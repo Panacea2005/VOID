@@ -21,6 +21,11 @@ export enum EnemyType {
   PATROLLER = 0,
   HUNTER = 1,
   SENTINEL = 2,
+  SHADOW_LURKER,
+  SHADOW_STALKER,
+  CRYSTAL_GUARDIAN,
+  VOID_ANOMALY,
+  VOID_WATCHER,
 }
 
 // Power-up types
@@ -29,6 +34,13 @@ export enum PowerUpType {
   INVISIBILITY = 1,
   SHIELD = 2,
   TELEPORT = 3,
+  PRISM,
+  LIGHT_AMPLIFIER,
+  GRAVITY_SHIFT,
+  REALITY_BEND,
+  VOID_STEP,
+  LIGHT_SOURCE,
+  SHADOW_BLEND,
 }
 
 // Player state
@@ -79,6 +91,8 @@ export interface EnemyState {
 
 // Level definition
 export interface LevelDefinition {
+  interactiveObjects: any;
+  realmProperties: any;
   id: number;
   name: string;
   grid: number[][];
@@ -167,7 +181,8 @@ export enum AudioEventType {
   AMBIENT,
   UI_SELECT,
   UI_CONFIRM,
-  UI_CANCEL
+  UI_CANCEL,
+  REALM_COMPLETE
 }
 
 // Particle effect types

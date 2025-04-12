@@ -19,16 +19,18 @@ export class PlayerController {
   private baseSpeed: number = 0.1;
   private lastMoveTime: number = 0;
   private invincibilityEnd: number = 0;
-  private powerUpEffects: {
-    [PowerUpType.SPEED]: THREE.Mesh | null,
-    [PowerUpType.INVISIBILITY]: THREE.Mesh | null,
-    [PowerUpType.SHIELD]: THREE.Mesh | null,
-    [PowerUpType.TELEPORT]: THREE.Mesh | null,
-  } = {
+  private powerUpEffects: Record<PowerUpType, THREE.Mesh | null> = {
     [PowerUpType.SPEED]: null,
     [PowerUpType.INVISIBILITY]: null,
     [PowerUpType.SHIELD]: null,
     [PowerUpType.TELEPORT]: null,
+    [PowerUpType.PRISM]: null,
+    [PowerUpType.LIGHT_AMPLIFIER]: null,
+    [PowerUpType.GRAVITY_SHIFT]: null,
+    [PowerUpType.REALITY_BEND]: null,
+    [PowerUpType.VOID_STEP]: null,
+    [PowerUpType.LIGHT_SOURCE]: null,
+    [PowerUpType.SHADOW_BLEND]: null
   };
 
   constructor(scene: THREE.Scene, gridSize: number, cellSize: number, grid: TileType[][]) {
