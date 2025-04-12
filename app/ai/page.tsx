@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
+import * as THREE from "three"
 import Navigation from "@/components/navigation"
 import Footer from "@/components/footer"
 import AbstractShape from "@/components/abstract-shape"
@@ -10,6 +11,24 @@ import PixelHeading from "@/components/pixel-heading"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
+import { generateCubeSkin } from "../ai/aiService"
+
+interface MaterialParams {
+  color?: string;
+  metalness?: number;
+  roughness?: number;
+  emissive?: string;
+  emissiveIntensity?: number;
+  map?: string;
+  gradientColors?: string[];
+  borderColor?: string;
+  borderWidth?: number;
+  transparent?: boolean;
+  opacity?: number;
+  bumpScale?: number;
+  normalScale?: number;
+  animateEmissive?: boolean;
+}
 
 export default function AIPage() {
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 })
@@ -17,10 +36,18 @@ export default function AIPage() {
   const [prompt, setPrompt] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [activeTab, setActiveTab] = useState("cube")
-  const canvasRef = useRef<HTMLDivElement>(null)
+  const [materialParams, setMaterialParams] = useState<MaterialParams | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
+  const sceneRef = useRef<THREE.Scene | null>(null)
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
+  const cubeRef = useRef<THREE.Mesh | null>(null)
+  const wireframeRef = useRef<THREE.LineSegments | null>(null)
+  const timeRef = useRef<number>(0)
+  const isDraggingRef = useRef<boolean>(false)
+  const previousMousePositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
-  // Handle cursor effects
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       setCursorPosition({ x: e.clientX, y: e.clientY })
@@ -30,25 +57,273 @@ export default function AIPage() {
     return () => window.removeEventListener("mousemove", handleMouseMove)
   }, [])
 
-  const handleGenerate = () => {
-    if (!prompt.trim()) return
+  const gradientShader = {
+    vertexShader: `
+      varying vec3 vPosition;
+      void main() {
+        vPosition = position;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 color1;
+      uniform vec3 color2;
+      varying vec3 vPosition;
+      void main() {
+        float mixFactor = (vPosition.y + 0.5) / 1.0;
+        vec3 color = mix(color1, color2, mixFactor);
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `,
+    uniforms: {
+      color1: { value: new THREE.Color('#ff00ff') },
+      color2: { value: new THREE.Color('#00ffcc') },
+    },
+  };
 
-    setIsGenerating(true)
+  // Procedural bump map simulation
+  const generateBumpMap = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const context = canvas.getContext('2d')!;
+    for (let x = 0; x < 256; x++) {
+      for (let y = 0; y < 256; y++) {
+        const value = Math.random() * 255;
+        context.fillStyle = `rgb(${value}, ${value}, ${value})`;
+        context.fillRect(x, y, 1, 1);
+      }
+    }
+    return new THREE.CanvasTexture(canvas);
+  };
 
-    // Simulate generation process
-    setTimeout(() => {
-      setIsGenerating(false)
-    }, 3000)
+  // Procedural normal map simulation
+  const generateNormalMap = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const context = canvas.getContext('2d')!;
+    for (let x = 0; x < 256; x++) {
+      for (let y = 0; y < 256; y++) {
+        const r = 128 + Math.sin(x * 0.1) * 127;
+        const g = 128 + Math.cos(y * 0.1) * 127;
+        const b = 255;
+        context.fillStyle = `rgb(${r}, ${g}, ${b})`;
+        context.fillRect(x, y, 1, 1);
+      }
+    }
+    return new THREE.CanvasTexture(canvas);
+  };
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    const scene = new THREE.Scene();
+    sceneRef.current = scene;
+
+    const gradientTexture = new THREE.CanvasTexture(generateGradientCanvas());
+    scene.background = gradientTexture;
+
+    const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+    camera.position.set(0, 0, 2);
+    cameraRef.current = camera;
+
+    const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, alpha: true, antialias: true });
+    renderer.setSize(400, 400);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    rendererRef.current = renderer;
+
+    const geometry = new THREE.BoxGeometry(1, 1, 1, 32, 32, 32);
+    const material = new THREE.MeshStandardMaterial({
+      color: '#4b0082',
+      metalness: 0.9,
+      roughness: 0.1,
+      emissive: '#ff00ff',
+      emissiveIntensity: 0.3,
+      transparent: false,
+      opacity: 1.0,
+    });
+    const cube = new THREE.Mesh(geometry, material);
+    cubeRef.current = cube;
+    scene.add(cube);
+
+    const wireframeGeometry = new THREE.EdgesGeometry(geometry, 1);
+    const wireframeMaterial = new THREE.LineBasicMaterial({
+      color: '#00ffcc',
+      linewidth: 3,
+      depthTest: false,
+      depthWrite: false,
+      transparent: true,
+      opacity: 1.0,
+    });
+    const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
+    wireframe.renderOrder = 1;
+    wireframeRef.current = wireframe;
+    cube.add(wireframe);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const directionalLight1 = new THREE.DirectionalLight(0xffffff, 1.2);
+    directionalLight1.position.set(5, 5, 5);
+    scene.add(directionalLight1);
+
+    const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
+    directionalLight2.position.set(-5, 3, -5);
+    scene.add(directionalLight2);
+
+    const pointLight = new THREE.PointLight(0xffffff, 0.5, 10);
+    pointLight.position.set(0, 2, 2);
+    scene.add(pointLight);
+
+    const onMouseDown = (event: MouseEvent) => {
+      isDraggingRef.current = true;
+      previousMousePositionRef.current = {
+        x: event.clientX,
+        y: event.clientY,
+      };
+    };
+
+    const onMouseMove = (event: MouseEvent) => {
+      if (!isDraggingRef.current || !cubeRef.current) return;
+
+      const deltaX = event.clientX - previousMousePositionRef.current.x;
+      const deltaY = event.clientY - previousMousePositionRef.current.y;
+
+      cubeRef.current.rotation.y += deltaX * 0.005;
+      cubeRef.current.rotation.x += deltaY * 0.005;
+
+      cubeRef.current.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cubeRef.current.rotation.x));
+
+      previousMousePositionRef.current = {
+        x: event.clientX,
+        y: event.clientY,
+      };
+    };
+
+    const onMouseUp = () => {
+      isDraggingRef.current = false;
+    };
+
+    const canvas = canvasRef.current;
+    canvas.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+      timeRef.current += 0.01;
+
+      if (cubeRef.current) {
+        cubeRef.current.position.y = Math.sin(timeRef.current) * 0.1;
+        if (!isDraggingRef.current) {
+          cubeRef.current.rotation.y += 0.005;
+          cubeRef.current.rotation.x += 0.003;
+        }
+
+        if (materialParams?.animateEmissive) {
+          const material = cubeRef.current.material as THREE.MeshStandardMaterial;
+          material.emissiveIntensity = materialParams.emissiveIntensity! * (1 + 0.3 * Math.sin(timeRef.current));
+          material.needsUpdate = true;
+        }
+      }
+
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    return () => {
+      canvas.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      renderer.dispose();
+    };
+  }, [materialParams]);
+
+  useEffect(() => {
+    if (!cubeRef.current || !wireframeRef.current || !materialParams) return;
+
+    const cube = cubeRef.current;
+    const wireframe = wireframeRef.current;
+
+    if (materialParams.gradientColors && materialParams.gradientColors.length === 2) {
+      const shaderMaterial = new THREE.ShaderMaterial({
+        vertexShader: gradientShader.vertexShader,
+        fragmentShader: gradientShader.fragmentShader,
+        uniforms: {
+          color1: { value: new THREE.Color(materialParams.gradientColors[0]) },
+          color2: { value: new THREE.Color(materialParams.gradientColors[1]) },
+        },
+      });
+      cube.material = shaderMaterial;
+    } else {
+      const newMaterial = new THREE.MeshStandardMaterial({
+        color: materialParams.color || '#4b0082',
+        metalness: materialParams.metalness ?? 0.9,
+        roughness: materialParams.roughness ?? 0.1,
+        emissive: materialParams.emissive || '#ff00ff',
+        emissiveIntensity: materialParams.emissiveIntensity ?? 0.3,
+        transparent: materialParams.transparent ?? false,
+        opacity: materialParams.opacity ?? 1.0,
+        bumpMap: materialParams.bumpScale ? generateBumpMap() : undefined,
+        bumpScale: materialParams.bumpScale ?? 0,
+        normalMap: materialParams.normalScale ? generateNormalMap() : undefined,
+        normalScale: materialParams.normalScale ? new THREE.Vector2(materialParams.normalScale, materialParams.normalScale) : undefined,
+      });
+
+      if (materialParams.map) {
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.load(materialParams.map, (texture) => {
+          newMaterial.map = texture;
+          newMaterial.needsUpdate = true;
+          cube.material = newMaterial;
+        });
+      } else {
+        cube.material = newMaterial;
+      }
+    }
+
+    (wireframe.material as THREE.LineBasicMaterial).color.set(materialParams.borderColor || '#00ffcc');
+    (wireframe.material as THREE.LineBasicMaterial).linewidth = materialParams.borderWidth || 3;
+    (wireframe.material as THREE.LineBasicMaterial).needsUpdate = true;
+  }, [materialParams]);
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return;
+
+    setIsGenerating(true);
+
+    try {
+      const response = await generateCubeSkin({
+        prompt,
+      });
+      setMaterialParams(response.materialParams);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   const handleMint = () => {
-    console.log("Minting AI creation...")
-    // This would be replaced with actual minting logic
+    console.log("Minting AI creation with material params:", materialParams);
   }
+
+  const generateGradientCanvas = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const context = canvas.getContext('2d')!;
+    const gradient = context.createRadialGradient(256, 256, 0, 256, 256, 256);
+    gradient.addColorStop(0, '#1a0033');
+    gradient.addColorStop(1, '#000000');
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, 512, 512);
+    return canvas;
+  };
 
   return (
     <div className="relative bg-black text-white overflow-hidden font-pixel">
-      {/* Custom cursor */}
       <motion.div
         className="fixed w-8 h-8 pointer-events-none z-[100] hidden md:block"
         animate={{
@@ -67,25 +342,20 @@ export default function AIPage() {
         </svg>
       </motion.div>
 
-      {/* Navigation */}
       <Navigation />
 
-      {/* Hero Section */}
       <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden pt-20">
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-black to-black"></div>
         </div>
 
-        {/* Modern AI Banner */}
         <div className="absolute inset-0 z-0 overflow-hidden">
-          {/* Grid Pattern */}
           <div className="absolute inset-0 grid grid-cols-12 grid-rows-12 opacity-20">
             {Array.from({ length: 144 }).map((_, i) => (
               <div key={i} className="border border-purple-800/20"></div>
             ))}
           </div>
 
-          {/* Neural Network Visualization */}
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
             <g opacity="0.2">
               {[...Array(10)].map((_, i) => (
@@ -122,7 +392,6 @@ export default function AIPage() {
             </g>
           </svg>
 
-          {/* Animated gradient overlay */}
           <div className="absolute inset-0 opacity-30">
             <div className="absolute inset-0 bg-gradient-radial from-purple-500/20 to-transparent animate-pulse-slow"></div>
             <div className="absolute inset-0 bg-gradient-radial from-pink-500/10 to-transparent animate-pulse-slow delay-1000"></div>
@@ -200,7 +469,6 @@ export default function AIPage() {
         </motion.div>
       </section>
 
-      {/* AI Creator Section */}
       <section id="creator" className="relative py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
@@ -227,7 +495,6 @@ export default function AIPage() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                {/* Prompt Input Section */}
                 <div className="bg-black border border-purple-900/50 p-8">
                   <PixelHeading
                     text={activeTab === "cube" ? "DESIGN YOUR CUBE" : "COMPOSE YOUR SOUND"}
@@ -242,7 +509,7 @@ export default function AIPage() {
                         onChange={(e) => setPrompt(e.target.value)}
                         placeholder={
                           activeTab === "cube"
-                            ? "A neon cyberpunk cube with glitchy textures..."
+                            ? "A cube with red faces, black borders, and a glossy plastic texture..."
                             : "Ambient synthwave with deep bass and ethereal pads..."
                         }
                         className="bg-black border-2 border-purple-900 focus:border-purple-500 rounded-none p-4 text-white font-pixel w-full"
@@ -251,37 +518,6 @@ export default function AIPage() {
                       />
                     </div>
                   </div>
-
-                  {activeTab === "cube" && (
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div>
-                        <label className="block text-gray-300 mb-2 font-pixel">TEXTURE STYLE</label>
-                        <select
-                          className="bg-black border-2 border-purple-900 focus:border-purple-500 rounded-none p-2 text-white font-pixel w-full"
-                          onMouseEnter={() => setCursorHover(true)}
-                          onMouseLeave={() => setCursorHover(false)}
-                        >
-                          <option value="abstract">ABSTRACT</option>
-                          <option value="glitch">GLITCH</option>
-                          <option value="neon">NEON</option>
-                          <option value="pixel">PIXEL</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-gray-300 mb-2 font-pixel">ANIMATION</label>
-                        <select
-                          className="bg-black border-2 border-purple-900 focus:border-purple-500 rounded-none p-2 text-white font-pixel w-full"
-                          onMouseEnter={() => setCursorHover(true)}
-                          onMouseLeave={() => setCursorHover(false)}
-                        >
-                          <option value="rotate">ROTATE</option>
-                          <option value="pulse">PULSE</option>
-                          <option value="morph">MORPH</option>
-                          <option value="glitch">GLITCH</option>
-                        </select>
-                      </div>
-                    </div>
-                  )}
 
                   {activeTab === "music" && (
                     <div className="grid grid-cols-2 gap-4 mb-6">
@@ -353,7 +589,7 @@ export default function AIPage() {
 
                     <Button
                       onClick={handleMint}
-                      disabled={isGenerating}
+                      disabled={isGenerating || !materialParams}
                       className="bg-transparent border-2 border-pink-500 hover:bg-pink-950/30 text-white rounded-none px-6 py-3 font-pixel tracking-wide"
                       onMouseEnter={() => setCursorHover(true)}
                       onMouseLeave={() => setCursorHover(false)}
@@ -363,7 +599,6 @@ export default function AIPage() {
                   </div>
                 </div>
 
-                {/* Output Display Section */}
                 <div className="bg-black border border-purple-900/50 p-8">
                   <PixelHeading
                     text={activeTab === "cube" ? "3D PREVIEW" : "AUDIO PREVIEW"}
@@ -371,17 +606,15 @@ export default function AIPage() {
                   />
 
                   {activeTab === "cube" ? (
-                    <div
-                      ref={canvasRef}
-                      className="w-full aspect-square bg-black/50 border-2 border-purple-900/50 flex items-center justify-center"
-                    >
-                      {isGenerating ? (
-                        <AbstractShape className="w-32 h-32 text-purple-500" type="loading" animate />
-                      ) : (
-                        <div className="text-center">
-                          <AbstractShape className="w-40 h-40 mx-auto text-purple-500/50" type="complex" animate />
-                          <p className="text-gray-400 mt-4 font-pixel">ENTER A PROMPT AND CLICK GENERATE</p>
+                    <div className="w-full aspect-square bg-black/50 border-2 border-purple-900/50 flex items-center justify-center">
+                      <canvas ref={canvasRef} className="w-full h-full" />
+                      {!materialParams && !isGenerating && (
+                        <div className="absolute text-center">
+                          <p className="text-gray-400 font-pixel">ENTER A PROMPT AND CLICK GENERATE</p>
                         </div>
+                      )}
+                      {isGenerating && (
+                        <AbstractShape className="w-32 h-32 text-purple-500 absolute" type="loading" animate />
                       )}
                     </div>
                   ) : (
@@ -411,7 +644,6 @@ export default function AIPage() {
         </div>
       </section>
 
-      {/* Examples Section */}
       <section className="relative py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
@@ -482,7 +714,6 @@ export default function AIPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="relative py-20">
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-t from-purple-950/30 via-black to-black"></div>
@@ -518,7 +749,6 @@ export default function AIPage() {
         </div>
       </section>
 
-      {/* Footer */}
       <Footer />
     </div>
   )
