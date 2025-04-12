@@ -8,6 +8,8 @@ import Navigation from "@/components/navigation"
 import Footer from "@/components/footer"
 import AbstractShape from "@/components/abstract-shape"
 import PixelHeading from "@/components/pixel-heading"
+import Logo3D from "@/components/logo-3d"
+import BackgroundAudio from "@/components/background-audio"
 import { cn } from "@/lib/utils"
 
 export default function Home() {
@@ -37,6 +39,9 @@ export default function Home() {
 
   return (
     <div className="relative bg-black text-white overflow-hidden font-pixel">
+      {/* Background Audio */}
+      <BackgroundAudio />
+
       {/* Custom cursor */}
       <motion.div
         className="fixed w-8 h-8 pointer-events-none z-[100] hidden md:block"
@@ -65,23 +70,9 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-black to-black"></div>
         </div>
 
-        {/* Abstract SVG Shapes */}
+        {/* 3D Logo Animation */}
         <div className="absolute inset-0 z-0 overflow-hidden">
-          <AbstractShape
-            className="absolute top-[10%] left-[5%] w-[30vw] h-[30vw] text-purple-500/20"
-            type="circle"
-            animate
-          />
-          <AbstractShape
-            className="absolute bottom-[15%] right-[10%] w-[25vw] h-[25vw] text-pink-500/20"
-            type="square"
-            animate
-          />
-          <AbstractShape
-            className="absolute top-[30%] right-[20%] w-[15vw] h-[15vw] text-blue-500/20"
-            type="triangle"
-            animate
-          />
+          <Logo3D />
         </div>
 
         <div className="container mx-auto px-4 z-10 relative">
