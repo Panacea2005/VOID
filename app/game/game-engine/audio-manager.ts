@@ -34,6 +34,7 @@ export class AudioManager {
       [AudioEventType.UI_SELECT]: '/sounds/ui_select.mp3',
       [AudioEventType.UI_CONFIRM]: '/sounds/ui_confirm.mp3',
       [AudioEventType.UI_CANCEL]: '/sounds/ui_cancel.mp3',
+      [AudioEventType.REALM_COMPLETE]: ''
     };
 
     // Create fallback audio elements for development

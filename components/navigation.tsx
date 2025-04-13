@@ -230,7 +230,11 @@ export default function Navigation() {
 
                     <nav
                       ref={navScrollRef}
-                      className="flex flex-col space-y-6 overflow-y-auto max-h-[50vh] pr-4 scrollbar-hide"
+                      className="flex flex-col space-y-6 overflow-y-auto max-h-[50vh] pr-4 scrollbar-hide no-scrollbar"
+                      style={{
+                        scrollbarWidth: 'none', /* Firefox */
+                        msOverflowStyle: 'none' /* IE and Edge */
+                      }}
                     >
                       {navLinks.map((link, index) => (
                         <motion.div key={link.path} variants={itemVariants}>
@@ -271,6 +275,19 @@ export default function Navigation() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <style jsx global>{`
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+        }
+      `}</style>
     </>
   )
 }
