@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import * as THREE from "three"
+import { EffectComposer, RenderPass } from "postprocessing"
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js"
 import Navigation from "@/components/navigation"
 import Footer from "@/components/footer"
 import AbstractShape from "@/components/abstract-shape"
@@ -24,10 +26,12 @@ interface MaterialParams {
   borderColor?: string;
   borderWidth?: number;
   transparent?: boolean;
+  showBorder?: boolean; // Added showBorder property
   opacity?: number;
   bumpScale?: number;
   normalScale?: number;
   animateEmissive?: boolean;
+  envMapIntensity?: number;
 }
 
 export default function AIPage() {
@@ -42,11 +46,13 @@ export default function AIPage() {
   const sceneRef = useRef<THREE.Scene | null>(null)
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
+  const composerRef = useRef<EffectComposer | null>(null)
   const cubeRef = useRef<THREE.Mesh | null>(null)
   const wireframeRef = useRef<THREE.LineSegments | null>(null)
   const timeRef = useRef<number>(0)
   const isDraggingRef = useRef<boolean>(false)
   const previousMousePositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [variantPreviews, setVariantPreviews] = useState<MaterialParams[]>([]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -81,110 +87,264 @@ export default function AIPage() {
     },
   };
 
-  // Procedural bump map simulation
-  const generateBumpMap = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
-    const context = canvas.getContext('2d')!;
-    for (let x = 0; x < 256; x++) {
-      for (let y = 0; y < 256; y++) {
-        const value = Math.random() * 255;
-        context.fillStyle = `rgb(${value}, ${value}, ${value})`;
-        context.fillRect(x, y, 1, 1);
-      }
-    }
-    return new THREE.CanvasTexture(canvas);
-  };
 
-  // Procedural normal map simulation
-  const generateNormalMap = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
-    const context = canvas.getContext('2d')!;
-    for (let x = 0; x < 256; x++) {
-      for (let y = 0; y < 256; y++) {
-        const r = 128 + Math.sin(x * 0.1) * 127;
-        const g = 128 + Math.cos(y * 0.1) * 127;
-        const b = 255;
-        context.fillStyle = `rgb(${r}, ${g}, ${b})`;
-        context.fillRect(x, y, 1, 1);
-      }
+  
+  const generateVariants = async () => {
+    if (!prompt.trim()) return;
+    
+    setIsGenerating(true);
+    
+    try {
+      // Generate the main version
+      const response = await generateCubeSkin({ prompt });
+      
+      // Generate 3 slightly modified variants based on the same prompt
+      const variants = [
+        { ...response.materialParams },
+        { 
+          ...response.materialParams, 
+          emissiveIntensity: (response.materialParams.emissiveIntensity || 0.2) * 1.5,
+          roughness: Math.max(0.1, (response.materialParams.roughness || 0.5) - 0.2)
+        },
+        { 
+          ...response.materialParams,
+          metalness: Math.min(1.0, (response.materialParams.metalness || 0.5) + 0.3),
+          envMapIntensity: (response.materialParams.envMapIntensity || 0.5) * 1.3
+        },
+        { 
+          ...response.materialParams,
+          borderColor: response.materialParams.borderColor ? 
+            response.materialParams.borderColor : 
+            (response.materialParams.color || "#ffffff"),
+          showBorder: true,
+          borderWidth: 4
+        }
+      ];
+      
+      setMaterialParams(variants[0]);
+      setVariantPreviews(variants);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsGenerating(false);
     }
-    return new THREE.CanvasTexture(canvas);
-  };
+  }
+  
+  // Add this UI component after your main canvas
+  // Place this after the main preview canvas in your render section
+  {activeTab === "cube" && variantPreviews.length > 0 && (
+    <div className="mt-6">
+      <PixelHeading
+        text="VARIATIONS"
+        className="text-xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
+      />
+      <div className="grid grid-cols-4 gap-4">
+        {variantPreviews.map((variant, index) => (
+          <div 
+            key={index}
+            className={`border-2 cursor-pointer transition-all ${
+              materialParams === variant ? 'border-purple-500 scale-105' : 'border-purple-900/30'
+            }`}
+            onClick={() => setMaterialParams(variant)}
+          >
+            <div className="p-1 aspect-square w-full relative">
+              {/* Here you would ideally render a thumbnail of the cube with these parameters */}
+              <div className="absolute inset-0 bg-gradient-to-br"
+                  style={{
+                    background: variant.gradientColors 
+                      ? `linear-gradient(to bottom right, ${variant.gradientColors[0]}, ${variant.gradientColors[1]})`
+                      : variant.color || '#4b0082'
+                  }}
+              />
+              {variant.showBorder && (
+                <div className="absolute inset-0 border-2" 
+                  style={{ borderColor: variant.borderColor || '#ffffff' }}
+                />
+              )}
+              <span className="absolute bottom-1 right-1 text-xs font-pixel text-white">#{index + 1}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+  
+  // Finally, update your Generate button to use the new function
+  <Button
+    onClick={generateVariants}  // Changed from handleGenerate to generateVariants
+    disabled={isGenerating || !prompt.trim()}
+    className="bg-transparent border-2 border-purple-500 hover:bg-purple-950/30 text-white rounded-none px-6 py-3 font-pixel tracking-wide flex-1"
+    onMouseEnter={() => setCursorHover(true)}
+    onMouseLeave={() => setCursorHover(false)}
+  >
+    {isGenerating ? (
+      <>
+        <svg
+          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
+        </svg>
+        GENERATING...
+      </>
+    ) : (
+      "GENERATE VARIANTS"
+    )}
+  </Button>
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
+    // Scene setup
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    const gradientTexture = new THREE.CanvasTexture(generateGradientCanvas());
-    scene.background = gradientTexture;
-
+    // Camera setup
     const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
     camera.position.set(0, 0, 2);
     cameraRef.current = camera;
 
+    // Renderer setup
     const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, alpha: true, antialias: true });
     renderer.setSize(400, 400);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     rendererRef.current = renderer;
 
-    const geometry = new THREE.BoxGeometry(1, 1, 1, 32, 32, 32);
+    // Load HDR environment map for realistic reflections
+    const rgbeLoader = new RGBELoader();
+    rgbeLoader.load('/textures/studio_small_08_1k.hdr', (texture: THREE.DataTexture) => {
+      texture.mapping = THREE.EquirectangularReflectionMapping;
+      scene.environment = texture;
+      scene.background = texture;
+    });
+
+    // Cube geometry
+    const geometry = new THREE.BoxGeometry(1, 1, 1, 64, 64, 64);
     const material = new THREE.MeshStandardMaterial({
       color: '#4b0082',
-      metalness: 0.9,
-      roughness: 0.1,
+      metalness: 0.5,
+      roughness: 0.5,
       emissive: '#ff00ff',
-      emissiveIntensity: 0.3,
+      emissiveIntensity: 0.2,
       transparent: false,
       opacity: 1.0,
+      envMapIntensity: 0.5,
     });
     const cube = new THREE.Mesh(geometry, material);
     cubeRef.current = cube;
     scene.add(cube);
 
-    const wireframeGeometry = new THREE.EdgesGeometry(geometry, 1);
+    // Wireframe using LineSegments for clean borders
+    const wireframeGeometry = new THREE.EdgesGeometry(geometry);
     const wireframeMaterial = new THREE.LineBasicMaterial({
       color: '#00ffcc',
-      linewidth: 3,
-      depthTest: false,
-      depthWrite: false,
-      transparent: true,
-      opacity: 1.0,
+      linewidth: 5,
+      transparent: false,
+      depthTest: true,
     });
     const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
     wireframe.renderOrder = 1;
+    wireframe.visible = true;
     wireframeRef.current = wireframe;
-    cube.add(wireframe);
+    if (wireframeRef.current) {
+      wireframeRef.current.visible = true;
+    }
+    scene.add(wireframe);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambientLight);
-
-    const directionalLight1 = new THREE.DirectionalLight(0xffffff, 1.2);
-    directionalLight1.position.set(5, 5, 5);
-    scene.add(directionalLight1);
-
-    const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
-    directionalLight2.position.set(-5, 3, -5);
-    scene.add(directionalLight2);
-
-    const pointLight = new THREE.PointLight(0xffffff, 0.5, 10);
-    pointLight.position.set(0, 2, 2);
-    scene.add(pointLight);
-
-    const onMouseDown = (event: MouseEvent) => {
-      isDraggingRef.current = true;
-      previousMousePositionRef.current = {
-        x: event.clientX,
-        y: event.clientY,
-      };
+    const animate = () => {
+      requestAnimationFrame(animate);
+      timeRef.current += 0.01;
+    
+      if (cubeRef.current && wireframeRef.current) {
+        cubeRef.current.position.y = Math.sin(timeRef.current) * 0.1;
+        
+        if (!isDraggingRef.current) {
+          cubeRef.current.rotation.y += 0.002; // Slower rotation
+          cubeRef.current.rotation.x += 0.001; // Slower rotation
+        }
+        
+        // Synchronize wireframe rotation with cube rotation
+        wireframeRef.current.position.copy(cubeRef.current.position);
+        wireframeRef.current.rotation.copy(cubeRef.current.rotation);
+        
+        if (materialParams?.animateEmissive) {
+          const material = cubeRef.current.material as THREE.MeshStandardMaterial;
+          material.emissiveIntensity = materialParams.emissiveIntensity! * (1 + 0.3 * Math.sin(timeRef.current));
+          material.needsUpdate = true;
+        }
+      }
+    
+      composer.render();
+    };
+    
+    // Finally, update the mouseMove handler to also update the wireframe:
+    const onMouseMove = (event: MouseEvent) => {
+      if (!isDraggingRef.current || !cubeRef.current) return;
+    
+      const deltaX = event.clientX - previousMousePositionRef.current.x;
+      const deltaY = event.clientY - previousMousePositionRef.current.y;
+    
+      cubeRef.current.rotation.y += deltaX * 0.005;
+      cubeRef.current.rotation.x += deltaY * 0.005;
+      cubeRef.current.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cubeRef.current.rotation.x));
+    
+      // Synchronize wireframe rotation with cube rotation
+      if (wireframeRef.current) {
+        wireframeRef.current.rotation.copy(cubeRef.current.rotation);
+      }
+    
+      previousMousePositionRef.current = { x: event.clientX, y: event.clientY };
     };
 
-    const onMouseMove = (event: MouseEvent) => {
+    // Lighting setup
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    directionalLight.position.set(5, 5, 5);
+    directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 1024;
+    directionalLight.shadow.mapSize.height = 1024;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 50;
+    scene.add(directionalLight);
+
+    const spotLight = new THREE.SpotLight(0xffffff, 1.0, 10, Math.PI / 4, 0.5, 2);
+    spotLight.position.set(0, 3, 3);
+    spotLight.castShadow = true;
+    scene.add(spotLight);
+
+    // Post-processing setup
+    const composer = new EffectComposer(renderer);
+    composerRef.current = composer;
+
+    const renderPass = new RenderPass(scene, camera);
+    composer.addPass(renderPass);
+
+    // Interaction handlers
+    const onMouseDown = (event: MouseEvent) => {
+      isDraggingRef.current = true;
+      previousMousePositionRef.current = { x: event.clientX, y: event.clientY };
+    };
+
+    const handleMouseDrag = (event: MouseEvent) => {
       if (!isDraggingRef.current || !cubeRef.current) return;
 
       const deltaX = event.clientX - previousMousePositionRef.current.x;
@@ -192,13 +352,9 @@ export default function AIPage() {
 
       cubeRef.current.rotation.y += deltaX * 0.005;
       cubeRef.current.rotation.x += deltaY * 0.005;
-
       cubeRef.current.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cubeRef.current.rotation.x));
 
-      previousMousePositionRef.current = {
-        x: event.clientX,
-        y: event.clientY,
-      };
+      previousMousePositionRef.current = { x: event.clientX, y: event.clientY };
     };
 
     const onMouseUp = () => {
@@ -210,26 +366,8 @@ export default function AIPage() {
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
 
-    const animate = () => {
-      requestAnimationFrame(animate);
-      timeRef.current += 0.01;
-
-      if (cubeRef.current) {
-        cubeRef.current.position.y = Math.sin(timeRef.current) * 0.1;
-        if (!isDraggingRef.current) {
-          cubeRef.current.rotation.y += 0.005;
-          cubeRef.current.rotation.x += 0.003;
-        }
-
-        if (materialParams?.animateEmissive) {
-          const material = cubeRef.current.material as THREE.MeshStandardMaterial;
-          material.emissiveIntensity = materialParams.emissiveIntensity! * (1 + 0.3 * Math.sin(timeRef.current));
-          material.needsUpdate = true;
-        }
-      }
-
-      renderer.render(scene, camera);
-    };
+    // Animation loop with slower rotation
+    // Removed duplicate animate function to resolve redeclaration error
     animate();
 
     return () => {
@@ -237,6 +375,7 @@ export default function AIPage() {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
       renderer.dispose();
+      composer.dispose();
     };
   }, [materialParams]);
 
@@ -259,16 +398,15 @@ export default function AIPage() {
     } else {
       const newMaterial = new THREE.MeshStandardMaterial({
         color: materialParams.color || '#4b0082',
-        metalness: materialParams.metalness ?? 0.9,
-        roughness: materialParams.roughness ?? 0.1,
+        metalness: materialParams.metalness ?? 0.5,
+        roughness: materialParams.roughness ?? 0.5,
         emissive: materialParams.emissive || '#ff00ff',
-        emissiveIntensity: materialParams.emissiveIntensity ?? 0.3,
+        emissiveIntensity: materialParams.emissiveIntensity ?? 0.2,
         transparent: materialParams.transparent ?? false,
         opacity: materialParams.opacity ?? 1.0,
-        bumpMap: materialParams.bumpScale ? generateBumpMap() : undefined,
-        bumpScale: materialParams.bumpScale ?? 0,
-        normalMap: materialParams.normalScale ? generateNormalMap() : undefined,
-        normalScale: materialParams.normalScale ? new THREE.Vector2(materialParams.normalScale, materialParams.normalScale) : undefined,
+        envMapIntensity: materialParams.envMapIntensity ?? 0.5,
+        bumpScale: materialParams.bumpScale ?? 0.0,
+        normalScale: materialParams.normalScale ? new THREE.Vector2(materialParams.normalScale, materialParams.normalScale) : new THREE.Vector2(1, 1),
       });
 
       if (materialParams.map) {
@@ -283,9 +421,14 @@ export default function AIPage() {
       }
     }
 
-    (wireframe.material as THREE.LineBasicMaterial).color.set(materialParams.borderColor || '#00ffcc');
-    (wireframe.material as THREE.LineBasicMaterial).linewidth = materialParams.borderWidth || 3;
-    (wireframe.material as THREE.LineBasicMaterial).needsUpdate = true;
+    // Update wireframe color and width
+    const wireframeMaterial = wireframe.material as THREE.LineBasicMaterial;
+    wireframeMaterial.color.set(materialParams.borderColor || '#00ffcc');
+    wireframeMaterial.linewidth = materialParams.borderWidth || 5;
+    wireframeMaterial.transparent = false;
+    wireframeMaterial.depthTest = true;
+    wireframeMaterial.needsUpdate = true;
+    wireframe.visible = true;
   }, [materialParams]);
 
   const handleGenerate = async () => {
@@ -308,19 +451,6 @@ export default function AIPage() {
   const handleMint = () => {
     console.log("Minting AI creation with material params:", materialParams);
   }
-
-  const generateGradientCanvas = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const context = canvas.getContext('2d')!;
-    const gradient = context.createRadialGradient(256, 256, 0, 256, 256, 256);
-    gradient.addColorStop(0, '#1a0033');
-    gradient.addColorStop(1, '#000000');
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, 512, 512);
-    return canvas;
-  };
 
   return (
     <div className="relative bg-black text-white overflow-hidden font-pixel">
@@ -606,7 +736,7 @@ export default function AIPage() {
                   />
 
                   {activeTab === "cube" ? (
-                    <div className="w-full aspect-square bg-black/50 border-2 border-purple-900/50 flex items-center justify-center">
+                    <div className="w-full aspect-square bg-black/50 flex items-center justify-center">
                       <canvas ref={canvasRef} className="w-full h-full" />
                       {!materialParams && !isGenerating && (
                         <div className="absolute text-center">
