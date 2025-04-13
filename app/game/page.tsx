@@ -1,13 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import Navigation from "@/components/navigation";
-import Footer from "@/components/footer";
-import PixelHeading from "@/components/pixel-heading";
-import VoidResonanceGame from "./void-resonance-game";
+import VoidResonanceGame from "./void-game";
 
 export default function GamePage() {
   const [loading, setLoading] = useState(true);
@@ -16,19 +11,41 @@ export default function GamePage() {
 
   // Handle cursor effects
   useEffect(() => {
-    const handleMouseMove = (e: { clientX: number; clientY: number }) => {
+    const handleMouseMove = (e: { clientX: any; clientY: any; }) => {
       setCursorPosition({ x: e.clientX, y: e.clientY });
     };
 
+    const handleMouseOver = () => {
+      setCursorHover(true);
+    };
+
+    const handleMouseOut = () => {
+      setCursorHover(false);
+    };
+
+    // Add event listeners for interactive elements
+    const interactiveElements = document.querySelectorAll('button, a, [role="button"]');
+    interactiveElements.forEach(el => {
+      el.addEventListener('mouseover', handleMouseOver);
+      el.addEventListener('mouseout', handleMouseOut);
+    });
+
     window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      interactiveElements.forEach(el => {
+        el.removeEventListener('mouseover', handleMouseOver);
+        el.removeEventListener('mouseout', handleMouseOut);
+      });
+    };
   }, []);
 
   // Loading animation
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 1500);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, []);
