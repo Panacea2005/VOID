@@ -1,19 +1,19 @@
-"use client"
+// page.tsx
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import { motion } from "framer-motion"
-import Link from "next/link"
-import * as THREE from "three"
-import { EffectComposer, RenderPass, EffectPass, BloomEffect } from "postprocessing"
-import { RGBELoader } from "three/addons/loaders/RGBELoader.js"
-import Navigation from "@/components/navigation"
-import Footer from "@/components/footer"
-import AbstractShape from "@/components/abstract-shape"
-import PixelHeading from "@/components/pixel-heading"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { generateCubeSkin } from "../ai/aiService"
+import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import * as THREE from "three";
+import { EffectComposer, RenderPass, EffectPass, BloomEffect } from "postprocessing";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import Navigation from "@/components/navigation";
+import Footer from "@/components/footer";
+import AbstractShape from "@/components/abstract-shape";
+import PixelHeading from "@/components/pixel-heading";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { generateCubeSkin, extractColor, adjustColorBrightness, generateProceduralTexture } from "../ai/aiService";
 
 interface MaterialParams {
   color?: string;
@@ -24,6 +24,7 @@ interface MaterialParams {
   map?: string;
   normalMap?: string;
   roughnessMap?: string;
+  displacementMap?: string;
   gradientColors?: string[];
   borderColor?: string;
   borderWidth?: number;
@@ -38,35 +39,46 @@ interface MaterialParams {
   texturePattern?: string;
   textureScale?: number;
   customEffects?: string[];
+  sheen?: number;
+  sheenColor?: string;
+  clearcoat?: number;
+  clearcoatRoughness?: number;
+  anisotropy?: number;
+  proceduralTexture?: string;
+  animationType?: "none" | "pulse" | "flow" | "rotate";
+  animationSpeed?: number;
+  displacementScale?: number;
+  transmission?: number;
 }
 
 export default function AIPage() {
-  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 })
-  const [cursorHover, setCursorHover] = useState(false)
-  const [prompt, setPrompt] = useState("")
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [activeTab, setActiveTab] = useState("cube")
-  const [materialParams, setMaterialParams] = useState<MaterialParams | null>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const sceneRef = useRef<THREE.Scene | null>(null)
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
-  const composerRef = useRef<EffectComposer | null>(null)
-  const cubeRef = useRef<THREE.Mesh | null>(null)
-  const wireframeRef = useRef<THREE.LineSegments | null>(null)
-  const timeRef = useRef<number>(0)
-  const isDraggingRef = useRef<boolean>(false)
-  const previousMousePositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  const [cursorHover, setCursorHover] = useState(false);
+  const [prompt, setPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [activeTab, setActiveTab] = useState("cube");
+  const [materialParams, setMaterialParams] = useState<MaterialParams | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const composerRef = useRef<EffectComposer | null>(null);
+  const cubeRef = useRef<THREE.Mesh | null>(null);
+  const wireframeRef = useRef<THREE.LineSegments | null>(null);
+  const bloomEffectRef = useRef<BloomEffect | null>(null);
+  const timeRef = useRef<number>(0);
+  const isDraggingRef = useRef<boolean>(false);
+  const previousMousePositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const [variantPreviews, setVariantPreviews] = useState<MaterialParams[]>([]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      setCursorPosition({ x: e.clientX, y: e.clientY })
-    }
+      setCursorPosition({ x: e.clientX, y: e.clientY });
+    };
 
-    window.addEventListener("mousemove", handleMouseMove)
-    return () => window.removeEventListener("mousemove", handleMouseMove)
-  }, [])
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
 
   const hologramShader = {
     vertexShader: `
@@ -93,7 +105,65 @@ export default function AIPage() {
     `,
     uniforms: {
       time: { value: 0 },
-      baseColor: { value: new THREE.Color('#a3e7fc') },
+      baseColor: { value: new THREE.Color("#7dd3fc") },
+    },
+  };
+
+  const gradientShader = {
+    vertexShader: `
+      varying vec3 vPosition;
+      varying vec3 vNormal;
+      void main() {
+        vPosition = position;
+        vNormal = normal;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 color1;
+      uniform vec3 color2;
+      uniform float opacity;
+      varying vec3 vPosition;
+      varying vec3 vNormal;
+      void main() {
+        float mixFactor = (vPosition.y + 0.5) * 0.5;
+        vec3 color = mix(color1, color2, mixFactor);
+        float lighting = max(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)), 0.0);
+        color *= (0.5 + 0.5 * lighting);
+        gl_FragColor = vec4(color, opacity);
+      }
+    `,
+    uniforms: {
+      color1: { value: new THREE.Color("#ffffff") },
+      color2: { value: new THREE.Color("#000000") },
+      opacity: { value: 1.0 },
+    },
+  };
+
+  const flowShader = {
+    vertexShader: `
+      varying vec3 vPosition;
+      void main() {
+        vPosition = position;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float time;
+      uniform vec3 color1;
+      uniform vec3 color2;
+      varying vec3 vPosition;
+      void main() {
+        float flow = sin(vPosition.x * 2.0 + time) * cos(vPosition.y * 2.0 + time);
+        float mixFactor = 0.5 + 0.5 * flow;
+        vec3 color = mix(color1, color2, mixFactor);
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `,
+    uniforms: {
+      time: { value: 0 },
+      color1: { value: new THREE.Color("#ffffff") },
+      color2: { value: new THREE.Color("#000000") },
     },
   };
 
@@ -104,23 +174,83 @@ export default function AIPage() {
 
     try {
       const response = await generateCubeSkin({ prompt });
-      const variants = [
-        { ...response.materialParams },
+      let baseParams = response.materialParams;
+
+      const variants: MaterialParams[] = [
+        { ...baseParams },
         {
-          ...response.materialParams,
-          emissiveIntensity: (response.materialParams.emissiveIntensity || 0.2) * 1.5,
-          roughness: Math.max(0.1, (response.materialParams.roughness || 0.5) - 0.2),
+          ...baseParams,
+          gradientColors: baseParams.gradientColors
+            ? baseParams.gradientColors.map((c) => adjustColorBrightness(c, 1.4))
+            : baseParams.color
+            ? [baseParams.color, adjustColorBrightness(baseParams.color, 0.8)]
+            : ["#ffffff", "#cccccc"],
+          emissive: baseParams.gradientColors ? baseParams.gradientColors[0] : baseParams.color || "#ffffff",
+          emissiveIntensity: 1.8,
+          animateEmissive: true,
+          animationType: "pulse",
+          envMapIntensity: (baseParams.envMapIntensity || 0.5) * 1.3,
         },
         {
-          ...response.materialParams,
-          metalness: Math.min(1.0, (response.materialParams.metalness || 0.5) + 0.3),
-          envMapIntensity: (response.materialParams.envMapIntensity || 0.5) * 1.3,
+          ...baseParams,
+          gradientColors: baseParams.gradientColors
+            ? baseParams.gradientColors.map((c) => adjustColorBrightness(c, 0.6))
+            : baseParams.color
+            ? [adjustColorBrightness(baseParams.color, 0.6), baseParams.color]
+            : ["#666666", "#999999"],
+          roughness: 0.9,
+          clearcoat: 0,
+          sheen: 0.8,
+          sheenColor: baseParams.gradientColors ? baseParams.gradientColors[1] : baseParams.color || "#ffffff",
+          texturePattern: baseParams.texturePattern || "marble",
+          map: baseParams.map || (baseParams.color ? generateProceduralTexture("marble", 512, { color: baseParams.color }) : undefined),
         },
         {
-          ...response.materialParams,
-          borderColor: response.materialParams.borderColor || '#ffffff',
-          showBorder: true,
-          borderWidth: 6,
+          ...baseParams,
+          gradientColors: baseParams.gradientColors
+            ? baseParams.gradientColors.map((c) => adjustColorBrightness(c, 1.1))
+            : baseParams.color
+            ? [baseParams.color, adjustColorBrightness(baseParams.color, 1.1)]
+            : ["#ffffff", "#eeeeee"],
+          clearcoat: 1.2,
+          clearcoatRoughness: 0.05,
+          metalness: Math.min(1.0, (baseParams.metalness || 0.5) + 0.2),
+          emissive: baseParams.gradientColors ? baseParams.gradientColors[0] : baseParams.color || "#ffffff",
+          emissiveIntensity: 1.0,
+          animationType: "none",
+          texturePattern: baseParams.texturePattern || "circuit",
+          map: baseParams.map || (baseParams.color ? generateProceduralTexture("circuit", 512, { color: baseParams.color }) : undefined),
+        },
+        {
+          ...baseParams,
+          gradientColors: baseParams.gradientColors
+            ? baseParams.gradientColors
+            : baseParams.color
+            ? [baseParams.color, adjustColorBrightness(baseParams.color, 0.9)]
+            : ["#ffffff", "#dddddd"],
+          texturePattern: baseParams.texturePattern || "plasma",
+          map: baseParams.map || (baseParams.color ? generateProceduralTexture("plasma", 512, { color: baseParams.color }) : undefined),
+          textureScale: (baseParams.textureScale || 1.0) * 1.8,
+          normalScale: (baseParams.normalScale || 0.8) * 1.5,
+          emissive: baseParams.gradientColors ? baseParams.gradientColors[1] : baseParams.color || "#ffffff",
+          emissiveIntensity: 2.0,
+          animationType: "flow",
+          animationSpeed: 0.05,
+        },
+        {
+          ...baseParams,
+          gradientColors: baseParams.gradientColors
+            ? baseParams.gradientColors.map((c) => adjustColorBrightness(c, 0.8))
+            : baseParams.color
+            ? [adjustColorBrightness(baseParams.color, 0.8), baseParams.color]
+            : ["#888888", "#bbbbbb"],
+          roughness: 0.85,
+          metalness: (baseParams.metalness || 0.5) * 0.8,
+          texturePattern: baseParams.texturePattern || "rust",
+          map: baseParams.map || (baseParams.color ? generateProceduralTexture("rust", 512, { color: baseParams.color }) : undefined),
+          textureScale: (baseParams.textureScale || 1.0) * 2.0,
+          displacementScale: (baseParams.displacementScale || 0.1) * 1.2,
+          animationType: "none",
         },
       ];
 
@@ -131,7 +261,7 @@ export default function AIPage() {
     } finally {
       setIsGenerating(false);
     }
-  }
+  };
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -150,18 +280,16 @@ export default function AIPage() {
     rendererRef.current = renderer;
 
     const rgbeLoader = new RGBELoader();
-    rgbeLoader.load('/textures/studio_small_08_1k.hdr', (texture: THREE.DataTexture) => {
+    rgbeLoader.load("/textures/studio_small_08_1k.hdr", (texture: THREE.DataTexture) => {
       texture.mapping = THREE.EquirectangularReflectionMapping;
       scene.environment = texture;
     });
 
     const geometry = new THREE.BoxGeometry(1, 1, 1, 64, 64, 64);
-    const material = new THREE.MeshStandardMaterial({
-      color: '#4b0082',
+    const material = new THREE.MeshPhysicalMaterial({
+      color: "#666666",
       metalness: 0.5,
       roughness: 0.5,
-      emissive: '#ff00ff',
-      emissiveIntensity: 0.2,
       envMapIntensity: 0.5,
     });
     const cube = new THREE.Mesh(geometry, material);
@@ -170,7 +298,7 @@ export default function AIPage() {
 
     const wireframeGeometry = new THREE.EdgesGeometry(geometry);
     const wireframeMaterial = new THREE.LineBasicMaterial({
-      color: '#ffffff',
+      color: "#ffffff",
       linewidth: 5,
     });
     const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
@@ -181,6 +309,7 @@ export default function AIPage() {
     composerRef.current = composer;
     composer.addPass(new RenderPass(scene, camera));
     const bloomEffect = new BloomEffect();
+    bloomEffectRef.current = bloomEffect;
     const effectPass = new EffectPass(camera, bloomEffect);
     composer.addPass(effectPass);
 
@@ -208,9 +337,21 @@ export default function AIPage() {
         wireframeRef.current.position.copy(cubeRef.current.position);
         wireframeRef.current.rotation.copy(cubeRef.current.rotation);
 
-        if (materialParams?.customEffects?.includes('hologramGlow')) {
+        if (materialParams?.customEffects?.includes("hologram")) {
           const material = cubeRef.current.material as THREE.ShaderMaterial;
           material.uniforms.time.value = timeRef.current;
+        }
+        if (materialParams?.animationType === "pulse" && materialParams.animateEmissive) {
+          const material = cubeRef.current.material as THREE.MeshPhysicalMaterial;
+          material.emissiveIntensity = (materialParams.emissiveIntensity || 0.2) * (1 + 0.5 * Math.sin(timeRef.current));
+        }
+        if (materialParams?.animationType === "flow" && cubeRef.current.material instanceof THREE.ShaderMaterial) {
+          const material = cubeRef.current.material;
+          material.uniforms.time.value = timeRef.current;
+        }
+        if (materialParams?.animationType === "rotate") {
+          cubeRef.current.rotation.y += (materialParams.animationSpeed || 0.03);
+          cubeRef.current.rotation.x += (materialParams.animationSpeed || 0.03) * 0.5;
         }
       }
 
@@ -244,16 +385,16 @@ export default function AIPage() {
     };
 
     const canvas = canvasRef.current;
-    canvas.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    canvas.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
 
     animate();
 
     return () => {
-      canvas.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
+      canvas.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
       renderer.dispose();
     };
   }, []);
@@ -266,71 +407,91 @@ export default function AIPage() {
 
     let newMaterial: THREE.Material;
 
-    if (materialParams.customEffects?.includes('hologramGlow')) {
+    if (materialParams.customEffects?.includes("hologram")) {
       newMaterial = new THREE.ShaderMaterial({
         vertexShader: hologramShader.vertexShader,
         fragmentShader: hologramShader.fragmentShader,
         uniforms: {
           ...hologramShader.uniforms,
-          baseColor: { value: new THREE.Color(materialParams.color || '#a3e7fc') },
+          baseColor: { value: new THREE.Color(materialParams.color || "#7dd3fc") },
         },
         transparent: true,
         opacity: materialParams.opacity ?? 0.6,
       });
-    } else if (materialParams.gradientColors && materialParams.gradientColors.length === 2) {
+    } else if (materialParams.animationType === "flow") {
       newMaterial = new THREE.ShaderMaterial({
-        vertexShader: `
-          varying vec3 vPosition;
-          void main() {
-            vPosition = position;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `,
-        fragmentShader: `
-          uniform vec3 color1;
-          uniform vec3 color2;
-          varying vec3 vPosition;
-          void main() {
-            float mixFactor = (vPosition.y + 0.5) / 1.0;
-            vec3 color = mix(color1, color2, mixFactor);
-            gl_FragColor = vec4(color, 1.0);
-          }
-        `,
+        vertexShader: flowShader.vertexShader,
+        fragmentShader: flowShader.fragmentShader,
+        uniforms: {
+          ...flowShader.uniforms,
+          color1: { value: new THREE.Color(materialParams.gradientColors?.[0] || materialParams.color || "#ffffff") },
+          color2: { value: new THREE.Color(materialParams.gradientColors?.[1] || "#000000") },
+        },
+      });
+    } else if (materialParams.gradientColors && materialParams.gradientColors.length >= 2) {
+      newMaterial = new THREE.ShaderMaterial({
+        vertexShader: gradientShader.vertexShader,
+        fragmentShader: gradientShader.fragmentShader,
         uniforms: {
           color1: { value: new THREE.Color(materialParams.gradientColors[0]) },
           color2: { value: new THREE.Color(materialParams.gradientColors[1]) },
+          opacity: { value: materialParams.opacity ?? 1.0 },
         },
+        transparent: materialParams.transparent ?? false,
       });
     } else {
-      newMaterial = new THREE.MeshStandardMaterial({
-        color: materialParams.color || '#4b0082',
+      newMaterial = new THREE.MeshPhysicalMaterial({
+        color: materialParams.color || "#666666",
         metalness: materialParams.metalness ?? 0.5,
         roughness: materialParams.roughness ?? 0.5,
-        emissive: materialParams.emissive || '#000000',
-        emissiveIntensity: materialParams.emissiveIntensity ?? 0.2,
+        emissive: materialParams.emissive || "#000000",
+        emissiveIntensity: materialParams.emissiveIntensity ?? 0,
         transparent: materialParams.transparent ?? false,
         opacity: materialParams.opacity ?? 1.0,
         envMapIntensity: materialParams.envMapIntensity ?? 0.5,
         bumpScale: materialParams.bumpScale ?? 0.0,
         normalScale: materialParams.normalScale ? new THREE.Vector2(materialParams.normalScale, materialParams.normalScale) : new THREE.Vector2(1, 1),
+        clearcoat: materialParams.clearcoat ?? 0,
+        clearcoatRoughness: materialParams.clearcoatRoughness ?? 0.1,
+        anisotropy: materialParams.anisotropy ?? 0,
+        displacementScale: materialParams.displacementScale ?? 0,
+        transmission: materialParams.transmission ?? 0,
+        sheen: materialParams.sheen ?? 0,
+        sheenColor: materialParams.sheenColor ? new THREE.Color(materialParams.sheenColor) : new THREE.Color("#ffffff"),
       });
 
       const textureLoader = new THREE.TextureLoader();
       if (materialParams.map) {
         textureLoader.load(materialParams.map, (texture) => {
-          (newMaterial as THREE.MeshStandardMaterial).map = texture;
+          (newMaterial as THREE.MeshPhysicalMaterial).map = texture;
+          texture.repeat.set(materialParams.textureScale || 1, materialParams.textureScale || 1);
+          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
           newMaterial.needsUpdate = true;
         });
       }
       if (materialParams.normalMap) {
         textureLoader.load(materialParams.normalMap, (texture) => {
-          (newMaterial as THREE.MeshStandardMaterial).normalMap = texture;
+          (newMaterial as THREE.MeshPhysicalMaterial).normalMap = texture;
           newMaterial.needsUpdate = true;
         });
       }
       if (materialParams.roughnessMap) {
         textureLoader.load(materialParams.roughnessMap, (texture) => {
-          (newMaterial as THREE.MeshStandardMaterial).roughnessMap = texture;
+          (newMaterial as THREE.MeshPhysicalMaterial).roughnessMap = texture;
+          newMaterial.needsUpdate = true;
+        });
+      }
+      if (materialParams.displacementMap) {
+        textureLoader.load(materialParams.displacementMap, (texture) => {
+          (newMaterial as THREE.MeshPhysicalMaterial).displacementMap = texture;
+          newMaterial.needsUpdate = true;
+        });
+      }
+      if (materialParams.proceduralTexture) {
+        textureLoader.load(materialParams.proceduralTexture, (texture) => {
+          (newMaterial as THREE.MeshPhysicalMaterial).map = texture;
+          texture.repeat.set(materialParams.textureScale || 1, materialParams.textureScale || 1);
+          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
           newMaterial.needsUpdate = true;
         });
       }
@@ -339,10 +500,14 @@ export default function AIPage() {
     cube.material = newMaterial;
 
     const wireframeMaterial = wireframe.material as THREE.LineBasicMaterial;
-    wireframeMaterial.color.set(materialParams.borderColor || '#ffffff');
+    wireframeMaterial.color.set(materialParams.borderColor || "#ffffff");
     wireframeMaterial.linewidth = materialParams.borderWidth || 5;
     wireframeMaterial.needsUpdate = true;
     wireframe.visible = materialParams.showBorder ?? false;
+
+    if (bloomEffectRef.current) {
+      bloomEffectRef.current.intensity = materialParams.emissiveIntensity ? materialParams.emissiveIntensity * 0.8 : 0;
+    }
   }, [materialParams]);
 
   const handleGenerate = async () => {
@@ -353,16 +518,17 @@ export default function AIPage() {
     try {
       const response = await generateCubeSkin({ prompt });
       setMaterialParams(response.materialParams);
+      await generateVariants();
     } catch (error) {
       console.error(error);
     } finally {
       setIsGenerating(false);
     }
-  }
+  };
 
   const handleMint = () => {
-    console.log("Minting AI creation with material params:", materialParams);
-  }
+    console.log("Minting creation with material params:", materialParams);
+  };
 
   return (
     <div className="relative bg-black text-white overflow-hidden font-pixel">
@@ -400,7 +566,7 @@ export default function AIPage() {
               className="mb-6"
             >
               <PixelHeading
-                text="AI CREATOR"
+                text="CREATOR"
                 className="text-8xl sm:text-9xl md:text-[12rem] font-black tracking-tighter mb-6 leading-none text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
                 animate
               />
@@ -417,7 +583,7 @@ export default function AIPage() {
               transition={{ duration: 1, delay: 0.6 }}
               className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto mb-10 font-light"
             >
-              Create and mint AI-generated 3D cubes with realistic textures
+              Create and mint custom 3D cubes with realistic textures and animations
             </motion.p>
 
             <motion.div
@@ -469,7 +635,7 @@ export default function AIPage() {
                     <Input
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
-                      placeholder="A holographic cube with rainbow shine and thick blue borders..."
+                      placeholder="A glossy cube with a blue-to-purple gradient and pulsing glow..."
                       className="bg-black border-2 border-purple-900 focus:border-purple-500 rounded-none p-4 text-white font-pixel w-full"
                       onMouseEnter={() => setCursorHover(true)}
                       onMouseLeave={() => setCursorHover(false)}
@@ -478,7 +644,7 @@ export default function AIPage() {
 
                   <div className="flex space-x-4">
                     <Button
-                      onClick={generateVariants}
+                      onClick={handleGenerate}
                       disabled={isGenerating || !prompt.trim()}
                       className="bg-transparent border-2 border-purple-500 hover:bg-purple-950/30 text-white rounded-none px-6 py-3 font-pixel tracking-wide flex-1"
                       onMouseEnter={() => setCursorHover(true)}
@@ -523,6 +689,25 @@ export default function AIPage() {
                       MINT
                     </Button>
                   </div>
+
+                  {materialParams && (
+                    <div className="mt-6">
+                      <PixelHeading
+                        text="MATERIAL PROPERTIES"
+                        className="text-xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
+                      />
+                      <div className="text-gray-400 font-pixel">
+                        <p>
+                          Color: {materialParams.gradientColors ? `${materialParams.gradientColors[0]} to ${materialParams.gradientColors[1]}` : materialParams.color}
+                        </p>
+                        <p>Metalness: {materialParams.metalness?.toFixed(2)}</p>
+                        <p>Roughness: {materialParams.roughness?.toFixed(2)}</p>
+                        <p>Animation: {materialParams.animationType || "None"}</p>
+                        <p>Border: {materialParams.showBorder ? `${materialParams.borderWidth}px ${materialParams.borderColor}` : "None"}</p>
+                        <p>Texture: {materialParams.texturePattern || (materialParams.proceduralTexture ? "Procedural" : "None")}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-black border border-purple-900/50 p-8">
@@ -538,9 +723,7 @@ export default function AIPage() {
                         <p className="text-gray-400 font-pixel">ENTER A PROMPT AND CLICK GENERATE</p>
                       </div>
                     )}
-                    {isGenerating && (
-                      <AbstractShape className="w-32 h-32 text-purple-500 absolute" type="loading" animate />
-                    )}
+                    {isGenerating && <AbstractShape className="w-32 h-32 text-purple-500 absolute" type="loading" animate />}
                   </div>
 
                   {activeTab === "cube" && variantPreviews.length > 0 && (
@@ -549,29 +732,37 @@ export default function AIPage() {
                         text="VARIATIONS"
                         className="text-xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
                       />
-                      <div className="grid grid-cols-4 gap-4">
+                      <div className="grid grid-cols-5 gap-4">
                         {variantPreviews.map((variant, index) => (
                           <div
                             key={index}
                             className={`border-2 cursor-pointer transition-all ${
-                              materialParams === variant ? 'border-purple-500 scale-105' : 'border-purple-900/30'
+                              materialParams === variant ? "border-purple-500 scale-105" : "border-purple-900/30"
                             }`}
                             onClick={() => setMaterialParams(variant)}
                           >
                             <div className="p-1 aspect-square w-full relative">
-                              <div
-                                className="absolute inset-0 bg-gradient-to-br"
-                                style={{
-                                  background: variant.gradientColors
-                                    ? `linear-gradient(to bottom right, ${variant.gradientColors[0]}, ${variant.gradientColors[1]})`
-                                    : variant.color || '#4b0082',
-                                }}
-                              />
+                              {variant.map || variant.proceduralTexture ? (
+                                <img
+                                  src={variant.map || variant.proceduralTexture}
+                                  alt="Texture Preview"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div
+                                  className="absolute inset-0 bg-gradient-to-br"
+                                  style={{
+                                    background: variant.gradientColors
+                                      ? `linear-gradient(to bottom right, ${variant.gradientColors[0]}, ${variant.gradientColors[1]})`
+                                      : variant.color || "#666666",
+                                  }}
+                                />
+                              )}
                               {variant.showBorder && (
                                 <div
                                   className="absolute inset-0 border"
                                   style={{
-                                    borderColor: variant.borderColor || '#ffffff',
+                                    borderColor: variant.borderColor || "#ffffff",
                                     borderWidth: `${variant.borderWidth || 2}px`,
                                   }}
                                 />
@@ -592,5 +783,5 @@ export default function AIPage() {
 
       <Footer />
     </div>
-  )
+  );
 }
