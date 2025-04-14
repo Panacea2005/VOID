@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion";
-import Navigation from "@/components/navigation";
-import Footer from "@/components/footer";
 import PixelHeading from "@/components/pixel-heading";
 import AbstractShape from "@/components/abstract-shape";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ChevronDown, ExternalLink, Sparkles } from "lucide-react";
 import RealmCube, { cubeCollection } from "../cube/realm-cube";
 import { useAudioController, AudioController } from "../manager/audio-manager";
 

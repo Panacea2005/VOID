@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import VoidHub from "./hub/void-hub";
 import EchoRealm from "./realms/echo/echo-realm";
 import NexusRealm from "./realms/nexus/nexus-realm";
-import RealmPlaceholder from "./realms/abyss/realm-placeholder";
+import AbyssRealm from "./realms/abyss/abyss-realm";
+import RealmPlaceholder from "./realms/cipher/realm-placeholder";
+import PulseRealm from "./realms/pulse/pulse-realm";
 
 // Main Game Component
 interface VoidResonanceGameProps {
@@ -16,19 +18,19 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
   const [enterAnimation, setEnterAnimation] = useState(false);
   // Add state for selectedCubeId
   const [selectedCubeId, setSelectedCubeId] = useState("pink-neon");
-  
+
   // Log the selected cube ID for debugging
   useEffect(() => {
     console.log("VoidResonanceGame - selectedCubeId:", selectedCubeId);
   }, [selectedCubeId]);
-  
+
   // Handle realm selection
   const selectRealm = (realm: string) => {
     setEnterAnimation(true);
     setTimeout(() => {
       setCurrentScreen(realm);
       setLoading(true);
-      
+
       setTimeout(() => {
         setEnterAnimation(false);
         setLoading(false);
@@ -49,7 +51,7 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
   useEffect(() => {
     setTimeout(() => setLoading(false), 1000);
   }, []);
-  
+
   // Handle cube selection from hub
   const handleCubeChange = (cubeId: string) => {
     console.log("Cube changed to:", cubeId);
@@ -58,18 +60,18 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
 
   // Get realm colors for animation
   const getRealmColors = (realmId: string) => {
-    switch(realmId) {
-      case "echo": 
+    switch (realmId) {
+      case "echo":
         return { color: "#a855f7", gradient: "from-blue-400 to-purple-600" };
-      case "nexus": 
+      case "nexus":
         return { color: "#ff00ff", gradient: "from-purple-400 to-pink-600" };
-      case "abyss": 
+      case "abyss":
         return { color: "#db2777", gradient: "from-pink-400 to-blue-600" };
-      case "pulse": 
+      case "pulse":
         return { color: "#60a5fa", gradient: "from-blue-400 to-pink-600" };
-      case "cipher": 
+      case "cipher":
         return { color: "#8b5cf6", gradient: "from-purple-400 to-blue-600" };
-      default: 
+      default:
         return { color: "#a855f7", gradient: "from-blue-400 to-purple-600" };
     }
   };
@@ -93,14 +95,74 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
                 className="w-full h-full text-purple-500"
                 style={{ animation: "rotate 2s linear infinite" }}
               >
-                <rect x="46" y="10" width="8" height="20" fill="currentColor" opacity="0.9" />
-                <rect x="46" y="70" width="8" height="20" fill="currentColor" opacity="0.3" />
-                <rect x="10" y="46" width="20" height="8" fill="currentColor" opacity="0.7" />
-                <rect x="70" y="46" width="20" height="8" fill="currentColor" opacity="0.5" />
-                <rect x="22" y="22" width="8" height="20" transform="rotate(45 26 32)" fill="currentColor" opacity="0.8" />
-                <rect x="70" y="70" width="8" height="20" transform="rotate(45 74 80)" fill="currentColor" opacity="0.4" />
-                <rect x="22" y="70" width="8" height="20" transform="rotate(-45 26 70)" fill="currentColor" opacity="0.6" />
-                <rect x="70" y="22" width="8" height="20" transform="rotate(-45 74 22)" fill="currentColor" opacity="0.2" />
+                <rect
+                  x="46"
+                  y="10"
+                  width="8"
+                  height="20"
+                  fill="currentColor"
+                  opacity="0.9"
+                />
+                <rect
+                  x="46"
+                  y="70"
+                  width="8"
+                  height="20"
+                  fill="currentColor"
+                  opacity="0.3"
+                />
+                <rect
+                  x="10"
+                  y="46"
+                  width="20"
+                  height="8"
+                  fill="currentColor"
+                  opacity="0.7"
+                />
+                <rect
+                  x="70"
+                  y="46"
+                  width="20"
+                  height="8"
+                  fill="currentColor"
+                  opacity="0.5"
+                />
+                <rect
+                  x="22"
+                  y="22"
+                  width="8"
+                  height="20"
+                  transform="rotate(45 26 32)"
+                  fill="currentColor"
+                  opacity="0.8"
+                />
+                <rect
+                  x="70"
+                  y="70"
+                  width="8"
+                  height="20"
+                  transform="rotate(45 74 80)"
+                  fill="currentColor"
+                  opacity="0.4"
+                />
+                <rect
+                  x="22"
+                  y="70"
+                  width="8"
+                  height="20"
+                  transform="rotate(-45 26 70)"
+                  fill="currentColor"
+                  opacity="0.6"
+                />
+                <rect
+                  x="70"
+                  y="22"
+                  width="8"
+                  height="20"
+                  transform="rotate(-45 74 22)"
+                  fill="currentColor"
+                  opacity="0.2"
+                />
               </svg>
             </div>
             <motion.p
@@ -117,7 +179,7 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
       {/* Entrance animation - cube flying in from corner */}
       <AnimatePresence>
         {enterAnimation && (
-          <motion.div 
+          <motion.div
             className="fixed inset-0 z-40 pointer-events-none flex items-center justify-center"
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -126,11 +188,11 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
             <motion.div
               className={`w-24 h-24 bg-gradient-to-br ${realmColors.gradient} rounded-lg shadow-lg`}
               initial={{ scale: 0.2, x: "40vw", y: "40vh", rotate: 0 }}
-              animate={{ 
-                scale: 15, 
-                x: 0, 
-                y: 0, 
-                rotate: 720 
+              animate={{
+                scale: 15,
+                x: 0,
+                y: 0,
+                rotate: 720,
               }}
               transition={{ duration: 1.5, ease: "easeInOut" }}
             />
@@ -150,46 +212,42 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
             className="min-h-screen w-full"
           >
             {currentScreen === "hub" && (
-              <VoidHub 
-                onSelectRealm={selectRealm} 
+              <VoidHub
+                onSelectRealm={selectRealm}
                 onCubeChange={handleCubeChange}
                 selectedCubeId={selectedCubeId}
               />
             )}
             {currentScreen === "echo" && (
-              <EchoRealm 
+              <EchoRealm
                 onReturn={returnToHub}
                 selectedCubeId={selectedCubeId} // Pass the selected cube ID to EchoRealm
               />
             )}
             {currentScreen === "nexus" && (
-              <NexusRealm 
+              <NexusRealm
                 onReturn={returnToHub}
                 selectedCubeId={selectedCubeId} // Pass the selected cube ID to NexusRealm
               />
             )}
             {currentScreen === "abyss" && (
-              <RealmPlaceholder 
-                realmName="Abyss Realm" 
-                realmColor="#db2777" 
-                realmGradient="from-pink-400 to-blue-600"
-                onReturn={returnToHub} 
+              <AbyssRealm
+                onReturn={returnToHub}
+                selectedCubeId={selectedCubeId} // Pass the selected cube ID to NexusRealm
               />
             )}
             {currentScreen === "pulse" && (
-              <RealmPlaceholder 
-                realmName="Pulse Realm" 
-                realmColor="#60a5fa" 
-                realmGradient="from-blue-400 to-pink-600"
-                onReturn={returnToHub} 
+              <PulseRealm
+              onReturn={returnToHub}
+              selectedCubeId={selectedCubeId} // Pass the selected cube ID to NexusRealm
               />
             )}
             {currentScreen === "cipher" && (
-              <RealmPlaceholder 
-                realmName="Cipher Realm" 
-                realmColor="#8b5cf6" 
+              <RealmPlaceholder
+                realmName="Cipher Realm"
+                realmColor="#8b5cf6"
                 realmGradient="from-purple-400 to-blue-600"
-                onReturn={returnToHub} 
+                onReturn={returnToHub}
               />
             )}
           </motion.div>
@@ -207,8 +265,12 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
       {/* Global styles */}
       <style jsx global>{`
         @keyframes rotate {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
         }
         .font-pixel {
           font-family: monospace;
