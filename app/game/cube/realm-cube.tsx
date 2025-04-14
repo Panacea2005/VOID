@@ -379,6 +379,7 @@ interface RealmCubeProps {
   size?: number; // Size in pixels
   primaryColor?: string; // Primary color override
   cubeId?: string; // Selected cube
+  isAnimated?: boolean;
   onCubeChange?: (cubeId: string) => void; // Cube change handler
   onCubeClick?: () => void; // Alternative click handler
 }
