@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import * as THREE from "three";
 import { EffectComposer, RenderPass, EffectPass, BloomEffect } from "postprocessing";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import WaveSurfer from "wavesurfer.js";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
 import AbstractShape from "@/components/abstract-shape";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { generateCubeSkin, extractColor, adjustColorBrightness, generateProceduralTexture } from "../ai/aiService";
+import { composeTrack, waitForTrack } from "../ai/aiMusicService";
 
 interface MaterialParams {
   color?: string;
@@ -55,10 +57,16 @@ export default function AIPage() {
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [cursorHover, setCursorHover] = useState(false);
   const [prompt, setPrompt] = useState("");
+  const [genre, setGenre] = useState("lo-fi");
+  const [duration, setDuration] = useState("30");
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState("cube");
   const [materialParams, setMaterialParams] = useState<MaterialParams | null>(null);
+  const [trackUrl, setTrackUrl] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const waveformRef = useRef<HTMLDivElement>(null);
+  const waveSurferRef = useRef<WaveSurfer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -79,6 +87,55 @@ export default function AIPage() {
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
+
+  // Initialize WaveSurfer
+  useEffect(() => {
+    if (waveformRef.current && !waveSurferRef.current) {
+      waveSurferRef.current = WaveSurfer.create({
+        container: waveformRef.current,
+        waveColor: "#a855f7",
+        progressColor: "#ec4899",
+        cursorColor: "#ffffff",
+        height: 100,
+        barWidth: 2,
+      });
+
+      // Sync with audio element
+      waveSurferRef.current.on("play", () => {
+        if (audioRef.current) audioRef.current.play();
+      });
+      waveSurferRef.current.on("pause", () => {
+        if (audioRef.current) audioRef.current.pause();
+      });
+      waveSurferRef.current.on("finish", () => {
+        if (audioRef.current) audioRef.current.pause();
+      });
+
+      // Sync audio events with waveform
+      if (audioRef.current) {
+        audioRef.current.addEventListener("play", () => {
+          if (waveSurferRef.current) waveSurferRef.current.play();
+        });
+        audioRef.current.addEventListener("pause", () => {
+          if (waveSurferRef.current) waveSurferRef.current.pause();
+        });
+      }
+    }
+
+    return () => {
+      if (waveSurferRef.current) {
+        waveSurferRef.current.destroy();
+        waveSurferRef.current = null;
+      }
+    };
+  }, []);
+
+  // Load audio into WaveSurfer when trackUrl changes
+  useEffect(() => {
+    if (trackUrl && waveSurferRef.current) {
+      waveSurferRef.current.load(trackUrl);
+    }
+  }, [trackUrl]);
 
   const hologramShader = {
     vertexShader: `
@@ -516,9 +573,20 @@ export default function AIPage() {
     setIsGenerating(true);
 
     try {
-      const response = await generateCubeSkin({ prompt });
-      setMaterialParams(response.materialParams);
-      await generateVariants();
+      if (activeTab === "cube") {
+        const response = await generateCubeSkin({ prompt });
+        setMaterialParams(response.materialParams);
+        await generateVariants();
+      } else {
+        // Construct a detailed prompt for Beatoven.ai
+        const fullPrompt = `${duration} seconds ${genre} track with ${prompt}`;
+        const response = await composeTrack(fullPrompt, "mp3", false);
+        const trackUrl = await waitForTrack(response.task_id);
+        setTrackUrl(trackUrl);
+        if (audioRef.current) {
+          audioRef.current.src = trackUrl;
+        }
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -527,7 +595,22 @@ export default function AIPage() {
   };
 
   const handleMint = () => {
-    console.log("Minting creation with material params:", materialParams);
+    if (activeTab === "cube") {
+      console.log("Minting creation with material params:", materialParams);
+    } else {
+      console.log("Minting AI music creation...");
+    }
+  };
+
+  const handleDownload = () => {
+    if (trackUrl) {
+      const link = document.createElement("a");
+      link.href = trackUrl;
+      link.download = `generated-track-${genre}-${duration}s.mp3`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
@@ -583,7 +666,7 @@ export default function AIPage() {
               transition={{ duration: 1, delay: 0.6 }}
               className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto mb-10 font-light"
             >
-              Create and mint custom 3D cubes with realistic textures and animations
+              Create and mint custom 3D cubes or AI-generated music tracks
             </motion.p>
 
             <motion.div
@@ -620,13 +703,21 @@ export default function AIPage() {
                   >
                     3D CUBE GENERATOR
                   </TabsTrigger>
+                  <TabsTrigger
+                    value="music"
+                    className="data-[state=active]:bg-purple-900/30 data-[state=active]:text-purple-400 rounded-none px-8 py-3 font-pixel"
+                    onMouseEnter={() => setCursorHover(true)}
+                    onMouseLeave={() => setCursorHover(false)}
+                  >
+                    MUSIC GENERATOR
+                  </TabsTrigger>
                 </TabsList>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                 <div className="bg-black border border-purple-900/50 p-8">
                   <PixelHeading
-                    text="DESIGN YOUR CUBE"
+                    text={activeTab === "cube" ? "DESIGN YOUR CUBE" : "COMPOSE YOUR SOUND"}
                     className="text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
                   />
 
@@ -635,143 +726,266 @@ export default function AIPage() {
                     <Input
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
-                      placeholder="A glossy cube with a blue-to-purple gradient and pulsing glow..."
+                      placeholder={
+                        activeTab === "cube"
+                          ? "A glossy cube with a blue-to-purple gradient and pulsing glow..."
+                          : "Peaceful chill hop with soft piano and smooth beats..."
+                      }
                       className="bg-black border-2 border-purple-900 focus:border-purple-500 rounded-none p-4 text-white font-pixel w-full"
                       onMouseEnter={() => setCursorHover(true)}
                       onMouseLeave={() => setCursorHover(false)}
                     />
                   </div>
 
-                  <div className="flex space-x-4">
-                    <Button
-                      onClick={handleGenerate}
-                      disabled={isGenerating || !prompt.trim()}
-                      className="bg-transparent border-2 border-purple-500 hover:bg-purple-950/30 text-white rounded-none px-6 py-3 font-pixel tracking-wide flex-1"
-                      onMouseEnter={() => setCursorHover(true)}
-                      onMouseLeave={() => setCursorHover(false)}
-                    >
-                      {isGenerating ? (
-                        <>
-                          <svg
-                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                          GENERATING...
-                        </>
-                      ) : (
-                        "GENERATE VARIANTS"
-                      )}
-                    </Button>
+                  {activeTab === "cube" && (
+                    <>
+                      <div className="flex space-x-4">
+                        <Button
+                          onClick={handleGenerate}
+                          disabled={isGenerating || !prompt.trim()}
+                          className="bg-transparent border-2 border-purple-500 hover:bg-purple-950/30 text-white rounded-none px-6 py-3 font-pixel tracking-wide flex-1"
+                          onMouseEnter={() => setCursorHover(true)}
+                          onMouseLeave={() => setCursorHover(false)}
+                        >
+                          {isGenerating ? (
+                            <>
+                              <svg
+                                className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                ></circle>
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                ></path>
+                              </svg>
+                              GENERATING...
+                            </>
+                          ) : (
+                            "GENERATE VARIANTS"
+                          )}
+                        </Button>
 
-                    <Button
-                      onClick={handleMint}
-                      disabled={isGenerating || !materialParams}
-                      className="bg-transparent border-2 border-pink-500 hover:bg-pink-950/30 text-white rounded-none px-6 py-3 font-pixel tracking-wide"
-                      onMouseEnter={() => setCursorHover(true)}
-                      onMouseLeave={() => setCursorHover(false)}
-                    >
-                      MINT
-                    </Button>
-                  </div>
-
-                  {materialParams && (
-                    <div className="mt-6">
-                      <PixelHeading
-                        text="MATERIAL PROPERTIES"
-                        className="text-xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
-                      />
-                      <div className="text-gray-400 font-pixel">
-                        <p>
-                          Color: {materialParams.gradientColors ? `${materialParams.gradientColors[0]} to ${materialParams.gradientColors[1]}` : materialParams.color}
-                        </p>
-                        <p>Metalness: {materialParams.metalness?.toFixed(2)}</p>
-                        <p>Roughness: {materialParams.roughness?.toFixed(2)}</p>
-                        <p>Animation: {materialParams.animationType || "None"}</p>
-                        <p>Border: {materialParams.showBorder ? `${materialParams.borderWidth}px ${materialParams.borderColor}` : "None"}</p>
-                        <p>Texture: {materialParams.texturePattern || (materialParams.proceduralTexture ? "Procedural" : "None")}</p>
+                        <Button
+                          onClick={handleMint}
+                          disabled={isGenerating || !materialParams}
+                          className="bg-transparent border-2 border-pink-500 hover:bg-pink-950/30 text-white rounded-none px-6 py-3 font-pixel tracking-wide"
+                          onMouseEnter={() => setCursorHover(true)}
+                          onMouseLeave={() => setCursorHover(false)}
+                        >
+                          MINT
+                        </Button>
                       </div>
-                    </div>
+
+                      {materialParams && (
+                        <div className="mt-6">
+                          <PixelHeading
+                            text="MATERIAL PROPERTIES"
+                            className="text-xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
+                          />
+                          <div className="text-gray-400 font-pixel">
+                            <p>
+                              Color: {materialParams.gradientColors ? `${materialParams.gradientColors[0]} to ${materialParams.gradientColors[1]}` : materialParams.color}
+                            </p>
+                            <p>Metalness: {materialParams.metalness?.toFixed(2)}</p>
+                            <p>Roughness: {materialParams.roughness?.toFixed(2)}</p>
+                            <p>Animation: {materialParams.animationType || "None"}</p>
+                            <p>Border: {materialParams.showBorder ? `${materialParams.borderWidth}px ${materialParams.borderColor}` : "None"}</p>
+                            <p>Texture: {materialParams.texturePattern || (materialParams.proceduralTexture ? "Procedural" : "None")}</p>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {activeTab === "music" && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                          <label className="block text-gray-300 mb-2 font-pixel">GENRE</label>
+                          <select
+                            value={genre}
+                            onChange={(e) => setGenre(e.target.value)}
+                            className="bg-black border-2 border-purple-900 focus:border-purple-500 rounded-none p-2 text-white font-pixel w-full"
+                            onMouseEnter={() => setCursorHover(true)}
+                            onMouseLeave={() => setCursorHover(false)}
+                          >
+                            <option value="lo-fi">LO-FI</option>
+                            <option value="ambient">AMBIENT</option>
+                            <option value="synthwave">SYNTHWAVE</option>
+                            <option value="cyberpunk">CYBERPUNK</option>
+                            <option value="classical">CLASSICAL</option>
+                            <option value="pop">POP</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-gray-300 mb-2 font-pixel">DURATION</label>
+                          <select
+                            value={duration}
+                            onChange={(e) => setDuration(e.target.value)}
+                            className="bg-black border-2 border-purple-900 focus:border-purple-500 rounded-none p-2 text-white font-pixel w-full"
+                            onMouseEnter={() => setCursorHover(true)}
+                            onMouseLeave={() => setCursorHover(false)}
+                          >
+                            <option value="30">30 SECONDS</option>
+                            <option value="60">1 MINUTE</option>
+                            <option value="120">2 MINUTES</option>
+                            <option value="180">3 MINUTES</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex space-x-4">
+                        <Button
+                          onClick={handleGenerate}
+                          disabled={isGenerating || !prompt.trim()}
+                          className="bg-transparent border-2 border-purple-500 hover:bg-purple-950/30 text-white rounded-none px-6 py-3 font-pixel tracking-wide flex-1"
+                          onMouseEnter={() => setCursorHover(true)}
+                          onMouseLeave={() => setCursorHover(false)}
+                        >
+                          {isGenerating ? (
+                            <>
+                              <svg
+                                className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                ></circle>
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                ></path>
+                              </svg>
+                              GENERATING...
+                            </>
+                          ) : (
+                            "GENERATE"
+                          )}
+                        </Button>
+
+                        <Button
+                          onClick={handleMint}
+                          disabled={isGenerating || !trackUrl}
+                          className="bg-transparent border-2 border-pink-500 hover:bg-pink-950/30 text-white rounded-none px-6 py-3 font-pixel tracking-wide"
+                          onMouseEnter={() => setCursorHover(true)}
+                          onMouseLeave={() => setCursorHover(false)}
+                        >
+                          MINT
+                        </Button>
+                      </div>
+                    </>
                   )}
                 </div>
 
                 <div className="bg-black border border-purple-900/50 p-8">
                   <PixelHeading
-                    text="3D PREVIEW"
+                    text={activeTab === "cube" ? "3D PREVIEW" : "AUDIO PREVIEW"}
                     className="text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
                   />
 
-                  <div className="w-full aspect-square bg-black/50 flex items-center justify-center">
-                    <canvas ref={canvasRef} className="w-full h-full" />
-                    {!materialParams && !isGenerating && (
-                      <div className="absolute text-center">
-                        <p className="text-gray-400 font-pixel">ENTER A PROMPT AND CLICK GENERATE</p>
-                      </div>
-                    )}
-                    {isGenerating && <AbstractShape className="w-32 h-32 text-purple-500 absolute" type="loading" animate />}
-                  </div>
-
-                  {activeTab === "cube" && variantPreviews.length > 0 && (
-                    <div className="mt-6">
-                      <PixelHeading
-                        text="VARIATIONS"
-                        className="text-xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
-                      />
-                      <div className="grid grid-cols-5 gap-4">
-                        {variantPreviews.map((variant, index) => (
-                          <div
-                            key={index}
-                            className={`border-2 cursor-pointer transition-all ${
-                              materialParams === variant ? "border-purple-500 scale-105" : "border-purple-900/30"
-                            }`}
-                            onClick={() => setMaterialParams(variant)}
-                          >
-                            <div className="p-1 aspect-square w-full relative">
-                              {variant.map || variant.proceduralTexture ? (
-                                <img
-                                  src={variant.map || variant.proceduralTexture}
-                                  alt="Texture Preview"
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div
-                                  className="absolute inset-0 bg-gradient-to-br"
-                                  style={{
-                                    background: variant.gradientColors
-                                      ? `linear-gradient(to bottom right, ${variant.gradientColors[0]}, ${variant.gradientColors[1]})`
-                                      : variant.color || "#666666",
-                                  }}
-                                />
-                              )}
-                              {variant.showBorder && (
-                                <div
-                                  className="absolute inset-0 border"
-                                  style={{
-                                    borderColor: variant.borderColor || "#ffffff",
-                                    borderWidth: `${variant.borderWidth || 2}px`,
-                                  }}
-                                />
-                              )}
-                              <span className="absolute bottom-1 right-1 text-xs font-pixel text-white">#{index + 1}</span>
-                            </div>
+                  {activeTab === "cube" ? (
+                    <>
+                      <div className="w-full aspect-square bg-black/50 flex items-center justify-center">
+                        <canvas ref={canvasRef} className="w-full h-full" />
+                        {!materialParams && !isGenerating && (
+                          <div className="absolute text-center">
+                            <p className="text-gray-400 font-pixel">ENTER A PROMPT AND CLICK GENERATE</p>
                           </div>
-                        ))}
+                        )}
+                        {isGenerating && <AbstractShape className="w-32 h-32 text-purple-500 absolute" type="loading" animate />}
                       </div>
+
+                      {variantPreviews.length > 0 && (
+                        <div className="mt-6">
+                          <PixelHeading
+                            text="VARIATIONS"
+                            className="text-xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
+                          />
+                          <div className="grid grid-cols-5 gap-4">
+                            {variantPreviews.map((variant, index) => (
+                              <div
+                                key={index}
+                                className={`border-2 cursor-pointer transition-all ${
+                                  materialParams === variant ? "border-purple-500 scale-105" : "border-purple-900/30"
+                                }`}
+                                onClick={() => setMaterialParams(variant)}
+                              >
+                                <div className="p-1 aspect-square w-full relative">
+                                  {variant.map || variant.proceduralTexture ? (
+                                    <img
+                                      src={variant.map || variant.proceduralTexture}
+                                      alt="Texture Preview"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div
+                                      className="absolute inset-0 bg-gradient-to-br"
+                                      style={{
+                                        background: variant.gradientColors
+                                          ? `linear-gradient(to bottom right, ${variant.gradientColors[0]}, ${variant.gradientColors[1]})`
+                                          : variant.color || "#666666",
+                                      }}
+                                    />
+                                  )}
+                                  {variant.showBorder && (
+                                    <div
+                                      className="absolute inset-0 border"
+                                      style={{
+                                        borderColor: variant.borderColor || "#ffffff",
+                                        borderWidth: `${variant.borderWidth || 2}px`,
+                                      }}
+                                    />
+                                  )}
+                                  <span className="absolute bottom-1 right-1 text-xs font-pixel text-white">#{index + 1}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="w-full aspect-square bg-black/50 border-2 border-purple-900/50 flex flex-col items-center justify-center">
+                      {isGenerating ? (
+                        <AbstractShape className="w-32 h-32 text-purple-500" type="loading" animate />
+                      ) : trackUrl ? (
+                        <div className="text-center w-full">
+                          <div ref={waveformRef} className="mb-4"></div>
+                          <audio ref={audioRef} controls className="w-full mb-4" />
+                          <Button
+                            onClick={handleDownload}
+                            className="bg-transparent border border-blue-500 hover:bg-blue-950/30 text-blue-400 rounded-none px-4 py-2 text-sm font-pixel tracking-wide"
+                            onMouseEnter={() => setCursorHover(true)}
+                            onMouseLeave={() => setCursorHover(false)}
+                          >
+                            DOWNLOAD AUDIO
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <AbstractShape className="w-40 h-40 mx-auto text-purple-500/50" type="wave" animate />
+                          <p className="text-gray-400 mt-4 font-pixel">ENTER A PROMPT AND CLICK GENERATE</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
