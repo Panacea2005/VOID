@@ -88,6 +88,22 @@ const realms = [
     gameplayElements: ["Code breaking", "Pattern recognition", "Symbol translation"],
     iconType: "glyph",
   },
+  {
+    id: "vortex",
+    name: "???",
+    theme: "Unknown Dimensions",
+    description: "A mysterious realm at the edge of perception. Strange geometries and fractal patterns suggest access to dimensions beyond conventional understanding.",
+    color: "from-emerald-400 to-cyan-600",
+    brightColor: "from-emerald-300 to-cyan-400",
+    darkColor: "from-emerald-950 to-cyan-950",
+    shapeType: "complex" as "complex",
+    particleCount: 160,
+    particleType: "fractal",
+    ambientSound: "vortex-ambient.mp3",
+    modelType: "fractal-vortex",
+    gameplayElements: ["Dimensional shifting", "Reality manipulation", "Perception challenges"],
+    iconType: "vortex",
+  },
 ];
 
 // Particle background that changes based on selected realm
@@ -229,6 +245,44 @@ const RealmIcon = ({ realm, isSelected }: { realm: (typeof realms)[0]; isSelecte
         >
           ⎔
         </motion.div>
+      </div>
+    )
+  }
+  
+  if (realm.iconType === "vortex") {
+    return (
+      <div className="relative w-6 h-6 flex items-center justify-center">
+        <motion.div 
+          className={`absolute inset-0 opacity-80 rounded-full bg-gradient-to-r ${realm.color}`}
+          animate={{ 
+            rotate: isSelected ? [0, 360] : 0,
+          }}
+          transition={{ 
+            duration: 8, 
+            repeat: isSelected ? Infinity : 0,
+            ease: "linear"
+          }}
+        >
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-xs text-white font-bold">?</div>
+          </div>
+        </motion.div>
+        
+        {isSelected && (
+          <motion.div
+            className="absolute inset-0 rounded-full border border-white/30"
+            animate={{
+              scale: [1, 0.6, 1],
+              opacity: [0.6, 1, 0.6],
+              rotate: [0, 180, 360]
+            }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+        )}
       </div>
     )
   }
@@ -613,6 +667,255 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: (typeof realms)[0]; mous
         </div>
       </motion.div>
     )
+  }
+  
+  if (realm.modelType === "fractal-vortex") {
+    return (
+      <motion.div
+        className="w-full h-full relative flex items-center justify-center"
+        style={{ rotateX: springRotateX, rotateY: springRotateY, perspective: 1500 }}
+      >
+        <div className="transform-style-preserve-3d relative w-full h-full flex items-center justify-center">
+          {/* Vortex realm - Black hole with orbiting mirror fragments */}
+          
+          {/* Black hole center - Centered in container */}
+          <motion.div
+            className="absolute w-40 h-40 rounded-full"
+            style={{
+              background: "radial-gradient(circle, rgba(0, 0, 0, 0.8) 30%, rgba(8, 8, 24, 0.9) 70%, rgba(20, 20, 35, 0.7) 85%, transparent 100%)",
+              boxShadow: "0 0 60px 10px rgba(56, 189, 248, 0.15)",
+              zIndex: 5,
+            }}
+            animate={{
+              scale: [1, 1.03, 0.98, 1.02, 1],
+            }}
+            transition={{
+              duration: 8,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+          
+          {/* Accretion disk glow effect - Centered */}
+          <motion.div
+            className="absolute w-64 h-16 rounded-full opacity-60"
+            style={{
+              background: "linear-gradient(90deg, rgba(14, 165, 233, 0.2), rgba(167, 139, 250, 0.4), rgba(236, 72, 153, 0.3), rgba(14, 165, 233, 0.2))",
+              transform: "rotateX(75deg)",
+              boxShadow: "0 0 20px rgba(139, 92, 246, 0.4)",
+              zIndex: 3,
+            }}
+            animate={{
+              rotateZ: [0, 360],
+            }}
+            transition={{
+              duration: 40,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+          />
+          
+          {/* Mirror fragments orbiting the black hole - Centered */}
+          <motion.div
+            className="absolute w-full h-full flex items-center justify-center"
+            style={{
+              transformStyle: "preserve-3d",
+            }}
+            animate={{
+              rotateZ: [0, 360],
+            }}
+            transition={{
+              duration: 80,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+          >
+            {/* Inner orbit mirror fragments */}
+            {Array.from({ length: 8 }).map((_, i) => {
+              // Calculate position in circular orbit
+              const angle = (i / 8) * Math.PI * 2;
+              const radius = 80 + Math.sin(i * 0.5) * 10;
+              const x = Math.cos(angle) * radius;
+              const y = Math.sin(angle) * radius;
+              const zOffset = Math.cos(i * 2.1) * 30;
+              
+              // Fragment size and rotation
+              const width = 15 + Math.random() * 20;
+              const height = 15 + Math.random() * 20;
+              const rotateX = Math.random() * 360;
+              const rotateY = Math.random() * 360;
+              const rotateZ = Math.random() * 360;
+              
+              return (
+                <motion.div
+                  key={`inner-fragment-${i}`}
+                  className="absolute"
+                  style={{
+                    width: `${width}px`,
+                    height: `${height}px`,
+                    left: `calc(50% + ${x}px)`,
+                    top: `calc(50% + ${y}px)`,
+                    transform: `translateZ(${zOffset}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg)`,
+                    transformStyle: "preserve-3d",
+                    zIndex: 4,
+                  }}
+                  animate={{
+                    rotateX: [rotateX, rotateX + 180, rotateX + 360],
+                    rotateY: [rotateY, rotateY + 180, rotateY + 360],
+                  }}
+                  transition={{
+                    duration: 15 + i,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                >
+                  {/* Mirror fragment with reflection effect */}
+                  <div
+                    className="w-full h-full backdrop-blur-sm"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1))",
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                      boxShadow: "0 0 10px rgba(139, 92, 246, 0.2)",
+                      clipPath: `polygon(
+                        ${Math.random() * 20}% ${Math.random() * 20}%, 
+                        ${80 + Math.random() * 20}% ${Math.random() * 20}%, 
+                        ${80 + Math.random() * 20}% ${80 + Math.random() * 20}%, 
+                        ${Math.random() * 20}% ${80 + Math.random() * 20}%
+                      )`,
+                    }}
+                  />
+                </motion.div>
+              );
+            })}
+            
+            {/* Outer orbit mirror fragments */}
+            {Array.from({ length: 12 }).map((_, i) => {
+              // Calculate position in circular orbit
+              const angle = (i / 12) * Math.PI * 2;
+              const radius = 150 + Math.sin(i * 0.8) * 20;
+              const x = Math.cos(angle) * radius;
+              const y = Math.sin(angle) * radius;
+              const zOffset = Math.cos(i * 1.5) * 50;
+              
+              // Fragment size and rotation
+              const width = 20 + Math.random() * 25;
+              const height = 20 + Math.random() * 25;
+              const rotateX = Math.random() * 360;
+              const rotateY = Math.random() * 360;
+              const rotateZ = Math.random() * 360;
+              
+              return (
+                <motion.div
+                  key={`outer-fragment-${i}`}
+                  className="absolute"
+                  style={{
+                    width: `${width}px`,
+                    height: `${height}px`,
+                    left: `calc(50% + ${x}px)`,
+                    top: `calc(50% + ${y}px)`,
+                    transform: `translateZ(${zOffset}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg)`,
+                    transformStyle: "preserve-3d",
+                    zIndex: 2,
+                  }}
+                  animate={{
+                    rotateX: [rotateX, rotateX + 180, rotateX + 360],
+                    rotateY: [rotateY, rotateY + 180, rotateY + 360],
+                  }}
+                  transition={{
+                    duration: 25 + i,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                >
+                  {/* Mirror fragment with reflection effect */}
+                  <div
+                    className="w-full h-full backdrop-blur-sm"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.05))",
+                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      boxShadow: "0 0 10px rgba(139, 92, 246, 0.15)",
+                      clipPath: `polygon(
+                        ${Math.random() * 30}% ${Math.random() * 30}%, 
+                        ${70 + Math.random() * 30}% ${Math.random() * 30}%, 
+                        ${70 + Math.random() * 30}% ${70 + Math.random() * 30}%, 
+                        ${Math.random() * 30}% ${70 + Math.random() * 30}%
+                      )`,
+                    }}
+                  />
+                </motion.div>
+              );
+            })}
+          </motion.div>
+          
+          {/* Gravitational lensing light effects - Centered */}
+          {Array.from({ length: 15 }).map((_, i) => {
+            const size = 1 + Math.random() * 3;
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 30 + Math.random() * 50;
+            const x = Math.cos(angle) * distance;
+            const y = Math.sin(angle) * distance;
+            
+            return (
+              <motion.div
+                key={`lensing-light-${i}`}
+                className="absolute rounded-full bg-white"
+                style={{
+                  width: `${size}px`,
+                  height: `${size}px`,
+                  left: `calc(50% + ${x}px)`,
+                  top: `calc(50% + ${y}px)`,
+                  boxShadow: `0 0 ${size * 2}px ${size / 2}px rgba(255, 255, 255, 0.8)`,
+                  zIndex: 6,
+                }}
+                animate={{
+                  opacity: [0, 0.8, 0],
+                  scale: [0, 1, 0],
+                }}
+                transition={{
+                  duration: 2 + Math.random() * 3,
+                  repeat: Infinity,
+                  delay: Math.random() * 5,
+                  ease: "easeInOut",
+                }}
+              />
+            );
+          })}
+          
+          {/* Distant stars in space */}
+          {Array.from({ length: 30 }).map((_, i) => (
+            <motion.div
+              key={`distant-star-${i}`}
+              className="absolute rounded-full bg-white"
+              style={{
+                width: `${Math.random() + 0.5}px`,
+                height: `${Math.random() + 0.5}px`,
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                boxShadow: "0 0 2px rgba(255, 255, 255, 0.6)",
+                zIndex: 0,
+              }}
+              animate={{
+                opacity: [0.3, 0.7, 0.3],
+              }}
+              transition={{
+                duration: 2 + Math.random() * 3,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+          ))}
+          
+          {/* Subtle background glow */}
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{
+              background: "radial-gradient(circle at center, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.8) 70%, rgba(15, 23, 42, 1) 100%)",
+              zIndex: 0,
+            }}
+          />
+        </div>
+      </motion.div>
+    );
   }
   
   // Default case - should never reach here since all realms have a model type

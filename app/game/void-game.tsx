@@ -4,8 +4,9 @@ import VoidHub from "./hub/void-hub";
 import EchoRealm from "./realms/echo/echo-realm";
 import NexusRealm from "./realms/nexus/nexus-realm";
 import AbyssRealm from "./realms/abyss/abyss-realm";
-import RealmPlaceholder from "./realms/cipher/realm-placeholder";
 import PulseRealm from "./realms/pulse/pulse-realm";
+import CipherRealm from "./realms/cipher/cipher-realm";
+import RealmPlaceholder from "./realms/vortex/realm-placeholder";
 
 // Main Game Component
 interface VoidResonanceGameProps {
@@ -13,7 +14,7 @@ interface VoidResonanceGameProps {
 }
 
 const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
-  const [currentScreen, setCurrentScreen] = useState("hub"); // "hub", "echo", "abyss", "pulse", "cipher", "nexus"
+  const [currentScreen, setCurrentScreen] = useState("hub"); // "hub", "echo", "abyss", "pulse", "cipher", "nexus", "vortex"
   const [loading, setLoading] = useState(true);
   const [enterAnimation, setEnterAnimation] = useState(false);
   // Add state for selectedCubeId
@@ -71,6 +72,8 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
         return { color: "#60a5fa", gradient: "from-blue-400 to-pink-600" };
       case "cipher":
         return { color: "#8b5cf6", gradient: "from-purple-400 to-blue-600" };
+      case "vortex":
+        return { color: "#10b981", gradient: "from-emerald-400 to-cyan-600" };
       default:
         return { color: "#a855f7", gradient: "from-blue-400 to-purple-600" };
     }
@@ -238,15 +241,21 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
             )}
             {currentScreen === "pulse" && (
               <PulseRealm
-              onReturn={returnToHub}
-              selectedCubeId={selectedCubeId} // Pass the selected cube ID to NexusRealm
+                onReturn={returnToHub}
+                selectedCubeId={selectedCubeId} // Pass the selected cube ID to NexusRealm
               />
             )}
             {currentScreen === "cipher" && (
+              <CipherRealm
+                onReturn={returnToHub}
+                selectedCubeId={selectedCubeId} // Pass the selected cube ID to NexusRealm
+              />
+            )}
+            {currentScreen === "vortex" && (
               <RealmPlaceholder
-                realmName="Cipher Realm"
-                realmColor="#8b5cf6"
-                realmGradient="from-purple-400 to-blue-600"
+                realmName="Vortex Realm"
+                realmColor="#10b981"
+                realmGradient="from-emerald-400 to-cyan-600"
                 onReturn={returnToHub}
               />
             )}
