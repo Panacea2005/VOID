@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import LoadingScreen from '@/components/loading-screen'
 
 export const metadata: Metadata = {
   title: 'VOID',
@@ -17,7 +18,9 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.png" />
       </head>
-      <body>{children}</body>
+      <body>
+        <LoadingScreen>{children}</LoadingScreen>
+      </body>
     </html>
   )
 }

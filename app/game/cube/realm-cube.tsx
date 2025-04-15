@@ -382,6 +382,10 @@ interface RealmCubeProps {
   isAnimated?: boolean;
   onCubeChange?: (cubeId: string) => void; // Cube change handler
   onCubeClick?: () => void; // Alternative click handler
+  interactable?: boolean;
+  onCubeInteractionStart?: () => void;
+  onCubeInteractionEnd?: () => void;
+  colors?: string[];
 }
 
 const RealmCube: React.FC<RealmCubeProps> = ({
