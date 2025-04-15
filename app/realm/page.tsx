@@ -124,13 +124,24 @@ interface Realm {
 }
 
 const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mouseY: any }) => {
+  // FIXED: Use React's useEffect to safely access window
+  const [dimensions, setDimensions] = useState({ width: 1000, height: 800 });
+  
+  useEffect(() => {
+    // Only access window when component is mounted in the browser
+    setDimensions({
+      width: window.innerWidth,
+      height: window.innerHeight
+    });
+  }, []);
+  
   // Set up rotation based on mouse position
-  const rotateX = useTransform(mouseY, [0, window.innerHeight], [15, -15])
-  const rotateY = useTransform(mouseX, [0, window.innerWidth], [-15, 15])
+  const rotateX = useTransform(mouseY, [0, dimensions.height], [15, -15]);
+  const rotateY = useTransform(mouseX, [0, dimensions.width], [-15, 15]);
 
   // Add spring physics for smoother motion
-  const springRotateX = useSpring(rotateX, { stiffness: 100, damping: 30 })
-  const springRotateY = useSpring(rotateY, { stiffness: 100, damping: 30 })
+  const springRotateX = useSpring(rotateX, { stiffness: 100, damping: 30 });
+  const springRotateY = useSpring(rotateY, { stiffness: 100, damping: 30 });
 
   if (realm.modelType === "mirror-fragments") {
     return (
@@ -515,6 +526,18 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
 
 // Particle background that changes based on selected realm
 const ParticleBackground = ({ realm }: { realm: Realm }) => {
+  // FIXED: Use state to store dimensions
+  const [dimensions, setDimensions] = useState({ width: 1000, height: 800 });
+  
+  // FIXED: Use effect to safely access window
+  useEffect(() => {
+    // Only run in browser
+    setDimensions({
+      width: window.innerWidth,
+      height: window.innerHeight
+    });
+  }, []);
+  
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {Array.from({ length: realm.particleCount }).map((_, i) => (
@@ -523,12 +546,12 @@ const ParticleBackground = ({ realm }: { realm: Realm }) => {
           className={`absolute rounded-full bg-gradient-to-r ${realm.brightColor}`}
           animate={{
             x: [
-              Math.random() * window.innerWidth,
-              Math.random() * window.innerWidth
+              Math.random() * dimensions.width,
+              Math.random() * dimensions.width
             ],
             y: [
-              Math.random() * window.innerHeight,
-              Math.random() * window.innerHeight
+              Math.random() * dimensions.height,
+              Math.random() * dimensions.height
             ],
             scale: [
               Math.random() * 0.5 + 0.5,
@@ -673,6 +696,9 @@ export default function RealmPage() {
   
   // Handle mouse movement for 3D effect
   useEffect(() => {
+    // FIXED: Only run in browser
+    if (typeof window === 'undefined') return;
+    
     const handleMouseMove = (e: { clientX: number; clientY: number }) => {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect()
