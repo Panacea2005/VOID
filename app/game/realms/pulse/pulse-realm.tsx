@@ -110,8 +110,11 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
   const [isTrackLoading, setIsTrackLoading] = useState(false);
   const [showPerfectEffect, setShowPerfectEffect] = useState(false);
   const [hitEffectColor, setHitEffectColor] = useState("#4ade80"); // Green for perfect
-  // New state for highlighting outer hit ring
   const [isOuterRingActive, setIsOuterRingActive] = useState(false);
+  const [volume, setVolume] = useState(70);
+  const [showVolume, setShowVolume] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [cubeEnergy, setCubeEnergy] = useState(0);
   
   // Refs
   const animationFrameRef = useRef<number | null>(null);
@@ -126,6 +129,7 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
   const activeBeatIndexRef = useRef<number>(0);
   const lastBeatTimeRef = useRef<number>(0);
   const waveSpeedMultiplierRef = useRef<number>(1.0);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   
   // Constants
   const CUBE_SIZE = 100; // Increased cube size for better visibility
@@ -154,6 +158,24 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
   };
   
   const cubeColor = getCubeColor();
+  const cubeGlow = selectedCube.glow || "rgba(236, 72, 153, 0.6)";
+  const cubeSecondaryColor = selectedCube.colors[1] || "#8B5CF6";
+
+  // Handle mouse movement for effects
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      
+      setMousePosition({ x, y });
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
   
   // Format time for display (mm:ss)
   const formatTime = (milliseconds: number) => {
@@ -178,6 +200,7 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
     // Reset combo
     setCombo(0);
     comboMultiplierRef.current = 1;
+    setCubeEnergy(Math.max(0, cubeEnergy - 10)); // Decrease cube energy
     
     // Increment miss count
     setMissCount(prev => prev + 1);
@@ -233,6 +256,9 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
       return Math.round(((hitCount + 1) / total) * 100);
     });
     
+    // Increase cube energy
+    setCubeEnergy(Math.min(100, cubeEnergy + 5));
+    
     // Visual feedback - good hit
     setIsCubeGlowing(true);
     setShowPerfectEffect(true);
@@ -282,6 +308,9 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
       const total = hitCount + missCount + 1;
       return Math.round(((hitCount + 1) / total) * 100);
     });
+    
+    // Increase cube energy
+    setCubeEnergy(Math.min(100, cubeEnergy + 10));
     
     // Enhanced visual feedback for perfect hit
     setIsCubeGlowing(true);
@@ -537,6 +566,7 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
     setHitCount(0);
     setMissCount(0);
     setGameTime(0);
+    setCubeEnergy(30); // Start with some energy
     lastTimestampRef.current = 0;
     gameStartTimeRef.current = 0;
     comboMultiplierRef.current = 1;
@@ -702,19 +732,34 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
     setPulseWaves([]);
   };
 
+  // Adjust volume
+  const adjustVolume = (newVolume: number) => {
+    // Clamp value between 0 and 100
+    const clampedVolume = Math.max(0, Math.min(100, newVolume));
+    setVolume(clampedVolume);
+    
+    // Apply to audio if it exists
+    if (audioRef.current) {
+      audioRef.current.volume = clampedVolume / 100;
+    }
+  };
+
   // Start game
   const startGame = (track: Track) => {
     setIsTrackLoading(true);
     
     // Preload audio
     const audio = new Audio(track.mp3Path);
-    audio.volume = 0.7;
+    audio.volume = volume / 100;
     
     // When audio is ready
     audio.oncanplaythrough = () => {
       audioRef.current = audio;
       setSelectedTrack(track);
       setIsTrackLoading(false);
+      
+      // Reset game state for new game
+      resetGameState();
       
       // Show tutorial first for easier difficulty or start directly
       if (track.difficulty === Difficulty.Easy) {
@@ -742,12 +787,9 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
       // Create audio element if it doesn't exist
       if (!audioRef.current) {
         const audio = new Audio(selectedTrack.mp3Path);
-        audio.volume = 0.7;
+        audio.volume = volume / 100;
         audioRef.current = audio;
       }
-      
-      // Reset game state for new game
-      resetGameState();
       
       // Start game loop
       startGameLoop();
@@ -794,6 +836,7 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
       
       // Handle spacebar press for hitting waves
       if (e.code === "Space") {
+        e.preventDefault(); // Prevent page scroll
         handlePulseHit();
       }
       
@@ -954,7 +997,7 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
           }}
         />
         
-        {/* Text indicators around the ring */}
+        {/* Text indicators around the ring - only when active */}
         {isOuterRingActive && (
           <div className="absolute z-10 pointer-events-none">
             <div 
@@ -963,39 +1006,6 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
                 top: '50%', 
                 left: '50%',
                 transform: 'translate(-50%, -140px)',
-                textShadow: '0 0 5px rgba(74, 222, 128, 0.8)'
-              }}
-            >
-              CLICK NOW!
-            </div>
-            <div 
-              className="absolute text-center font-bold text-green-400 text-sm bg-black/30 px-2 py-1 rounded"
-              style={{
-                top: '50%', 
-                left: '50%',
-                transform: 'translate(-50%, 130px)',
-                textShadow: '0 0 5px rgba(74, 222, 128, 0.8)'
-              }}
-            >
-              CLICK NOW!
-            </div>
-            <div 
-              className="absolute text-center font-bold text-green-400 text-sm bg-black/30 px-2 py-1 rounded"
-              style={{
-                top: '50%', 
-                left: '50%',
-                transform: 'translate(-140px, 0) rotate(-90deg)',
-                textShadow: '0 0 5px rgba(74, 222, 128, 0.8)'
-              }}
-            >
-              CLICK NOW!
-            </div>
-            <div 
-              className="absolute text-center font-bold text-green-400 text-sm bg-black/30 px-2 py-1 rounded"
-              style={{
-                top: '50%', 
-                left: '50%',
-                transform: 'translate(140px, 0) rotate(90deg)',
                 textShadow: '0 0 5px rgba(74, 222, 128, 0.8)'
               }}
             >
@@ -1020,13 +1030,52 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
     );
   };
   
+  // Generate background particles
+  const renderBackgroundParticles = () => {
+    return Array.from({ length: 30 }).map((_, i) => (
+      <motion.div
+        key={`particle-${i}`}
+        className="absolute rounded-full bg-gradient-to-r from-blue-300 to-purple-400"
+        animate={{
+          x: [
+            Math.random() * window.innerWidth,
+            Math.random() * window.innerWidth
+          ],
+          y: [
+            Math.random() * window.innerHeight,
+            Math.random() * window.innerHeight
+          ],
+          opacity: [0.1, 0.3, 0.1]
+        }}
+        transition={{
+          duration: Math.random() * 20 + 10,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+        style={{
+          width: `${Math.random() * 4 + 1}px`,
+          height: `${Math.random() * 4 + 1}px`,
+          boxShadow: `0 0 ${Math.random() * 8 + 2}px #8b5cf6`
+        }}
+      />
+    ));
+  };
+  
   // Render the game grid (top-down perspective)
   const renderGameGrid = () => {
     // Calculate a reactive background intensity based on combo
     const intensityFactor = Math.min(0.3 + (combo / 100) * 0.7, 1);
     
     return (
-      <div className="relative flex items-center justify-center h-screen bg-black overflow-hidden">
+      <div 
+        ref={containerRef}
+        className="relative flex items-center justify-center h-screen bg-black overflow-hidden"
+      >
+        {/* Background particles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {renderBackgroundParticles()}
+        </div>
+        
         {/* Circular grid lines for depth - more subtle for top-down view */}
         {[0.2, 0.4, 0.6, 0.8, 1.0].map((size, index) => (
           <div
@@ -1135,6 +1184,7 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
               ${isCubeFloating ? 'translateY(-10px)' : 'translateY(0)'}`,
             transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
           }}
+          onClick={handlePulseHit}
         >
           <div className={isCubeError ? 'animate-shake' : ''}>
             <div className="relative">
@@ -1151,6 +1201,30 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
                   filter: `blur(${8 + combo / 8}px)`,
                   opacity: isCubeError ? 0.1 : (0.4 + intensityFactor * 0.6),
                   zIndex: 5
+                }}
+              />
+              
+              {/* Cube energy aura */}
+              <motion.div
+                className="absolute rounded-full"
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.4, 0.6, 0.4]
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                style={{
+                  width: CUBE_SIZE * 2.5,
+                  height: CUBE_SIZE * 2.5,
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  background: `radial-gradient(circle, ${cubeColor}${Math.floor((cubeEnergy/100) * 70 + 10).toString(16).padStart(2, '0')} 0%, transparent 70%)`,
+                  zIndex: 4,
+                  filter: 'blur(10px)'
                 }}
               />
               
@@ -1171,57 +1245,204 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
                 />
               )}
               
-              {/* The cube */}
+              {/* Energy level indicator */}
+              <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 z-20 w-20">
+                <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full transition-all duration-300"
+                    style={{
+                      width: `${cubeEnergy}%`,
+                      background: `linear-gradient(to right, ${
+                        cubeEnergy > 70 ? '#4ade80' : 
+                        cubeEnergy > 30 ? '#facc15' : 
+                        '#ef4444'
+                      }, ${
+                        cubeEnergy > 70 ? '#10b981' : 
+                        cubeEnergy > 30 ? '#eab308' : 
+                        '#dc2626'
+                      })`
+                    }}
+                  />
+                </div>
+              </div>
+              
+              {/* The cube with energy-based animation speed */}
               <RealmCube
                 position="center"
                 size={CUBE_SIZE}
                 cubeId={selectedCubeId}
-                isAnimated={isCubeGlowing || isCubeRotating}
+                isAnimated={isCubeGlowing || isCubeRotating || cubeEnergy > 50}
                 onCubeClick={handlePulseHit} // Allow clicking the cube too
               />
+              
+              {/* Orbiting energy particles - only when energy is high */}
+              {cubeEnergy > 50 && (
+                <div className="absolute inset-0">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <motion.div
+                      key={`cube-energy-${i}`}
+                      className="absolute w-2 h-2 rounded-full"
+                      animate={{
+                        rotate: 360
+                      }}
+                      transition={{
+                        duration: 3 - (i * 0.5),
+                        repeat: Infinity,
+                        ease: "linear"
+                      }}
+                      style={{
+                        top: '50%',
+                        left: '50%',
+                        transformOrigin: 'center',
+                        background: cubeColor,
+                        boxShadow: `0 0 5px ${cubeColor}`,
+                        transform: `translate(-50%, -50%) rotate(${i * 120}deg) translateX(${CUBE_SIZE * 0.8}px)`
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
         
-        {/* Pulse on space indicator */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-black/50 backdrop-blur-sm px-6 py-3 rounded-full border border-blue-500/30 z-20">
-          <span className="text-blue-400 font-pixel">
-            PRESS <span className="text-white bg-blue-900/50 px-3 py-1 rounded mx-1">SPACE</span> WHEN WAVES REACH {isOuterRingActive ? 
-            <span className="text-green-400 font-bold animate-pulse">HIGHLIGHTED</span> : 
-            <span className="text-blue-300">COLORED</span>} RINGS
-          </span>
+        {/* Circular pulse on space indicator */}
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black/50 backdrop-blur-sm px-6 py-2 rounded-full border border-blue-500/30 z-20">
+          <div className="flex items-center">
+            <span className="text-blue-400 font-pixel text-sm">
+              PRESS <span className="text-white bg-blue-900/50 px-2 py-0.5 rounded mx-1">SPACE</span> OR <span className="text-white bg-blue-900/50 px-2 py-0.5 rounded mx-1">CLICK</span> WHEN WAVES REACH RINGS
+            </span>
+          </div>
         </div>
         
-        {/* Track info display */}
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/50 backdrop-blur-sm px-6 py-3 rounded-full border border-blue-500/30 z-20">
-          <span className="text-blue-300 font-pixel">
-            {selectedTrack.name} 
-            <span className="text-gray-400 mx-2">|</span> 
-            <span className="text-gray-400">{selectedTrack.bpm} BPM</span>
-            <span className="text-gray-400 mx-2">|</span>
-            <span className={
+        {/* Top header with track info */}
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/50 backdrop-blur-sm px-4 py-2 rounded-full border border-blue-500/30 z-20">
+          <div className="flex items-center gap-2">
+            <span className="text-blue-300 font-pixel text-sm whitespace-nowrap">
+              {selectedTrack.name}
+            </span>
+            <span className="h-3 w-px bg-blue-500/30"></span>
+            <span className="text-blue-300 font-pixel text-sm">
+              {selectedTrack.bpm} BPM
+            </span>
+            <span className="h-3 w-px bg-blue-500/30"></span>
+            <span className={`font-pixel text-sm ${
               selectedTrack.difficulty === Difficulty.Easy ? 'text-green-400' :
               selectedTrack.difficulty === Difficulty.Medium ? 'text-yellow-400' :
               'text-red-400'
-            }>
+            }`}>
               {selectedTrack.difficulty.toUpperCase()}
             </span>
-          </span>
+          </div>
         </div>
         
-        {/* HUD - Score & Combo */}
-        <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md p-4 rounded-lg border border-blue-500/30 z-20 shadow-lg">
-          <div className="flex flex-col gap-2">
-            <div className="text-blue-300 font-pixel">SCORE</div>
-            <div className={`text-4xl font-bold transition-colors ${score > 5000 ? 'text-pink-400' : score > 2000 ? 'text-purple-400' : 'text-blue-400'}`}>
+        {/* Exit button - top right */}
+        <motion.button
+          onClick={onReturn}
+          className="absolute top-4 right-4 px-3 py-1.5 bg-black/70 backdrop-blur-sm border border-pink-500/30 text-pink-500 hover:text-pink-400 rounded z-30 transition-colors"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.98 }}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          EXIT
+        </motion.button>
+        
+        {/* Audio controls - top right below exit */}
+        <div className="absolute top-16 right-4 flex flex-col items-end z-30">
+          <button 
+            className="bg-black/70 backdrop-blur-sm border border-blue-500/30 rounded px-2 py-1.5 text-blue-400 hover:bg-blue-900/20 transition-colors"
+            onClick={() => setShowVolume(!showVolume)}
+          >
+            {volume === 0 ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+                <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path>
+                <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            ) : volume < 30 ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+              </svg>
+            )}
+          </button>
+          
+          {/* Volume slider */}
+          <AnimatePresence>
+            {showVolume && (
+              <motion.div 
+                className="mt-2 bg-black/70 backdrop-blur-sm border border-blue-500/30 rounded p-2 flex flex-col items-center"
+                initial={{ opacity: 0, height: 0, width: 0 }}
+                animate={{ opacity: 1, height: 'auto', width: 'auto' }}
+                exit={{ opacity: 0, height: 0, width: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="h-32 w-6 bg-gray-800 rounded-full relative flex justify-center my-2">
+                  <div 
+                    className="absolute bottom-0 w-full rounded-full"
+                    style={{ 
+                      height: `${volume}%`,
+                      background: `linear-gradient(to top, #3b82f6, #8b5cf6)`
+                    }}
+                  />
+                  <div
+                    className="absolute w-6 h-3 rounded-full bg-white cursor-pointer z-10"
+                    style={{ bottom: `${volume}%`, transform: 'translateY(50%)' }}
+                    onMouseDown={(e) => {
+                      const handleDrag = (moveEvent: MouseEvent) => {
+                        if (!e.currentTarget.parentElement) return;
+                        
+                        const rect = e.currentTarget.parentElement.getBoundingClientRect();
+                        const height = rect.height;
+                        const y = moveEvent.clientY - rect.top;
+                        
+                        // Calculate volume (0-100) from bottom to top
+                        const newVolume = Math.round(100 - ((y / height) * 100));
+                        adjustVolume(newVolume);
+                      };
+                      
+                      const handleMouseUp = () => {
+                        document.removeEventListener('mousemove', handleDrag);
+                        document.removeEventListener('mouseup', handleMouseUp);
+                      };
+                      
+                      document.addEventListener('mousemove', handleDrag);
+                      document.addEventListener('mouseup', handleMouseUp);
+                    }}
+                  />
+                </div>
+                <div className="text-white text-xs">{volume}%</div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+        
+        {/* Left sidebar with score, combo, etc. - compact circular displays */}
+        <div className="absolute left-4 top-1/2 transform -translate-y-1/2 flex flex-col gap-4 z-30">
+          {/* Score display */}
+          <div className="bg-black/60 backdrop-blur-md p-3 rounded-2xl border border-blue-500/30 text-center shadow-lg w-36">
+            <div className="text-blue-300 font-pixel text-xs mb-1">SCORE</div>
+            <div className={`text-2xl font-bold transition-colors ${score > 5000 ? 'text-pink-400' : score > 2000 ? 'text-purple-400' : 'text-blue-400'}`}>
               {score.toLocaleString()}
             </div>
-            
-            <div className="mt-2 text-blue-300 font-pixel">COMBO</div>
+          </div>
+          
+          {/* Combo display */}
+          <div className="bg-black/60 backdrop-blur-md p-3 rounded-2xl border border-purple-500/30 text-center shadow-lg w-36">
+            <div className="text-purple-300 font-pixel text-xs mb-1">COMBO</div>
             <div className={`text-2xl font-bold transition-colors ${combo > 20 ? 'text-pink-400' : combo > 10 ? 'text-purple-400' : 'text-blue-400'}`}>
               {combo}×
             </div>
-            
             {combo > 0 && (
               <div className="w-full bg-gray-900 h-1 mt-1 rounded-full overflow-hidden">
                 <div 
@@ -1231,30 +1452,37 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
               </div>
             )}
           </div>
-        </div>
-        
-        {/* HUD - Accuracy & Time */}
-        <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md p-4 rounded-lg border border-blue-500/30 z-20 shadow-lg">
-          <div className="flex flex-col gap-2">
-            <div className="text-blue-300 font-pixel">ACCURACY</div>
+          
+          {/* Accuracy display */}
+          <div className="bg-black/60 backdrop-blur-md p-3 rounded-2xl border border-green-500/30 text-center shadow-lg w-36">
+            <div className="text-green-300 font-pixel text-xs mb-1">ACCURACY</div>
             <div className={`text-2xl font-bold transition-colors ${accuracy > 90 ? 'text-green-400' : accuracy > 70 ? 'text-yellow-400' : 'text-red-400'}`}>
               {accuracy}%
-            </div>
-            
-            <div className="mt-2 text-blue-300 font-pixel">TIME</div>
-            <div className="text-2xl font-bold text-white">
-              {formatTime(gameTime)}
             </div>
           </div>
         </div>
         
-        {/* Pause button */}
-        <button
-          onClick={pauseGame}
-          className="absolute top-4 right-1/2 transform translate-x-36 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-blue-500/30 text-white hover:bg-blue-900/30 transition-colors z-20 shadow-lg"
-        >
-          II
-        </button>
+        {/* Right sidebar - time and controls */}
+        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col gap-4 z-30">
+          {/* Time display */}
+          <div className="bg-black/60 backdrop-blur-md p-3 rounded-2xl border border-teal-500/30 text-center shadow-lg w-28">
+            <div className="text-teal-300 font-pixel text-xs mb-1">TIME</div>
+            <div className="text-xl font-bold text-white">
+              {formatTime(gameTime)}
+            </div>
+          </div>
+          
+          {/* Pause button */}
+          <button
+            onClick={pauseGame}
+            className="bg-black/60 backdrop-blur-md p-3 rounded-2xl border border-amber-500/30 text-center shadow-lg hover:bg-blue-900/30 transition-colors"
+            title="Pause Game"
+          >
+            <div className="flex justify-center">
+              <div className="w-5 h-10 border-l-4 border-r-4 border-amber-400"></div>
+            </div>
+          </button>
+        </div>
         
         {/* Background intensity effect based on combo */}
         <div 
@@ -1262,6 +1490,15 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
           style={{ 
             opacity: intensityFactor,
             background: `radial-gradient(circle, rgba(37, 99, 235, ${intensityFactor * 0.15}) 0%, rgba(219, 39, 119, ${intensityFactor * 0.1}) 60%, transparent 100%)` 
+          }}
+        />
+        
+        {/* Dynamic ambient light that follows mouse */}
+        <div
+          className="absolute inset-0 pointer-events-none z-0"
+          style={{
+            background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, ${cubeColor}15 0%, transparent 70%)`,
+            filter: 'blur(40px)',
           }}
         />
       </div>
@@ -1942,7 +2179,10 @@ const renderLevelCompleteScreen = () => (
 );
   
   return (
-    <div className="min-h-screen bg-black text-white font-pixel overflow-hidden">
+    <div 
+      className="min-h-screen bg-black text-white font-pixel overflow-hidden"
+      ref={containerRef}
+    >
       {/* Main content container */}
       <AnimatePresence mode="wait">
         {gameState === "intro" && renderIntroScreen()}

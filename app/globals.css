@@ -124,3 +124,61 @@
 .grid-animate {
   animation: fadeGrid 4s infinite;
 }
+
+::-webkit-scrollbar {
+  width: 12px;
+  background-color: #000000;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #000000;
+  border-left: 1px solid #333333;
+}
+
+::-webkit-scrollbar-thumb {
+  /* Create a pixelated purple gradient effect */
+  background-image: linear-gradient(
+    to bottom,
+    #8b5cf6,
+    #a855f7,
+    #d946ef,
+    #c026d3,
+    #a21caf,
+    #8b5cf6
+  );
+  
+  /* Add pixel-style borders */
+  border: 2px solid #000000;
+  border-right: none;
+  
+  /* Ensure the gradient has a pixelated look */
+  image-rendering: pixelated;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  /* Brighter gradient on hover */
+  background-image: linear-gradient(
+    to bottom,
+    #a855f7,
+    #d946ef,
+    #e879f9,
+    #d946ef,
+    #a855f7,
+    #a855f7
+  );
+}
+
+/* Pixelated buttons for scrollbar */
+::-webkit-scrollbar-button:vertical:start:decrement,
+::-webkit-scrollbar-button:vertical:end:increment {
+  display: block;
+  height: 12px;
+  background-color: #000000;
+  border: 2px solid #8b5cf6;
+}
+
+/* Firefox support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #a855f7 #000000;
+}

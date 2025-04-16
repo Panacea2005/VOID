@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+// contexts/audio-context.tsx - Updated version
+
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 
 // Define audio tracks with more metadata
@@ -54,13 +56,15 @@ export const audioTracks = {
   }
 };
 
-interface UseAudioControllerProps {
-  enabled?: boolean;
-  initialTrackId?: string;
-  volume?: number;
-}
+// Format time in MM:SS
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
 
-interface AudioControllerResult {
+// Define the audio context type
+type AudioContextType = {
   isPlaying: boolean;
   currentTrackId: string;
   volume: number;
@@ -70,23 +74,21 @@ interface AudioControllerResult {
   changeTrack: (trackId: string) => void;
   setVolume: (volume: number) => void;
   seekTo: (progress: number) => void;
-}
+};
 
-/**
- * Enhanced hook for audio control with more features
- */
-export const useAudioController = ({
-  enabled = true,
-  initialTrackId = "hub",
-  volume = 0.7
-}: UseAudioControllerProps = {}): AudioControllerResult => {
-  const [isPlaying, setIsPlaying] = useState(enabled);
-  const [currentTrackId, setCurrentTrackId] = useState(initialTrackId);
-  const [currentVolume, setCurrentVolume] = useState(volume);
+// Create the context
+const AudioContext = createContext<AudioContextType | null>(null);
+
+// Provider component
+export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [currentTrackId, setCurrentTrackId] = useState("hub");
+  const [volume, setCurrentVolume] = useState(0.7);
   const [progress, setProgress] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   // Previous state for mute toggle
-  const previousVolumeRef = useRef(volume);
+  const previousVolumeRef = useRef(0.7);
   
   // Audio element ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -97,36 +99,57 @@ export const useAudioController = ({
   // Fade transition refs
   const fadeIntervalRef = useRef<number | null>(null);
   
-  // Initialize audio
+  // Initialize audio on mount
   useEffect(() => {
+    console.log("AudioProvider - Initializing audio...");
+    
     if (!audioRef.current) {
       const audio = new Audio();
       audio.loop = true;
-      audio.volume = currentVolume;
+      audio.volume = volume;
       audioRef.current = audio;
       
+      // Try to load saved track from localStorage
+      const savedTrack = localStorage.getItem('currentRealmAudio');
+      const initialTrack = savedTrack || "hub";
+      
+      console.log(`AudioProvider - Initial track: ${initialTrack}`);
+      setCurrentTrackId(initialTrack);
+      
       // Get the track info
-      const trackInfo = audioTracks[currentTrackId as keyof typeof audioTracks];
+      const trackInfo = audioTracks[initialTrack as keyof typeof audioTracks];
       
       if (trackInfo) {
         audio.src = trackInfo.path;
-        if (isPlaying) {
-          audio.play().catch(error => {
-            console.error("Failed to play audio:", error);
+        
+        // Auto-play with user interaction requirement workaround
+        const playPromise = audio.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            console.log("AudioProvider - Audio playback started successfully");
+            setIsPlaying(true);
+          }).catch(error => {
+            console.error("AudioProvider - Failed to play audio:", error);
             setIsPlaying(false);
           });
         }
       }
+      
+      // Set up progress tracking
+      progressIntervalRef.current = window.setInterval(() => {
+        if (audioRef.current && audioRef.current.duration) {
+          setProgress(audioRef.current.currentTime / audioRef.current.duration);
+        }
+      }, 1000);
+      
+      setIsInitialized(true);
     }
     
-    // Set up progress tracking
-    progressIntervalRef.current = window.setInterval(() => {
-      if (audioRef.current && audioRef.current.duration) {
-        setProgress(audioRef.current.currentTime / audioRef.current.duration);
-      }
-    }, 1000);
-    
+    // Cleanup function
     return () => {
+      console.log("AudioProvider - Cleaning up audio resources");
+      
       if (progressIntervalRef.current) {
         window.clearInterval(progressIntervalRef.current);
       }
@@ -141,68 +164,7 @@ export const useAudioController = ({
       }
     };
   }, []);
-  
-  // Handle track changes
-  useEffect(() => {
-    if (!audioRef.current) return;
-    
-    const trackInfo = audioTracks[currentTrackId as keyof typeof audioTracks];
-    if (!trackInfo) return;
-    
-    // If currently playing, fade out before changing
-    if (isPlaying && audioRef.current.volume > 0) {
-      fadeOut(() => {
-        audioRef.current!.src = trackInfo.path;
-        audioRef.current!.currentTime = 0;
-        if (isPlaying) {
-          audioRef.current!.play().then(() => {
-            fadeIn();
-          }).catch(error => {
-            console.error("Failed to play new track:", error);
-          });
-        }
-      });
-    } else {
-      // If not playing or already faded out, just change the track
-      audioRef.current.src = trackInfo.path;
-      audioRef.current.currentTime = 0;
-      if (isPlaying) {
-        audioRef.current.play().then(() => {
-          fadeIn();
-        }).catch(error => {
-          console.error("Failed to play new track:", error);
-        });
-      }
-    }
-  }, [currentTrackId]);
-  
-  // Handle play/pause changes
-  useEffect(() => {
-    if (!audioRef.current) return;
-    
-    if (isPlaying) {
-      audioRef.current.play().then(() => {
-        fadeIn();
-      }).catch(error => {
-        console.error("Failed to play audio:", error);
-        setIsPlaying(false);
-      });
-    } else {
-      fadeOut(() => {
-        if (audioRef.current) {
-          audioRef.current.pause();
-        }
-      });
-    }
-  }, [isPlaying]);
-  
-  // Handle volume changes
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = currentVolume;
-    }
-  }, [currentVolume]);
-  
+
   // Clear any active fade interval
   const clearFadeInterval = () => {
     if (fadeIntervalRef.current !== null) {
@@ -225,10 +187,10 @@ export const useAudioController = ({
         return;
       }
       
-      vol = Math.min(vol + 0.05, currentVolume);
+      vol = Math.min(vol + 0.05, volume);
       audioRef.current.volume = vol;
       
-      if (vol >= currentVolume) {
+      if (vol >= volume) {
         clearFadeInterval();
       }
     }, 50);
@@ -268,30 +230,118 @@ export const useAudioController = ({
   
   // Toggle playback
   const togglePlayback = () => {
-    setIsPlaying(!isPlaying);
+    console.log("AudioProvider - Toggling playback, current state:", isPlaying);
+    
+    if (!audioRef.current) return;
+    
+    if (isPlaying) {
+      fadeOut(() => {
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
+        setIsPlaying(false);
+      });
+    } else {
+      const playPromise = audioRef.current.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          fadeIn();
+          setIsPlaying(true);
+        }).catch(error => {
+          console.error("AudioProvider - Failed to play audio:", error);
+        });
+      }
+    }
   };
   
   // Toggle mute
   const toggleMute = () => {
-    if (currentVolume > 0) {
-      previousVolumeRef.current = currentVolume;
+    if (volume > 0) {
+      previousVolumeRef.current = volume;
       setCurrentVolume(0);
     } else {
       setCurrentVolume(previousVolumeRef.current);
     }
   };
   
-  // Change track
+  // Change track with fade effect
   const changeTrack = (trackId: string) => {
-    if (audioTracks[trackId as keyof typeof audioTracks]) {
+    console.log(`AudioProvider - Changing track to: ${trackId}`);
+    
+    if (!audioTracks[trackId as keyof typeof audioTracks]) {
+      console.error(`AudioProvider - Invalid track ID: ${trackId}`);
+      return;
+    }
+    
+    // Save to localStorage for persistence
+    localStorage.setItem('currentRealmAudio', trackId);
+    
+    // If audio isn't initialized yet, just update the state
+    if (!audioRef.current) {
       setCurrentTrackId(trackId);
+      return;
+    }
+    
+    const trackInfo = audioTracks[trackId as keyof typeof audioTracks];
+    
+    // If we're already playing this track, don't do anything
+    if (currentTrackId === trackId) {
+      console.log(`AudioProvider - Already playing track: ${trackId}`);
+      return;
+    }
+    
+    // If currently playing, fade out before changing
+    if (isPlaying && audioRef.current.volume > 0) {
+      fadeOut(() => {
+        audioRef.current!.src = trackInfo.path;
+        audioRef.current!.currentTime = 0;
+        setCurrentTrackId(trackId);
+        
+        if (isPlaying) {
+          const playPromise = audioRef.current!.play();
+          
+          if (playPromise !== undefined) {
+            playPromise.then(() => {
+              fadeIn();
+            }).catch(error => {
+              console.error("AudioProvider - Failed to play new track:", error);
+            });
+          }
+        }
+      });
+    } else {
+      // If not playing or already faded out, just change the track
+      audioRef.current.src = trackInfo.path;
+      audioRef.current.currentTime = 0;
+      setCurrentTrackId(trackId);
+      
+      if (isPlaying) {
+        const playPromise = audioRef.current.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            fadeIn();
+          }).catch(error => {
+            console.error("AudioProvider - Failed to play new track:", error);
+            setIsPlaying(false);
+          });
+        }
+      }
     }
   };
   
   // Set volume
-  const setVolume = (volume: number) => {
-    const clampedVolume = Math.max(0, Math.min(1, volume));
+  const setVolume = (newVolume: number) => {
+    console.log(`AudioProvider - Setting volume to: ${newVolume}`);
+    
+    const clampedVolume = Math.max(0, Math.min(1, newVolume));
     setCurrentVolume(clampedVolume);
+    
+    if (audioRef.current) {
+      audioRef.current.volume = clampedVolume;
+    }
+    
     if (clampedVolume > 0) {
       previousVolumeRef.current = clampedVolume;
     }
@@ -302,16 +352,25 @@ export const useAudioController = ({
     if (!audioRef.current) return;
     
     const clampedValue = Math.max(0, Math.min(1, value));
+    
     if (audioRef.current.duration) {
       audioRef.current.currentTime = clampedValue * audioRef.current.duration;
       setProgress(clampedValue);
     }
   };
-  
-  return {
+
+  // Update volume when the volume state changes
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
+  // Context value that will be provided
+  const contextValue: AudioContextType = {
     isPlaying,
     currentTrackId,
-    volume: currentVolume,
+    volume,
     progress,
     togglePlayback,
     toggleMute,
@@ -319,15 +378,26 @@ export const useAudioController = ({
     setVolume,
     seekTo
   };
+
+  return (
+    <AudioContext.Provider value={contextValue}>
+      {children}
+    </AudioContext.Provider>
+  );
 };
 
-// Format time in MM:SS
-const formatTime = (seconds: number) => {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+// Custom hook for using the audio context
+export const useAudio = () => {
+  const context = useContext(AudioContext);
+  
+  if (context === null) {
+    throw new Error('useAudio must be used within an AudioProvider');
+  }
+  
+  return context;
 };
 
+// Audio Controller UI Component
 interface AudioControllerProps {
   isPlaying: boolean;
   currentTrackId: string;
@@ -340,7 +410,6 @@ interface AudioControllerProps {
   onSeek: (progress: number) => void;
 }
 
-// Modern Audio Controller UI Component
 export const AudioController: React.FC<AudioControllerProps> = ({
   isPlaying,
   currentTrackId,
@@ -615,5 +684,3 @@ export const AudioController: React.FC<AudioControllerProps> = ({
     </>
   );
 };
-
-export default useAudioController;

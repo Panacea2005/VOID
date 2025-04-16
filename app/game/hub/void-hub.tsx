@@ -5,6 +5,7 @@ import AbstractShape from "@/components/abstract-shape";
 import { cn } from "@/lib/utils";
 import RealmCube, { cubeCollection } from "../cube/realm-cube";
 import { useAudioController, AudioController } from "../manager/audio-manager";
+import { useAudio } from "../contexts/audio-context";
 
 // Realm data from the realm page
 const realms = [
@@ -19,7 +20,7 @@ const realms = [
     shapeType: "wave" as "wave",
     particleCount: 150,
     particleType: "mirror",
-    ambientSound: "echo-ambient.mp3",
+    ambientSound: "/audio/echo-theme.mp3",
     modelType: "mirror-fragments",
     gameplayElements: ["Memory challenges", "Reflection puzzles", "Temporal distortions"],
     iconType: "ripple",
@@ -35,7 +36,7 @@ const realms = [
     shapeType: "grid" as "grid",
     particleCount: 200,
     particleType: "node",
-    ambientSound: "nexus-ambient.mp3",
+    ambientSound: "/audio/nexus-theme.mp3",
     modelType: "nodal-network",
     gameplayElements: ["Connection challenges", "Path finding", "Community insights"],
     iconType: "network",
@@ -51,7 +52,7 @@ const realms = [
     shapeType: "dots" as "dots",
     particleCount: 100,
     particleType: "void",
-    ambientSound: "abyss-ambient.mp3",
+    ambientSound: "/audio/abyss-theme.mp3",
     modelType: "void-sphere",
     gameplayElements: ["Darkness navigation", "Light discovery", "Hidden truths"],
     iconType: "void",
@@ -67,7 +68,7 @@ const realms = [
     shapeType: "complex" as "complex",
     particleCount: 180,
     particleType: "pulse",
-    ambientSound: "pulse-ambient.mp3",
+    ambientSound: "/audio/pulse-theme.mp3",
     modelType: "pulse-orb",
     gameplayElements: ["Rhythm matching", "Harmonic puzzles", "Synchronized movement"],
     iconType: "wave",
@@ -83,7 +84,7 @@ const realms = [
     shapeType: "noise" as "noise",
     particleCount: 120,
     particleType: "symbol",
-    ambientSound: "cipher-ambient.mp3",
+    ambientSound: "/audio/cipher-theme.mp3",
     modelType: "glyph-cube",
     gameplayElements: ["Code breaking", "Pattern recognition", "Symbol translation"],
     iconType: "glyph",
@@ -99,7 +100,7 @@ const realms = [
     shapeType: "complex" as "complex",
     particleCount: 160,
     particleType: "fractal",
-    ambientSound: "vortex-ambient.mp3",
+    ambientSound: "/audio/vortex-theme.mp3",
     modelType: "fractal-vortex",
     gameplayElements: ["Dimensional shifting", "Reality manipulation", "Perception challenges"],
     iconType: "vortex",
@@ -935,7 +936,7 @@ const VoidHub: React.FC<VoidHubProps> = ({
   selectedCubeId = "pink-neon", 
   onExit 
 }) => {
-  const [selectedRealm, setSelectedRealm] = useState<(typeof realms)[0]>(realms[0]);
+  const [selectedRealm, setSelectedRealm] = useState(realms[0]);
   const [isEntering, setIsEntering] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   
@@ -944,12 +945,17 @@ const VoidHub: React.FC<VoidHubProps> = ({
     console.log("VoidHub - selectedCubeId:", selectedCubeId);
   }, [selectedCubeId]);
   
-  // Audio management
-  const audioController = useAudioController({ 
-    enabled: true, 
-    initialTrackId: "hub",
-    volume: 0.7
-  });
+  // Use the shared audio controller from context
+  const audio = useAudio();
+  
+  // Set initial hub audio when component mounts
+  useEffect(() => {
+    // Only set to hub if nothing is playing or if it's first load
+    if (!audio.isPlaying || audio.currentTrackId === "") {
+      audio.changeTrack("hub");
+    }
+    console.log("VoidHub mounted, current audio track:", audio.currentTrackId);
+  }, []);
   
   // Mouse position for 3D effects
   const mouseX = useMotionValue(0);
@@ -974,7 +980,7 @@ const VoidHub: React.FC<VoidHubProps> = ({
   // Handle realm selection
   const selectRealm = (realm: (typeof realms)[0]) => {
     setSelectedRealm(realm);
-    audioController.changeTrack(realm.id);
+    audio.changeTrack(realm.id);
   };
   
   // Handle cube change
@@ -1013,19 +1019,6 @@ const VoidHub: React.FC<VoidHubProps> = ({
         primaryColor={selectedRealm.color.split(' ')[1]} // Use the second part of the color gradient
         cubeId={selectedCubeId} // Use the provided selectedCubeId
         onCubeChange={handleCubeChange} // Pass the change handler
-      />
-
-      {/* Audio Controller */}
-      <AudioController
-        isPlaying={audioController.isPlaying}
-        currentTrackId={audioController.currentTrackId}
-        volume={audioController.volume}
-        progress={audioController.progress}
-        onTogglePlayback={audioController.togglePlayback}
-        onToggleMute={audioController.toggleMute}
-        onTrackChange={audioController.changeTrack}
-        onVolumeChange={audioController.setVolume}
-        onSeek={audioController.seekTo}
       />
       
       {/* Enhanced Realm Entry Animation */}
