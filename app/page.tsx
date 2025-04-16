@@ -14,7 +14,7 @@ import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
 import AbstractShape from "@/components/abstract-shape";
 import PixelHeading from "@/components/pixel-heading";
-import Banner3D from "@/components/interactive-banner"; // The new 3D banner component
+import Banner3D from "@/components/interactive-banner";
 import BackgroundAudio from "@/components/background-audio";
 import { cn } from "@/lib/utils";
 

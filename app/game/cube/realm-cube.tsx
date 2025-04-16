@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion";
+import {
+  motion,
+  AnimatePresence,
+  useMotionValue,
+  useTransform,
+  useSpring,
+} from "framer-motion";
 
 // Enhanced cube collection with 3D properties
 export const cubeCollection = [
@@ -10,7 +16,7 @@ export const cubeCollection = [
     accentColor: "#ff00ff",
     borderColor: "rgba(255, 255, 255, 0.3)",
     glow: "0 0 20px rgba(236, 72, 153, 0.6)",
-    rarity: "common"
+    rarity: "common",
   },
   {
     id: "cosmic-void",
@@ -19,7 +25,7 @@ export const cubeCollection = [
     accentColor: "#8b5cf6",
     borderColor: "rgba(139, 92, 246, 0.5)",
     glow: "0 0 25px rgba(139, 92, 246, 0.7)",
-    rarity: "rare"
+    rarity: "rare",
   },
   {
     id: "crystal-blue",
@@ -28,16 +34,16 @@ export const cubeCollection = [
     accentColor: "#0ea5e9",
     borderColor: "rgba(14, 165, 233, 0.5)",
     glow: "0 0 25px rgba(14, 165, 233, 0.7)",
-    rarity: "rare"
+    rarity: "rare",
   },
   {
     id: "golden-relic",
     name: "Golden Relic",
     colors: ["#fbbf24", "#f59e0b", "#d97706", "#b45309", "#92400e", "#78350f"],
-    accentColor: "#fbbf24", 
+    accentColor: "#fbbf24",
     borderColor: "rgba(251, 191, 36, 0.5)",
     glow: "0 0 25px rgba(251, 191, 36, 0.7)",
-    rarity: "epic"
+    rarity: "epic",
   },
   {
     id: "emerald-matrix",
@@ -46,7 +52,7 @@ export const cubeCollection = [
     accentColor: "#22c55e",
     borderColor: "rgba(34, 197, 94, 0.5)",
     glow: "0 0 25px rgba(34, 197, 94, 0.7)",
-    rarity: "epic"
+    rarity: "epic",
   },
   {
     id: "obsidian-void",
@@ -55,7 +61,7 @@ export const cubeCollection = [
     accentColor: "#a1a1aa",
     borderColor: "rgba(255, 255, 255, 0.2)",
     glow: "0 0 15px rgba(161, 161, 170, 0.5)",
-    rarity: "legendary"
+    rarity: "legendary",
   },
   {
     id: "holographic",
@@ -64,8 +70,8 @@ export const cubeCollection = [
     accentColor: "#c026d3",
     borderColor: "rgba(240, 171, 252, 0.6)",
     glow: "0 0 30px rgba(192, 38, 211, 0.8)",
-    rarity: "legendary"
-  }
+    rarity: "legendary",
+  },
 ];
 
 // Custom styles for cube rendering and scrollbar
@@ -163,8 +169,8 @@ const Cube: React.FC<{
   rotateX?: number;
   rotateY?: number;
   rotateZ?: number;
-}> = ({ 
-  colors, 
+}> = ({
+  colors,
   size = 64,
   borderWidth = 1,
   borderColor = "rgba(255, 255, 255, 0.3)",
@@ -172,16 +178,16 @@ const Cube: React.FC<{
   isHovered = false,
   rotateX = 15,
   rotateY = 15,
-  rotateZ = 0
+  rotateZ = 0,
 }) => {
   // Calculate half of the size for translateZ values
   const halfSize = size / 2;
-  
+
   return (
     <div className="cube-scene" style={{ width: size, height: size }}>
-      <div 
+      <div
         className="cube"
-        style={{ 
+        style={{
           transform: `rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg)`,
           width: size,
           height: size,
@@ -189,60 +195,60 @@ const Cube: React.FC<{
         }}
       >
         {/* Front face */}
-        <div 
-          className="cube-face cube-face-front" 
-          style={{ 
+        <div
+          className="cube-face cube-face-front"
+          style={{
             backgroundColor: colors[0],
             borderWidth,
             borderColor,
-            boxShadow: isHovered ? glow : 'none'
+            boxShadow: isHovered ? glow : "none",
           }}
         />
-        
+
         {/* Back face */}
-        <div 
-          className="cube-face cube-face-back" 
-          style={{ 
+        <div
+          className="cube-face cube-face-back"
+          style={{
             backgroundColor: colors[1],
             borderWidth,
             borderColor,
           }}
         />
-        
+
         {/* Right face */}
-        <div 
-          className="cube-face cube-face-right" 
-          style={{ 
+        <div
+          className="cube-face cube-face-right"
+          style={{
             backgroundColor: colors[2],
             borderWidth,
             borderColor,
           }}
         />
-        
+
         {/* Left face */}
-        <div 
-          className="cube-face cube-face-left" 
-          style={{ 
+        <div
+          className="cube-face cube-face-left"
+          style={{
             backgroundColor: colors[3],
             borderWidth,
             borderColor,
           }}
         />
-        
+
         {/* Top face */}
-        <div 
-          className="cube-face cube-face-top" 
-          style={{ 
+        <div
+          className="cube-face cube-face-top"
+          style={{
             backgroundColor: colors[4],
             borderWidth,
             borderColor,
           }}
         />
-        
+
         {/* Bottom face */}
-        <div 
-          className="cube-face cube-face-bottom" 
-          style={{ 
+        <div
+          className="cube-face cube-face-bottom"
+          style={{
             backgroundColor: colors[5],
             borderWidth,
             borderColor,
@@ -265,9 +271,9 @@ const AnimatedCube: React.FC<{
   rotateX?: number;
   rotateY?: number;
   rotateZ?: number;
-}> = ({ 
-  colors, 
-  size = 64, 
+}> = ({
+  colors,
+  size = 64,
   borderWidth = 1,
   borderColor = "rgba(255, 255, 255, 0.3)",
   glow = "",
@@ -278,92 +284,97 @@ const AnimatedCube: React.FC<{
   rotateZ = 0,
 }) => {
   return (
-    <motion.div 
-      className="cube-scene" 
-      style={{ width: size, height: size }}
-    >
-      <motion.div 
+    <motion.div className="cube-scene" style={{ width: size, height: size }}>
+      <motion.div
         className="cube"
-        style={{ 
-          width: size, 
+        style={{
+          width: size,
           height: size,
           // Set CSS variable using correct TypeScript syntax for custom properties
           ["--cube-size" as string]: `${size}px`,
         }}
-        animate={animate ? {
-          rotateX: rotateX,
-          rotateY: isHovered ? [0, 360] : rotateY,
-          rotateZ: rotateZ,
-        } : {
-          rotateX,
-          rotateY,
-          rotateZ,
-        }}
-        transition={isHovered ? {
-          rotateY: { 
-            duration: 5,
-            repeat: Infinity,
-            ease: "linear"
-          }
-        } : {
-          duration: 0.5,
-        }}
+        animate={
+          animate
+            ? {
+                rotateX: rotateX,
+                rotateY: isHovered ? [0, 360] : rotateY,
+                rotateZ: rotateZ,
+              }
+            : {
+                rotateX,
+                rotateY,
+                rotateZ,
+              }
+        }
+        transition={
+          isHovered
+            ? {
+                rotateY: {
+                  duration: 5,
+                  repeat: Infinity,
+                  ease: "linear",
+                },
+              }
+            : {
+                duration: 0.5,
+              }
+        }
       >
         {/* Front face */}
-        <div 
-          className="cube-face cube-face-front" 
-          style={{ 
+        <div
+          className="cube-face cube-face-front"
+          style={{
             backgroundColor: colors[0],
             borderWidth,
             borderColor,
-            boxShadow: isHovered ? glow : 'none'
+            boxShadow: isHovered ? glow : "none",
           }}
         />
-        
+
         {/* Back face */}
-        <div 
-          className="cube-face cube-face-back" 
-          style={{ 
+        <div
+          className="cube-face cube-face-back"
+          style={{
             backgroundColor: colors[1],
             borderWidth,
             borderColor,
           }}
         />
-        
+
         {/* Right face */}
-        <div 
-          className="cube-face cube-face-right" 
-          style={{ 
+        <div
+          className="cube-face cube-face-right"
+          style={{
             backgroundColor: colors[2],
             borderWidth,
             borderColor,
           }}
         />
-        
+
         {/* Left face */}
-        <div 
-          className="cube-face cube-face-left" 
-          style={{ 
+        <div
+          className="cube-face cube-face-left"
+          style={{
             backgroundColor: colors[3],
             borderWidth,
             borderColor,
           }}
         />
-        
+
         {/* Top face */}
-        <div 
-          className="cube-face cube-face-top" 
-          style={{ 
+        <div
+          className="cube-face cube-face-top"
+          style={{
             backgroundColor: colors[4],
             borderWidth,
             borderColor,
           }}
         />
-        
+
         {/* Bottom face */}
-        <div 
-          className="cube-face cube-face-bottom" 
-          style={{ 
+        <div
+          className="cube-face cube-face-bottom"
+          style={{
             backgroundColor: colors[5],
             borderWidth,
             borderColor,
@@ -394,51 +405,53 @@ const RealmCube: React.FC<RealmCubeProps> = ({
   primaryColor,
   cubeId = "pink-neon",
   onCubeChange,
-  onCubeClick
+  onCubeClick,
 }) => {
   // States
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [selectedCubeId, setSelectedCubeId] = useState(cubeId);
   const [hoveredCubeId, setHoveredCubeId] = useState<string | null>(null);
-  
+
   // Get the selected cube
-  const selectedCube = cubeCollection.find(cube => cube.id === selectedCubeId) || cubeCollection[0];
-  
+  const selectedCube =
+    cubeCollection.find((cube) => cube.id === selectedCubeId) ||
+    cubeCollection[0];
+
   // Apply primary color override if provided
   const colors = [...selectedCube.colors];
   if (primaryColor) {
     colors[0] = primaryColor;
   }
-  
+
   // Refs
   const containerRef = useRef<HTMLDivElement | null>(null);
-  
+
   // Motion values for smooth animation
   const cubeRotateX = useMotionValue(15);
   const cubeRotateY = useMotionValue(15);
   const cubeRotateZ = useMotionValue(0);
-  
+
   // Spring animations for smoother motion
   const springRotateX = useSpring(cubeRotateX, { stiffness: 200, damping: 20 });
   const springRotateY = useSpring(cubeRotateY, { stiffness: 200, damping: 20 });
   const springRotateZ = useSpring(cubeRotateZ, { stiffness: 200, damping: 20 });
-  
+
   // Auto-rotation animation
   useEffect(() => {
     let frameId: number;
     let angle = 0;
-    
+
     const autoRotate = () => {
       angle += 0.01;
       cubeRotateY.set(15 + Math.sin(angle) * 25);
       cubeRotateX.set(15 + Math.cos(angle) * 15);
       cubeRotateZ.set(Math.sin(angle * 0.5) * 5);
-      
+
       frameId = requestAnimationFrame(autoRotate);
     };
-    
+
     frameId = requestAnimationFrame(autoRotate);
-    
+
     return () => {
       cancelAnimationFrame(frameId);
     };
@@ -450,7 +463,7 @@ const RealmCube: React.FC<RealmCubeProps> = ({
       setSelectedCubeId(cubeId);
     }
   }, [cubeId]);
-  
+
   // Handle cube selection
   const handleCubeSelect = (id: string) => {
     setSelectedCubeId(id);
@@ -459,7 +472,7 @@ const RealmCube: React.FC<RealmCubeProps> = ({
     }
     setIsLibraryOpen(false);
   };
-  
+
   // Handle cube click
   const handleCubeClick = () => {
     if (onCubeClick) {
@@ -468,29 +481,28 @@ const RealmCube: React.FC<RealmCubeProps> = ({
       setIsLibraryOpen(true);
     }
   };
-  
+
   // Position styles
-  const positionStyles = position === "corner" 
-    ? "fixed bottom-8 right-8"
-    : "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2";
-  
-  const zIndexStyle = position === "corner" 
-    ? "z-50" 
-    : "z-[100]";
-  
+  const positionStyles =
+    position === "corner"
+      ? "fixed bottom-8 right-8"
+      : "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2";
+
+  const zIndexStyle = position === "corner" ? "z-50" : "z-[100]";
+
   // Prevent background from scrolling when library is open
   useEffect(() => {
     if (isLibraryOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     }
-    
+
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, [isLibraryOpen]);
-  
+
   return (
     <>
       {/* The 3D Cube */}
@@ -502,7 +514,7 @@ const RealmCube: React.FC<RealmCubeProps> = ({
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
       >
-        <Cube 
+        <Cube
           colors={colors}
           size={size}
           borderWidth={1}
@@ -513,19 +525,25 @@ const RealmCube: React.FC<RealmCubeProps> = ({
           rotateZ={springRotateZ.get()}
         />
       </motion.div>
-      
+
       {/* Cube Library Overlay */}
       <AnimatePresence>
         {isLibraryOpen && (
           <motion.div
-            className="fixed inset-0 bg-black/90 backdrop-blur-md z-[200] flex items-center justify-center"
+            className="fixed inset-0 bg-black/90 backdrop-blur-md z-[200] flex items-center justify-center overflow-hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsLibraryOpen(false)}
           >
             <motion.div
-              className="bg-black border border-gray-800 rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden"
+              className="bg-black/60 border border-gray-800 rounded-xl p-6 max-w-4xl w-full mx-4 my-auto flex flex-col"
+              style={{
+                maxHeight: "80vh",
+                boxShadow: "0 0 40px rgba(139, 92, 246, 0.2)",
+                backdropFilter: "blur(10px)",
+                transform: "translateY(0)", // Explicitly ensure no vertical offset
+              }}
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
@@ -533,39 +551,64 @@ const RealmCube: React.FC<RealmCubeProps> = ({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">Cube Collection</h2>
-                <button 
-                  className="text-gray-400 hover:text-white"
+                <h2 className="text-2xl font-bold text-white font-pixel">
+                  Cube Collection
+                </h2>
+                <button
+                  className="text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10 transition-all"
                   onClick={() => setIsLibraryOpen(false)}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
                   </svg>
                 </button>
               </div>
-              
-              <div className="cube-collection-container overflow-y-auto max-h-[calc(80vh-100px)]">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+
+              <div
+                className="cube-collection-container overflow-y-auto"
+                style={{ maxHeight: "calc(80vh - 5rem)" }}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                   {cubeCollection.map((cube) => {
                     const isSelected = selectedCubeId === cube.id;
                     const isHovered = hoveredCubeId === cube.id;
                     const rarity = getRarityStyles(cube.rarity);
-                    
+
                     return (
                       <motion.div
                         key={cube.id}
-                        className="relative bg-black border border-gray-800 rounded-lg overflow-hidden cursor-pointer transition-all"
-                        whileHover={{ scale: 1.03 }}
+                        className="relative bg-black/30 border border-gray-800 rounded-lg overflow-hidden cursor-pointer transition-all group"
+                        whileHover={{
+                          scale: 1.03,
+                          borderColor: cube.accentColor,
+                        }}
                         whileTap={{ scale: 0.97 }}
                         onClick={() => handleCubeSelect(cube.id)}
                         onMouseEnter={() => setHoveredCubeId(cube.id)}
                         onMouseLeave={() => setHoveredCubeId(null)}
+                        style={{
+                          boxShadow: isHovered
+                            ? `0 0 20px ${cube.accentColor}40`
+                            : "none",
+                        }}
                       >
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/40 pointer-events-none"></div>
+
                         <div className="aspect-square w-full relative p-6 flex items-center justify-center">
                           <AnimatedCube
                             colors={cube.colors}
-                            size={120}  
+                            size={110}
                             borderWidth={1}
                             borderColor={cube.borderColor}
                             glow={cube.glow}
@@ -576,27 +619,52 @@ const RealmCube: React.FC<RealmCubeProps> = ({
                             rotateZ={0}
                           />
                         </div>
-                        
-                        <div className="p-3 flex justify-between items-center border-t border-gray-800">
+
+                        <div className="p-4 flex justify-between items-center border-t border-gray-800 relative z-10 bg-black/50 backdrop-blur-sm">
                           <h3 className="font-bold text-white">{cube.name}</h3>
-                          <span 
-                            className="text-xs px-2 py-1 rounded border text-center"
-                            style={{ 
-                              color: rarity.color, 
-                              borderColor: rarity.color
+                          <span
+                            className="text-xs px-2 py-1 rounded border text-center transition-colors"
+                            style={{
+                              color: rarity.color,
+                              borderColor: rarity.color,
+                              background: `${rarity.color}10`,
                             }}
                           >
                             {rarity.label}
                           </span>
                         </div>
-                        
+
                         {isSelected && (
-                          <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <motion.div
+                            className="absolute top-3 right-3 bg-green-500 rounded-full p-1.5 shadow-lg"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", damping: 20 }}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="white"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
                               <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
-                          </div>
+                          </motion.div>
                         )}
+
+                        {/* Hover effect glow */}
+                        <motion.div
+                          className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none"
+                          style={{
+                            background: `radial-gradient(circle at center, ${cube.accentColor}20 0%, transparent 70%)`,
+                            transition: "opacity 0.3s ease",
+                          }}
+                        />
                       </motion.div>
                     );
                   })}
@@ -608,7 +676,9 @@ const RealmCube: React.FC<RealmCubeProps> = ({
       </AnimatePresence>
 
       {/* Global styles */}
-      <style jsx global>{cubeStyles}</style>
+      <style jsx global>
+        {cubeStyles}
+      </style>
     </>
   );
 };

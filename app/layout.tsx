@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import LoadingScreen from '@/components/loading-screen'
+import { Suspense } from 'react'
+import ConditionalLayout from '@/components/conditional-layout'
 
 export const metadata: Metadata = {
   title: 'VOID',
@@ -19,7 +20,9 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.png" />
       </head>
       <body>
-        <LoadingScreen>{children}</LoadingScreen>
+        <Suspense fallback={<div>Loading...</div>}>
+          <ConditionalLayout>{children}</ConditionalLayout>
+        </Suspense>
       </body>
     </html>
   )

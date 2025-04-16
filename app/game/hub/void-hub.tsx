@@ -676,8 +676,6 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: (typeof realms)[0]; mous
         style={{ rotateX: springRotateX, rotateY: springRotateY, perspective: 1500 }}
       >
         <div className="transform-style-preserve-3d relative w-full h-full flex items-center justify-center">
-          {/* Vortex realm - Black hole with orbiting mirror fragments */}
-          
           {/* Black hole center - Centered in container */}
           <motion.div
             className="absolute w-40 h-40 rounded-full"
@@ -904,15 +902,6 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: (typeof realms)[0]; mous
               }}
             />
           ))}
-          
-          {/* Subtle background glow */}
-          <div
-            className="absolute inset-0 opacity-20"
-            style={{
-              background: "radial-gradient(circle at center, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.8) 70%, rgba(15, 23, 42, 1) 100%)",
-              zIndex: 0,
-            }}
-          />
         </div>
       </motion.div>
     );

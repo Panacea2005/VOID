@@ -8,17 +8,45 @@ type LoadingScreenProps = {
   children: React.ReactNode;
 };
 
-const UltraSmoothBlackHole: React.FC<LoadingScreenProps> = ({ children }) => {
+const LoadingScreen: React.FC<LoadingScreenProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [blackHoleProgress, setBlackHoleProgress] = useState(0);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  
+  // State to store window dimensions
+  const [dimensions, setDimensions] = useState({
+    width: 0,
+    height: 0
+  });
+
+  // Set window dimensions only after component mounts
+  useEffect(() => {
+    setDimensions({
+      width: window.innerWidth,
+      height: window.innerHeight
+    });
+    
+    // Optional: Add resize listener if needed
+    const handleResize = () => {
+      setDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Handle route changes and initial load
   useEffect(() => {
     // Reset animation state
     setIsLoading(true);
     setBlackHoleProgress(0);
+    
+    // Skip animation if dimensions not set yet (server-side)
+    if (dimensions.width === 0) return;
     
     // Extremely gradual black hole growth with smooth easing
     let startTime = Date.now();
@@ -56,10 +84,10 @@ const UltraSmoothBlackHole: React.FC<LoadingScreenProps> = ({ children }) => {
     return () => {
       clearTimeout(startTimer);
     };
-  }, [pathname, searchParams]);
+  }, [pathname, searchParams, dimensions.width]);
 
   // Calculate black hole size based on screen dimensions and progress
-  const maxSize = Math.max(window.innerWidth, window.innerHeight) * 2;
+  const maxSize = Math.max(dimensions.width, dimensions.height) * 2;
   const blackHoleSize = blackHoleProgress * maxSize;
   
   // Calculate particle swallow progress - slightly delayed from the black hole growth
@@ -164,54 +192,56 @@ const UltraSmoothBlackHole: React.FC<LoadingScreenProps> = ({ children }) => {
             </div>
             
             {/* Gradient particles getting swallowed gradually */}
-            <div className="absolute inset-0 overflow-hidden">
-              {Array.from({ length: 150 }).map((_, i) => {
-                const size = Math.random() * 4 + 1;
-                const distance = Math.random() * Math.min(window.innerWidth, window.innerHeight) * 0.4 + (Math.min(window.innerWidth, window.innerHeight) * 0.1);
-                const angle = Math.random() * Math.PI * 2;
-                const x = Math.cos(angle) * distance + window.innerWidth/2;
-                const y = Math.sin(angle) * distance + window.innerHeight/2;
-                
-                // Stagger particle animations - particles closer to center get swallowed first
-                // Normalized distance from 0-1 (0 = center, 1 = furthest)
-                const normalizedDistance = distance / (Math.min(window.innerWidth, window.innerHeight) * 0.5);
-                // Threshold based on current progress - particles get swallowed when progress exceeds their threshold
-                const swallowThreshold = normalizedDistance * 0.9; // 0-0.9 range
-                
-                // Determine if this particle should be getting swallowed
-                const isActive = particleProgress >= swallowThreshold;
-                
-                // Select color from gradient palette
-                const colors = ['#2c3e90', '#823dac', '#a43dac', '#c43d9c', '#e23498', '#de2c65'];
-                const color = colors[Math.floor(Math.random() * colors.length)];
-                
-                return (
-                  <motion.div
-                    key={`particle-${i}`}
-                    className="absolute rounded-full"
-                    style={{
-                      width: `${size}px`,
-                      height: `${size}px`,
-                      x: x,
-                      y: y,
-                      backgroundColor: color,
-                      boxShadow: `0 0 ${size}px ${color}50`,
-                      opacity: Math.random() * 0.6 + 0.4,
-                    }}
-                    animate={isActive ? {
-                      x: window.innerWidth / 2,
-                      y: window.innerHeight / 2,
-                      scale: 0,
-                      opacity: 0
-                    } : {}}
-                    transition={{
-                      duration: 1.5 + Math.random() * 1,
-                      ease: [0.25, 0.1, 0.25, 1],
-                    }}
-                  />
-                );
-              })}
-            </div>
+            {typeof window !== 'undefined' && dimensions.width > 0 && (
+              <div className="absolute inset-0 overflow-hidden">
+                {Array.from({ length: 150 }).map((_, i) => {
+                  const size = Math.random() * 4 + 1;
+                  const distance = Math.random() * Math.min(dimensions.width, dimensions.height) * 0.4 + (Math.min(dimensions.width, dimensions.height) * 0.1);
+                  const angle = Math.random() * Math.PI * 2;
+                  const x = Math.cos(angle) * distance + dimensions.width/2;
+                  const y = Math.sin(angle) * distance + dimensions.height/2;
+                  
+                  // Stagger particle animations - particles closer to center get swallowed first
+                  // Normalized distance from 0-1 (0 = center, 1 = furthest)
+                  const normalizedDistance = distance / (Math.min(dimensions.width, dimensions.height) * 0.5);
+                  // Threshold based on current progress - particles get swallowed when progress exceeds their threshold
+                  const swallowThreshold = normalizedDistance * 0.9; // 0-0.9 range
+                  
+                  // Determine if this particle should be getting swallowed
+                  const isActive = particleProgress >= swallowThreshold;
+                  
+                  // Select color from gradient palette
+                  const colors = ['#2c3e90', '#823dac', '#a43dac', '#c43d9c', '#e23498', '#de2c65'];
+                  const color = colors[Math.floor(Math.random() * colors.length)];
+                  
+                  return (
+                    <motion.div
+                      key={`particle-${i}`}
+                      className="absolute rounded-full"
+                      style={{
+                        width: `${size}px`,
+                        height: `${size}px`,
+                        x: x,
+                        y: y,
+                        backgroundColor: color,
+                        boxShadow: `0 0 ${size}px ${color}50`,
+                        opacity: Math.random() * 0.6 + 0.4,
+                      }}
+                      animate={isActive ? {
+                        x: dimensions.width / 2,
+                        y: dimensions.height / 2,
+                        scale: 0,
+                        opacity: 0
+                      } : {}}
+                      transition={{
+                        duration: 1.5 + Math.random() * 1,
+                        ease: [0.25, 0.1, 0.25, 1],
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -230,4 +260,4 @@ const UltraSmoothBlackHole: React.FC<LoadingScreenProps> = ({ children }) => {
   );
 };
 
-export default UltraSmoothBlackHole;
+export default LoadingScreen;
