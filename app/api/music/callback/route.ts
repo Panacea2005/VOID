@@ -10,6 +10,7 @@ async function storeData(key: string, data: any) {
     // Try to use Vercel Blob first
     const blob = await put(`music-callbacks/${key}.json`, JSON.stringify(data), {
       contentType: "application/json",
+      access: "public"
     });
     return blob.url;
   } catch (error) {
@@ -25,7 +26,7 @@ async function getData(key: string) {
     // Try to get from Vercel Blob first
     const response = await get(`music-callbacks/${key}.json`);
     if (response) {
-      const text = await response.text();
+      const text = await response.blob.text();
       return JSON.parse(text);
     }
     return null;

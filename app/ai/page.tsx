@@ -722,149 +722,98 @@ export default function AIPage() {
       const pollStatus = async () => {
         try {
           // First, check the callback endpoint for the audio_url
-          const callbackRes = await fetch(
-            `/api/music/callback?taskId=${response.id}`,
-            {
-              headers: {
-                Accept: "application/json",
-              },
+          const callbackRes = await fetch(`/api/music/callback?taskId=${response.id}`, {
+            headers: {
+              'Accept': 'application/json'
             }
-          );
-
+          });
+      
           // Check if response is ok before proceeding
           if (!callbackRes.ok) {
             const errorText = await callbackRes.text();
-            console.error(
-              `Callback endpoint returned ${callbackRes.status}:`,
-              errorText
-            );
-            throw new Error(
-              `Callback endpoint returned status ${callbackRes.status}`
-            );
+            console.error(`Callback endpoint returned ${callbackRes.status}:`, errorText);
+            throw new Error(`Callback endpoint returned status ${callbackRes.status}`);
           }
-
+      
           // Check content type to ensure we're getting JSON
-          const contentType = callbackRes.headers.get("content-type");
-          if (!contentType || !contentType.includes("application/json")) {
+          const contentType = callbackRes.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
             const responseText = await callbackRes.text();
-            console.error(
-              "Callback endpoint returned non-JSON response:",
-              responseText
-            );
-            throw new Error("Callback endpoint returned non-JSON response");
+            console.error('Callback endpoint returned non-JSON response:', responseText);
+            throw new Error('Callback endpoint returned non-JSON response');
           }
-
+      
           // Parse JSON response
           const callbackData = await callbackRes.json();
           console.log("Fetched callback data:", callbackData);
-
+      
           if (callbackData.error) {
             console.warn("Callback returned error:", callbackData.error);
           }
-
+      
           // Check if we have audio URL from callback
           if (callbackData.audio_url) {
             // If the callback has the audio_url, use it and stop polling
-            setMusicGeneration((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    ...callbackData,
-                    style: musicStyle,
-                  }
-                : null
-            );
+            setMusicGeneration((prev) => prev ? { 
+              ...prev, 
+              ...callbackData, 
+              style: musicStyle 
+            } : null);
             clearInterval(pollingInterval);
             return;
           }
-
+      
           // Fallback to getMusicGenerationDetails if the callback doesn't have the audio_url yet
           try {
             const details = await getMusicGenerationDetails(response.id);
             console.log("Polled music generation details:", details);
             setMusicGeneration({ ...details, style: musicStyle });
-
-            if (
-              details.status === "SUCCESS" ||
-              details.status === "completed"
-            ) {
+      
+            if (details.status === "SUCCESS" || details.status === "completed") {
               clearInterval(pollingInterval);
               if (!details.audio_url && !callbackData.audio_url) {
-                setMusicGeneration((prev) =>
-                  prev
-                    ? {
-                        ...prev,
-                        status: "failed",
-                        error: "Audio URL missing after successful generation",
-                        style: musicStyle,
-                      }
-                    : null
-                );
+                setMusicGeneration((prev) => (prev ? { 
+                  ...prev, 
+                  status: "failed", 
+                  error: "Audio URL missing after successful generation", 
+                  style: musicStyle 
+                } : null));
               }
             } else if (details.status === "failed") {
               clearInterval(pollingInterval);
               throw new Error(details.error || "Music generation failed");
-            } else if (pollAttempts >= maxPollAttempts) {
-              clearInterval(pollingInterval);
-              setMusicGeneration((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      status: "failed",
-                      error:
-                        "Timed out waiting for music generation to complete",
-                      style: musicStyle,
-                    }
-                  : null
-              );
             }
+            // Removed the timeout check based on pollAttempts
           } catch (detailsError) {
-            console.error(
-              "Error fetching music generation details:",
-              detailsError
-            );
+            console.error("Error fetching music generation details:", detailsError);
             // If we already have some data from the callback, use that instead of failing completely
             if (callbackData && callbackData.status) {
-              setMusicGeneration((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      ...callbackData,
-                      style: musicStyle,
-                      error: `Details API error: ${
-                        detailsError instanceof Error
-                          ? detailsError.message
-                          : String(detailsError)
-                      }`,
-                    }
-                  : null
-              );
+              setMusicGeneration((prev) => prev ? {
+                ...prev,
+                ...callbackData,
+                style: musicStyle,
+                error: `Details API error: ${detailsError instanceof Error ? detailsError.message : String(detailsError)}`
+              } : null);
             } else {
               throw detailsError;
             }
           }
-
-          pollAttempts++;
+          
+          pollAttempts++; // Keep track of attempts for logging purposes, but don't use it for timeout
         } catch (error) {
           console.error("Error polling music generation status:", error);
           clearInterval(pollingInterval);
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          setMusicGeneration((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  status: "failed",
-                  error:
-                    errorMessage || "Failed to fetch music generation details",
-                  style: musicStyle,
-                }
-              : null
-          );
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          setMusicGeneration((prev) => (prev ? { 
+            ...prev, 
+            status: "failed", 
+            error: errorMessage || "Failed to fetch music generation details", 
+            style: musicStyle 
+          } : null));
         }
       };
 
-      const pollingInterval = setInterval(pollStatus, 5000);
+      const pollingInterval = setInterval(pollStatus, 100000);
 
       return () => clearInterval(pollingInterval);
     } catch (error) {
