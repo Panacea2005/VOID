@@ -6,8 +6,13 @@ import NexusRealm from "./realms/nexus/nexus-realm";
 import AbyssRealm from "./realms/abyss/abyss-realm";
 import PulseRealm from "./realms/pulse/pulse-realm";
 import CipherRealm from "./realms/cipher/cipher-realm";
+import RubiksRealm from "./realms/rubiks/rubiks-realm";
 import RealmPlaceholder from "./realms/vortex/realm-placeholder";
-import { AudioProvider, useAudio, AudioController } from "./contexts/audio-context"; 
+import {
+  AudioProvider,
+  useAudio,
+  AudioController,
+} from "./contexts/audio-context";
 // Updated import to get AudioController from audio-context.tsx instead of audio-manager.tsx
 
 // Main Game Component
@@ -22,7 +27,7 @@ const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
   const [enterAnimation, setEnterAnimation] = useState(false);
   // Add state for selectedCubeId
   const [selectedCubeId, setSelectedCubeId] = useState("pink-neon");
-  
+
   // Access audio context
   const audio = useAudio();
 
@@ -30,7 +35,7 @@ const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
   useEffect(() => {
     console.log("VoidResonanceGame - selectedCubeId:", selectedCubeId);
   }, [selectedCubeId]);
-  
+
   // Initial loading
   useEffect(() => {
     console.log("VoidResonanceGame - Initial loading...");
@@ -41,7 +46,7 @@ const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
   const selectRealm = (realm: string) => {
     console.log(`VoidResonanceGame - Selecting realm: ${realm}`);
     setEnterAnimation(true);
-    
+
     // Audio will be handled by the realm components through useAudio
     setTimeout(() => {
       setCurrentScreen(realm);
@@ -273,6 +278,12 @@ const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
             )}
             {currentScreen === "cipher" && (
               <CipherRealm
+                onReturn={returnToHub}
+                selectedCubeId={selectedCubeId}
+              />
+            )}
+            {currentScreen === "rubiks" && (
+              <RubiksRealm
                 onReturn={returnToHub}
                 selectedCubeId={selectedCubeId}
               />

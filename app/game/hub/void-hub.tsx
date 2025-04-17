@@ -90,6 +90,22 @@ const realms = [
     iconType: "glyph",
   },
   {
+    id: "rubiks",
+    name: "RUBIKS",
+    theme: "Spatial Harmony",
+    description: "A realm of 3D puzzles where colors must be aligned in perfect harmony. Navigate spatial dimensions to restore color patterns to their original state.",
+    color: "from-green-400 to-blue-600",
+    brightColor: "from-green-300 to-blue-400",
+    darkColor: "from-green-900 to-blue-950",
+    shapeType: "square" as "square", 
+    particleCount: 140,
+    particleType: "cube",
+    ambientSound: "/audio/rubiks-theme.mp3",
+    modelType: "rubiks-cube",
+    gameplayElements: ["Pattern matching", "3D rotation", "Spatial reasoning"],
+    iconType: "cube",
+  },
+  {
     id: "vortex",
     name: "???",
     theme: "Unknown Dimensions",
@@ -246,6 +262,29 @@ const RealmIcon = ({ realm, isSelected }: { realm: (typeof realms)[0]; isSelecte
         >
           ⎔
         </motion.div>
+      </div>
+    )
+  }
+
+  if (realm.iconType === "cube") {
+    return (
+      <div className="relative w-6 h-6 flex items-center justify-center">
+        <motion.div
+          className={`absolute w-4 h-4 rounded-sm bg-gradient-to-r ${realm.color}`}
+          animate={{
+            rotateX: isSelected ? [0, 180, 360] : 0,
+            rotateY: isSelected ? [0, 180, 360] : 0,
+          }}
+          transition={{
+            duration: 5,
+            repeat: isSelected ? Infinity : 0,
+            ease: "linear"
+          }}
+          style={{
+            transformStyle: "preserve-3d",
+            boxShadow: isSelected ? `0 0 8px ${realm.brightColor.split(' ')[1]}` : "none",
+          }}
+        />
       </div>
     )
   }
@@ -668,6 +707,130 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: (typeof realms)[0]; mous
         </div>
       </motion.div>
     )
+  }
+
+  if (realm.modelType === "rubiks-cube") {
+    return (
+      <motion.div
+        className="w-full h-full relative"
+        style={{ rotateX: springRotateX, rotateY: springRotateY, perspective: 1000 }}
+      >
+        <div className="transform-style-preserve-3d relative w-full h-full">
+          {/* Rubik's cube 3D model */}
+          <motion.div
+            className="absolute top-1/2 left-1/2 transform-gpu"
+            style={{
+              width: '200px',
+              height: '200px',
+              marginLeft: '-100px', 
+              marginTop: '-100px',
+              transformStyle: 'preserve-3d',
+            }}
+            animate={{
+              rotateX: [0, 360],
+              rotateY: [0, 360],
+            }}
+            transition={{
+              duration: 20,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          >
+            {/* Render cube faces */}
+            {[...Array(6)].map((_, index) => {
+              const transformValues = [
+                "rotateY(0deg) translateZ(100px)",    // Front
+                "rotateY(180deg) translateZ(100px)",  // Back
+                "rotateY(90deg) translateZ(100px)",   // Right
+                "rotateY(-90deg) translateZ(100px)",  // Left
+                "rotateX(90deg) translateZ(100px)",   // Top
+                "rotateX(-90deg) translateZ(100px)",  // Bottom
+              ];
+              
+              return (
+                <motion.div
+                  key={`cube-face-${index}`}
+                  className="absolute inset-0 border border-white/20"
+                  style={{
+                    transform: transformValues[index],
+                    background: `linear-gradient(135deg, ${realm.brightColor.split(' ')[1]}, ${realm.color.split(' ')[1]})`,
+                    backfaceVisibility: 'hidden',
+                  }}
+                >
+                  {/* Create 3x3 grid pattern */}
+                  <div className="w-full h-full grid grid-cols-3 grid-rows-3 p-1 gap-1">
+                    {[...Array(9)].map((_, i) => (
+                      <div key={`grid-${index}-${i}`} className="bg-white/10 rounded-sm" />
+                    ))}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+          
+          {/* Add floating cubes around the main cube */}
+          {[...Array(12)].map((_, i) => {
+            const angle = (i / 12) * Math.PI * 2;
+            const radius = 120 + Math.sin(i * 0.8) * 20;
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+            const z = Math.cos(i * 1.5) * 50;
+            
+            return (
+              <motion.div
+                key={`floating-cube-${i}`}
+                className="absolute"
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  left: "50%",
+                  top: "50%",
+                  marginLeft: `${x}px`,
+                  marginTop: `${y}px`,
+                  transformStyle: "preserve-3d",
+                  transform: `translateZ(${z}px)`,
+                }}
+                animate={{
+                  rotateX: [0, 360],
+                  rotateY: [0, 360],
+                }}
+                transition={{
+                  duration: 10 + i % 5,
+                  repeat: Infinity,
+                  ease: "linear"
+                }}
+              >
+                {/* Render mini cube faces */}
+                {[...Array(6)].map((_, faceIndex) => {
+                  const miniTransforms = [
+                    "rotateY(0deg) translateZ(10px)",
+                    "rotateY(180deg) translateZ(10px)",
+                    "rotateY(90deg) translateZ(10px)",
+                    "rotateY(-90deg) translateZ(10px)",
+                    "rotateX(90deg) translateZ(10px)",
+                    "rotateX(-90deg) translateZ(10px)",
+                  ];
+                  
+                  return (
+                    <div
+                      key={`mini-face-${i}-${faceIndex}`}
+                      className="absolute inset-0"
+                      style={{
+                        transform: miniTransforms[faceIndex],
+                        background: faceIndex === i % 6 ? realm.brightColor.split(' ')[1] : realm.color.split(' ')[1],
+                        borderRadius: '2px',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        backfaceVisibility: 'hidden',
+                      }}
+                    />
+                  );
+                })}
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.div>
+    );
   }
   
   if (realm.modelType === "fractal-vortex") {

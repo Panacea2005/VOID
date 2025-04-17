@@ -47,6 +47,13 @@ export const audioTracks = {
     duration: 190,
     cover: "/cipher-cover.jpg"
   },
+  rubiks: {
+    path: "/audio/rubiks-theme.mp3",
+    title: "Rubik's Realm",
+    artist: "VOID",
+    duration: 200,
+    cover: "/rubiks-cover.jpg"
+  },
   vortex: {
     path: "/audio/vortex-theme.mp3",
     title: "Vortex",

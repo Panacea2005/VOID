@@ -408,7 +408,7 @@ const isPuzzleSolved = (tiles: Tile[]): boolean => {
 };
 
 // Main component
-const CipherSlidingPuzzle: React.FC<CipherSlidingPuzzleProps> = ({
+const CipherRealm: React.FC<CipherSlidingPuzzleProps> = ({
   onReturn,
   selectedCubeId = "pink-neon",
 }) => {
@@ -1705,4 +1705,4 @@ const renderIntroScreen = () => (
   );
 };
 
-export default CipherSlidingPuzzle;
+export default CipherRealm;
