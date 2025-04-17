@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { Suspense } from 'react'
+import ConditionalLayout from '@/components/conditional-layout'
 
 export const metadata: Metadata = {
   title: 'VOID',
@@ -17,7 +19,11 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.png" />
       </head>
-      <body>{children}</body>
+      <body>
+        <Suspense fallback={<div>Loading...</div>}>
+          <ConditionalLayout>{children}</ConditionalLayout>
+        </Suspense>
+      </body>
     </html>
   )
 }

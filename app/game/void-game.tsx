@@ -4,29 +4,50 @@ import VoidHub from "./hub/void-hub";
 import EchoRealm from "./realms/echo/echo-realm";
 import NexusRealm from "./realms/nexus/nexus-realm";
 import AbyssRealm from "./realms/abyss/abyss-realm";
-import RealmPlaceholder from "./realms/cipher/realm-placeholder";
 import PulseRealm from "./realms/pulse/pulse-realm";
+import CipherRealm from "./realms/cipher/cipher-realm";
+import RubiksRealm from "./realms/rubiks/rubiks-realm";
+import RealmPlaceholder from "./realms/vortex/realm-placeholder";
+import {
+  AudioProvider,
+  useAudio,
+  AudioController,
+} from "./contexts/audio-context";
+// Updated import to get AudioController from audio-context.tsx instead of audio-manager.tsx
 
 // Main Game Component
 interface VoidResonanceGameProps {
   onExit: () => void;
 }
 
-const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
-  const [currentScreen, setCurrentScreen] = useState("hub"); // "hub", "echo", "abyss", "pulse", "cipher", "nexus"
+// Inner component that uses the audio context
+const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
+  const [currentScreen, setCurrentScreen] = useState("hub"); // "hub", "echo", "abyss", "pulse", "cipher", "nexus", "vortex"
   const [loading, setLoading] = useState(true);
   const [enterAnimation, setEnterAnimation] = useState(false);
   // Add state for selectedCubeId
   const [selectedCubeId, setSelectedCubeId] = useState("pink-neon");
+
+  // Access audio context
+  const audio = useAudio();
 
   // Log the selected cube ID for debugging
   useEffect(() => {
     console.log("VoidResonanceGame - selectedCubeId:", selectedCubeId);
   }, [selectedCubeId]);
 
-  // Handle realm selection
+  // Initial loading
+  useEffect(() => {
+    console.log("VoidResonanceGame - Initial loading...");
+    setTimeout(() => setLoading(false), 1000);
+  }, []);
+
+  // Handle realm selection and audio change
   const selectRealm = (realm: string) => {
+    console.log(`VoidResonanceGame - Selecting realm: ${realm}`);
     setEnterAnimation(true);
+
+    // Audio will be handled by the realm components through useAudio
     setTimeout(() => {
       setCurrentScreen(realm);
       setLoading(true);
@@ -38,8 +59,9 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
     }, 1000); // Time to match the cube animation in void-hub
   };
 
-  // Return to hub
+  // Return to hub and change audio
   const returnToHub = () => {
+    console.log("VoidResonanceGame - Returning to hub");
     setLoading(true);
     setTimeout(() => {
       setCurrentScreen("hub");
@@ -47,14 +69,9 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
     }, 800);
   };
 
-  // Initial loading
-  useEffect(() => {
-    setTimeout(() => setLoading(false), 1000);
-  }, []);
-
   // Handle cube selection from hub
   const handleCubeChange = (cubeId: string) => {
-    console.log("Cube changed to:", cubeId);
+    console.log("VoidResonanceGame - Cube changed to:", cubeId);
     setSelectedCubeId(cubeId);
   };
 
@@ -71,6 +88,8 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
         return { color: "#60a5fa", gradient: "from-blue-400 to-pink-600" };
       case "cipher":
         return { color: "#8b5cf6", gradient: "from-purple-400 to-blue-600" };
+      case "vortex":
+        return { color: "#10b981", gradient: "from-emerald-400 to-cyan-600" };
       default:
         return { color: "#a855f7", gradient: "from-blue-400 to-purple-600" };
     }
@@ -200,6 +219,21 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
         )}
       </AnimatePresence>
 
+      {/* Include AudioController UI at top level */}
+      <div className="z-50">
+        <AudioController
+          isPlaying={audio.isPlaying}
+          currentTrackId={audio.currentTrackId}
+          volume={audio.volume}
+          progress={audio.progress}
+          onTogglePlayback={audio.togglePlayback}
+          onToggleMute={audio.toggleMute}
+          onTrackChange={audio.changeTrack}
+          onVolumeChange={audio.setVolume}
+          onSeek={audio.seekTo}
+        />
+      </div>
+
       {/* Main Content */}
       <AnimatePresence mode="wait">
         {!loading && (
@@ -221,32 +255,44 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
             {currentScreen === "echo" && (
               <EchoRealm
                 onReturn={returnToHub}
-                selectedCubeId={selectedCubeId} // Pass the selected cube ID to EchoRealm
+                selectedCubeId={selectedCubeId}
               />
             )}
             {currentScreen === "nexus" && (
               <NexusRealm
                 onReturn={returnToHub}
-                selectedCubeId={selectedCubeId} // Pass the selected cube ID to NexusRealm
+                selectedCubeId={selectedCubeId}
               />
             )}
             {currentScreen === "abyss" && (
               <AbyssRealm
                 onReturn={returnToHub}
-                selectedCubeId={selectedCubeId} // Pass the selected cube ID to NexusRealm
+                selectedCubeId={selectedCubeId}
               />
             )}
             {currentScreen === "pulse" && (
               <PulseRealm
-              onReturn={returnToHub}
-              selectedCubeId={selectedCubeId} // Pass the selected cube ID to NexusRealm
+                onReturn={returnToHub}
+                selectedCubeId={selectedCubeId}
               />
             )}
             {currentScreen === "cipher" && (
+              <CipherRealm
+                onReturn={returnToHub}
+                selectedCubeId={selectedCubeId}
+              />
+            )}
+            {currentScreen === "rubiks" && (
+              <RubiksRealm
+                onReturn={returnToHub}
+                selectedCubeId={selectedCubeId}
+              />
+            )}
+            {currentScreen === "vortex" && (
               <RealmPlaceholder
-                realmName="Cipher Realm"
-                realmColor="#8b5cf6"
-                realmGradient="from-purple-400 to-blue-600"
+                realmName="Vortex Realm"
+                realmColor="#10b981"
+                realmGradient="from-emerald-400 to-cyan-600"
                 onReturn={returnToHub}
               />
             )}
@@ -279,6 +325,11 @@ const VoidResonanceGame: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
       `}</style>
     </div>
   );
+};
+
+// The main game component
+const VoidResonanceGame: React.FC<VoidResonanceGameProps> = (props) => {
+  return <VoidGameInner {...props} />;
 };
 
 export default VoidResonanceGame;
