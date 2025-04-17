@@ -688,10 +688,10 @@ export default function AIPage() {
       (!isInstrumental && !musicPrompt.trim())
     )
       return;
-
+  
     setIsGeneratingMusic(true);
     setMusicGeneration(null); // Reset music generation state
-
+  
     try {
       console.log("isInstrumental value:", isInstrumental);
       const params = {
@@ -705,20 +705,18 @@ export default function AIPage() {
         customMode: true,
       };
       console.log("Calling generateMusic with params:", params);
-
+  
       const response = await generateMusic(params);
-
+  
       if (!response.id) {
         throw new Error(
           "Failed to retrieve task ID from music generation response"
         );
       }
-
+  
       setMusicGeneration({ ...response, style: musicStyle });
-
-      let pollAttempts = 0;
-      const maxPollAttempts = 12; // 60 seconds total (5 seconds per poll)
-
+  
+      // Improved polling mechanism with better fallbacks
       const pollStatus = async () => {
         try {
           // First, check the callback endpoint for the audio_url
@@ -747,10 +745,6 @@ export default function AIPage() {
           const callbackData = await callbackRes.json();
           console.log("Fetched callback data:", callbackData);
       
-          if (callbackData.error) {
-            console.warn("Callback returned error:", callbackData.error);
-          }
-      
           // Check if we have audio URL from callback
           if (callbackData.audio_url) {
             // If the callback has the audio_url, use it and stop polling
@@ -767,11 +761,73 @@ export default function AIPage() {
           try {
             const details = await getMusicGenerationDetails(response.id);
             console.log("Polled music generation details:", details);
-            setMusicGeneration({ ...details, style: musicStyle });
+            
+            // Extract audio URL from response using a more comprehensive approach
+            let audioUrl = details.audio_url;
+            
+            // If status is success but no audio URL, search deeper
+            if ((details.status === "SUCCESS" || details.status === "completed") && !audioUrl) {
+              console.log("SUCCESS status but no audio_url, searching for URL in raw response...");
+              
+              // Attempt to fetch raw details again to do deep inspection
+              try {
+                const rawResponse = await fetch(`/api/music/callback?taskId=${response.id}&full=true`, {
+                  headers: { 'Accept': 'application/json' }
+                });
+                
+                if (rawResponse.ok) {
+                  const rawData = await rawResponse.json();
+                  console.log("Raw callback data for deep inspection:", rawData);
+                  
+                  // Look for audio URLs in common places
+                  const possibleUrlFields = [
+                    'audio_url', 'audioUrl', 'url', 'fileUrl', 'mp3_url', 
+                    'audio', 'music_url', 'result_url', 'output_url'
+                  ];
+                  
+                  // Check all top-level fields
+                  for (const field of possibleUrlFields) {
+                    if (rawData[field] && typeof rawData[field] === 'string' && 
+                        rawData[field].includes('http')) {
+                      audioUrl = rawData[field];
+                      console.log(`Found audio URL in field: ${field}`, audioUrl);
+                      break;
+                    }
+                  }
+                  
+                  // Check nested fields - data, payload, result
+                  const nestedObjects = ['data', 'payload', 'result', 'output'];
+                  for (const nestedField of nestedObjects) {
+                    if (!audioUrl && rawData[nestedField] && typeof rawData[nestedField] === 'object') {
+                      for (const field of possibleUrlFields) {
+                        if (rawData[nestedField][field] && 
+                            typeof rawData[nestedField][field] === 'string' &&
+                            rawData[nestedField][field].includes('http')) {
+                          audioUrl = rawData[nestedField][field];
+                          console.log(`Found audio URL in ${nestedField}.${field}`, audioUrl);
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }
+              } catch (err) {
+                console.warn("Failed deep inspection for audio URL:", err);
+              }
+            }
+            
+            // Update state with the results
+            setMusicGeneration(prev => ({
+              ...(prev || {}),
+              ...details,
+              audio_url: audioUrl, // Use our extracted URL
+              style: musicStyle
+            }));
       
             if (details.status === "SUCCESS" || details.status === "completed") {
               clearInterval(pollingInterval);
-              if (!details.audio_url && !callbackData.audio_url) {
+              if (!audioUrl) {
+                console.error("No audio URL found despite SUCCESS status. Falling back to error state.");
                 setMusicGeneration((prev) => (prev ? { 
                   ...prev, 
                   status: "failed", 
@@ -783,9 +839,10 @@ export default function AIPage() {
               clearInterval(pollingInterval);
               throw new Error(details.error || "Music generation failed");
             }
-            // Removed the timeout check based on pollAttempts
+            
           } catch (detailsError) {
             console.error("Error fetching music generation details:", detailsError);
+            
             // If we already have some data from the callback, use that instead of failing completely
             if (callbackData && callbackData.status) {
               setMusicGeneration((prev) => prev ? {
@@ -798,8 +855,6 @@ export default function AIPage() {
               throw detailsError;
             }
           }
-          
-          pollAttempts++; // Keep track of attempts for logging purposes, but don't use it for timeout
         } catch (error) {
           console.error("Error polling music generation status:", error);
           clearInterval(pollingInterval);
@@ -812,9 +867,13 @@ export default function AIPage() {
           } : null));
         }
       };
-
-      const pollingInterval = setInterval(pollStatus, 10000);
-
+  
+      // Poll more frequently at the beginning
+      const pollingInterval = setInterval(pollStatus, 5000);
+      
+      // Start polling immediately
+      pollStatus();
+  
       return () => clearInterval(pollingInterval);
     } catch (error) {
       console.error("Error generating music:", error);
