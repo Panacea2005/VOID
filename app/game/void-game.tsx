@@ -6,7 +6,7 @@ import NexusRealm from "./realms/nexus/nexus-realm";
 import AbyssRealm from "./realms/abyss/abyss-realm";
 import PulseRealm from "./realms/pulse/pulse-realm";
 import CipherRealm from "./realms/cipher/cipher-realm";
-import RubiksRealm from "./realms/rubiks/rubiks-realm";
+import CrypticRealm from "./realms/cryptic/cryptic-realm";
 import RealmPlaceholder from "./realms/vortex/realm-placeholder";
 import {
   AudioProvider,
@@ -282,8 +282,8 @@ const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
                 selectedCubeId={selectedCubeId}
               />
             )}
-            {currentScreen === "rubiks" && (
-              <RubiksRealm
+            {currentScreen === "cryptic" && (
+              <CrypticRealm
                 onReturn={returnToHub}
                 selectedCubeId={selectedCubeId}
               />

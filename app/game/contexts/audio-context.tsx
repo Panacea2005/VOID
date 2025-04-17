@@ -47,12 +47,12 @@ export const audioTracks = {
     duration: 190,
     cover: "/cipher-cover.jpg"
   },
-  rubiks: {
-    path: "/audio/rubiks-theme.mp3",
-    title: "Rubik's Realm",
+  cryptic: {
+    path: "/audio/cryptic-theme.mp3",
+    title: "Cryptic",
     artist: "VOID",
     duration: 200,
-    cover: "/rubiks-cover.jpg"
+    cover: "/cryptic-cover.jpg"
   },
   vortex: {
     path: "/audio/vortex-theme.mp3",
@@ -72,6 +72,7 @@ const formatTime = (seconds: number) => {
 
 // Define the audio context type
 type AudioContextType = {
+  playSound(arg0: string): unknown;
   isPlaying: boolean;
   currentTrackId: string;
   volume: number;
@@ -383,7 +384,10 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     toggleMute,
     changeTrack,
     setVolume,
-    seekTo
+    seekTo,
+    playSound: function (arg0: string): unknown {
+      throw new Error('Function not implemented.');
+    }
   };
 
   return (
