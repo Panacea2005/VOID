@@ -18,6 +18,9 @@ interface MusicGenerationResponse {
 }
 
 interface MusicRecordInfoResponse {
+  errorMessage: string | undefined;
+  response: any;
+  errorCode: number;
   id: string;
   status: string;
   audio_url?: string;
@@ -59,38 +62,67 @@ function findAudioUrl(obj: any, path = ""): { found: boolean; url?: string; path
     'audio_url', 'audioUrl', 'url', 'fileUrl', 'mp3_url', 'audio', 'music_url',
     'result_url', 'output_url', 'download_url', 'file', 'mp3', 'wav', 'result'
   ];
+
+  // Blacklist of field names that might contain URLs but are definitely not audio files
+  const blacklistedFields = ['param', 'params', 'parameters', 'callBackUrl', 'callback_url', 'webhook'];
   
   // First pass: check exact field names
   for (const field of audioFields) {
     if (obj[field] && typeof obj[field] === 'string' && 
         (obj[field].includes('http') || obj[field].startsWith('/api/'))) {
-      console.log(`Found exact match for audio URL at ${path}.${field}:`, obj[field]);
-      return { found: true, url: obj[field], path: `${path}.${field}` };
+      
+      // Validate that this looks like an actual audio URL, not just any URL
+      const url = obj[field].toLowerCase();
+      
+      // Skip if it's a callback URL or other non-audio URL
+      if (url.includes('callback') || url.includes('webhook')) {
+        console.log(`Skipping non-audio URL at ${path}.${field}:`, obj[field]);
+        continue;
+      }
+      
+      // If it ends with an audio extension, it's definitely an audio URL
+      const isAudioUrl = url.endsWith('.mp3') || url.endsWith('.wav') || 
+                          url.endsWith('.ogg') || url.endsWith('.m4a') || 
+                          url.endsWith('.aac') || url.includes('/audio/') ||
+                          url.includes('/music/') || url.includes('/stream/');
+      
+      if (isAudioUrl) {
+        console.log(`Found confirmed audio URL at ${path}.${field}:`, obj[field]);
+        return { found: true, url: obj[field], path: `${path}.${field}` };
+      }
+      
+      // For other URLs, log but don't immediately confirm
+      console.log(`Found potential audio URL at ${path}.${field}:`, obj[field]);
+      // Continue checking for better matches before returning this one
     }
   }
   
   // Second pass: check for fields containing these keywords
   for (const key in obj) {
+    // Skip blacklisted fields
+    if (blacklistedFields.includes(key)) continue;
+    
     if (typeof obj[key] === 'string' && obj[key].includes('http')) {
+      const url = obj[key].toLowerCase();
+      
+      // Skip if it's a callback URL or other non-audio URL
+      if (url.includes('callback') || url.includes('webhook')) {
+        continue;
+      }
+      
       // Check if the key name contains any of our audio-related keywords
       const isLikelyAudioField = audioFields.some(field => 
         key.toLowerCase().includes(field.toLowerCase().replace('_', ''))
       );
       
-      if (isLikelyAudioField) {
+      // If the URL ends with an audio extension, it's definitely an audio URL
+      const isAudioUrl = url.endsWith('.mp3') || url.endsWith('.wav') || 
+                          url.endsWith('.ogg') || url.endsWith('.m4a') || 
+                          url.endsWith('.aac') || url.includes('/audio/') ||
+                          url.includes('/music/') || url.includes('/stream/');
+      
+      if (isLikelyAudioField || isAudioUrl) {
         console.log(`Found likely audio URL at ${path}.${key}:`, obj[key]);
-        return { found: true, url: obj[key], path: `${path}.${key}` };
-      }
-    }
-  }
-  
-  // Look for any URL that ends with audio file extension
-  for (const key in obj) {
-    if (typeof obj[key] === 'string' && obj[key].includes('http')) {
-      const url = obj[key].toLowerCase();
-      if (url.endsWith('.mp3') || url.endsWith('.wav') || url.endsWith('.ogg') || 
-          url.endsWith('.m4a') || url.endsWith('.aac')) {
-        console.log(`Found URL with audio extension at ${path}.${key}:`, obj[key]);
         return { found: true, url: obj[key], path: `${path}.${key}` };
       }
     }
@@ -112,19 +144,17 @@ function findAudioUrl(obj: any, path = ""): { found: boolean; url?: string; path
   
   // Recursively check nested objects
   for (const key in obj) {
+    // Skip blacklisted fields
+    if (blacklistedFields.includes(key)) continue;
+    
     if (obj[key] && typeof obj[key] === 'object' && obj[key] !== null) {
       const result = findAudioUrl(obj[key], `${path}.${key}`);
       if (result.found) return result;
     }
   }
   
-  // If still no URL found, look for ANY http URL as a last resort
-  for (const key in obj) {
-    if (typeof obj[key] === 'string' && obj[key].includes('http')) {
-      console.log(`Found fallback URL at ${path}.${key}:`, obj[key]);
-      return { found: true, url: obj[key], path: `${path}.${key}` };
-    }
-  }
+  // We're not going to look for ANY http URL as a last resort anymore
+  // because that was causing false positives
   
   return { found: false };
 }
@@ -256,6 +286,7 @@ export async function generateMusic(params: MusicGenerationParams): Promise<Musi
 }
 
 export async function getMusicGenerationDetails(taskId: string): Promise<MusicRecordInfoResponse> {
+  // Ensure all code paths either return a value or throw an error
   try {
     if (!taskId) {
       throw new Error("taskId is required");
@@ -277,6 +308,17 @@ export async function getMusicGenerationDetails(taskId: string): Promise<MusicRe
       if (data.code !== 200) {
         throw new Error(data.msg || "Failed to fetch music generation details");
       }
+      
+      // Check for error conditions explicitly, even if code is 200
+      if (data.data?.errorCode || data.data?.errorMessage || 
+          data.data?.status === "failed" || data.data?.status?.includes("FAILED")) {
+        // Log but continue processing - we'll handle the error status in the result
+        console.warn("API returned error condition:", {
+          errorCode: data.data.errorCode,
+          errorMessage: data.data.errorMessage,
+          status: data.data.status
+        });
+      }
 
       // Log response structure for debugging
       console.log("Details response structure:", Object.keys(data));
@@ -288,11 +330,23 @@ export async function getMusicGenerationDetails(taskId: string): Promise<MusicRe
       const audioUrlSearch = findAudioUrl(data);
       
       // Handle different response structures
+      // Make sure we handle different status formats 
+      let status = data.data?.status || "PENDING";
+      
+      // Map any error status to a standardized format for the frontend
+      if (status?.includes("FAILED") || status === "failed") {
+        status = "failed";
+      }
+      
+      // Create the result object
       const result: MusicRecordInfoResponse = {
         id: data.data?.id || taskId,
-        status: data.data?.status || "PENDING",
+        status: status,
         audio_url: audioUrlSearch.found ? audioUrlSearch.url : (data.data?.audio_url || data.data?.audioUrl),
-        error: data.msg !== "success" ? data.msg : undefined,
+        error: data.data?.errorMessage || (data.msg !== "success" ? data.msg : undefined),
+        errorMessage: undefined,
+        response: undefined,
+        errorCode: 0
       };
 
       if (audioUrlSearch.found) {
@@ -404,6 +458,7 @@ export async function getMusicGenerationDetails(taskId: string): Promise<MusicRe
         throw apiError;
       }
     }
+    throw new Error("Unexpected error: No valid response or error handling occurred.");
   } catch (error: any) {
     console.error("Error fetching music generation details:", {
       message: error.message,

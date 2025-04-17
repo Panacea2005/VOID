@@ -67,7 +67,7 @@ interface MusicGeneration {
   id: string;
   status: string;
   audio_url?: string;
-  error?: string;
+  error?: string | null;
   style?: string;
 }
 
@@ -693,6 +693,9 @@ export default function AIPage() {
     setMusicGeneration(null); // Reset music generation state
   
     try {
+      // First, clear any previous error state
+      setMusicGeneration(prev => prev ? {...prev, error: null} : null);
+      
       console.log("isInstrumental value:", isInstrumental);
       const params = {
         prompt: musicPrompt,
@@ -824,6 +827,7 @@ export default function AIPage() {
               style: musicStyle
             }));
       
+            // Map API-specific status codes to user-friendly statuses
             if (details.status === "SUCCESS" || details.status === "completed") {
               clearInterval(pollingInterval);
               if (!audioUrl) {
@@ -835,9 +839,28 @@ export default function AIPage() {
                   style: musicStyle 
                 } : null));
               }
-            } else if (details.status === "failed") {
+            } else if (details.status === "failed" || details.status === "GENERATE_AUDIO_FAILED" || 
+                      details.status?.includes("FAILED")) {
               clearInterval(pollingInterval);
-              throw new Error(details.error || "Music generation failed");
+              
+              // Extract error message from various possible locations
+              let errorMessage = details.error || details.errorMessage || 
+                                (details.response?.errorMessage) || 
+                                "Music generation failed";
+              
+              // Handle specific error codes with user-friendly messages
+              if (details.errorCode === 500) {
+                errorMessage = "The music service is experiencing technical difficulties. Please try again later or try a different style/prompt.";
+              }
+              
+              console.error(`Music generation failed: ${errorMessage}`, details);
+              
+              setMusicGeneration((prev) => (prev ? { 
+                ...prev, 
+                status: "failed", 
+                error: errorMessage, 
+                style: musicStyle 
+              } : null));
             }
             
           } catch (detailsError) {

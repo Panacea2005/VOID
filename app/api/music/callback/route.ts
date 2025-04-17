@@ -14,29 +14,49 @@ function findAudioUrl(obj: any): string | undefined {
     'audio', 'music_url', 'result_url', 'output_url'
   ];
   
+  // Blacklist of field names that might contain URLs but are definitely not audio files
+  const blacklistedFields = ['param', 'params', 'parameters', 'callBackUrl', 'callback_url', 'webhook'];
+  
   // First check direct fields
   for (const field of audioFields) {
     if (obj[field] && typeof obj[field] === 'string' && obj[field].includes('http')) {
+      // Skip if it's a callback URL or other non-audio URL
+      const url = obj[field].toLowerCase();
+      if (url.includes('callback') || url.includes('webhook')) {
+        continue;
+      }
+      
       console.log(`Found audio URL in field: ${field}`, obj[field]);
       return obj[field];
     }
   }
   
+  // Check for URLs with audio extensions
+  for (const key in obj) {
+    if (blacklistedFields.includes(key)) continue;
+    
+    if (typeof obj[key] === 'string' && obj[key].includes('http')) {
+      const url = obj[key].toLowerCase();
+      if (url.endsWith('.mp3') || url.endsWith('.wav') || url.endsWith('.ogg') || 
+          url.endsWith('.m4a') || url.endsWith('.aac') || url.includes('/audio/') ||
+          url.includes('/music/') || url.includes('/stream/')) {
+        console.log(`Found URL with audio extension: ${key}`, obj[key]);
+        return obj[key];
+      }
+    }
+  }
+  
   // Check nested objects
   for (const key in obj) {
+    if (blacklistedFields.includes(key)) continue;
+    
     if (obj[key] && typeof obj[key] === 'object') {
       const nestedUrl = findAudioUrl(obj[key]);
       if (nestedUrl) return nestedUrl;
     }
   }
   
-  // Last resort: find any URL
-  for (const key in obj) {
-    if (typeof obj[key] === 'string' && obj[key].includes('http')) {
-      return obj[key];
-    }
-  }
-  
+  // We no longer use the "any URL" fallback as it was causing false positives
   return undefined;
 }
 
@@ -116,11 +136,19 @@ export async function POST(request: Request) {
       audioUrl = findAudioUrl(data);
     }
 
+    // Extract error from multiple possible locations
+    let errorMessage = data.error || 
+                       data.errorMessage || 
+                       (data.msg && data.msg !== "success" ? data.msg : undefined) ||
+                       (data.data?.errorMessage) ||
+                       (status.includes("FAILED") ? "Generation failed" : undefined);
+    
     const callbackData = {
       id: taskId,
       status: status,
       audio_url: audioUrl,
-      error: data.error || (data.msg && data.msg !== "success" ? data.msg : undefined),
+      error: errorMessage,
+      errorCode: data.errorCode || data.data?.errorCode,
       timestamp: new Date().toISOString(),
       // Store the entire raw data for debugging
       raw_data: data
@@ -160,16 +188,37 @@ export async function GET(request: Request) {
     console.log(`GET request for taskId ${taskId}:`, data ? "Data found" : "No data found");
     
     if (!data) {
-      return NextResponse.json({ 
-        id: taskId,
-        status: "PENDING", 
-        message: "No data found for this task yet. It may still be processing."
-      }, { 
-        status: 200,
-        headers: {
-          "Content-Type": "application/json"
-        }
-      });
+      // Check for records in a secondary location (e.g., DB, other cache)
+    try {
+      const alternativeData = await checkAlternativeSources(taskId);
+      if (alternativeData) {
+        console.log("Found data from alternative source for taskId:", taskId);
+        return NextResponse.json(alternativeData, {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    } catch (altError) {
+      console.warn("Error checking alternative sources:", altError);
+    }
+    
+    return NextResponse.json({ 
+      id: taskId,
+      status: "PENDING", 
+      message: "No data found for this task yet. It may still be processing."
+    }, { 
+      status: 200,
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+    
+    // Helper function to check alternative data sources
+    async function checkAlternativeSources(taskId: string) {
+      // This is a placeholder function - in a real implementation,
+      // you might check a database or another cache mechanism
+      return null;
+    }
     }
 
     // If full response is requested, return the entire raw data
