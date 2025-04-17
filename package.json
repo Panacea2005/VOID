@@ -42,6 +42,8 @@
     "@react-three/drei": "^10.0.6",
     "@react-three/fiber": "^9.1.2",
     "@react-three/postprocessing": "^3.0.4",
+    "@vercel/blob": "^1.0.0",
+    "@vercel/kv": "^3.0.0",
     "animejs": "^4.0.1",
     "autoprefixer": "^10.4.20",
     "axios": "^1.8.4",
@@ -51,6 +53,7 @@
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
     "framer-motion": "latest",
+    "howler": "^2.2.4",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
@@ -68,6 +71,7 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "three": "^0.175.0",
+    "tone": "^15.0.4",
     "unsplash-js": "^7.0.19",
     "uuid": "^11.1.0",
     "vaul": "^0.9.6",
@@ -75,6 +79,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/howler": "^2.2.12",
     "@types/node": "^22",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.2",
