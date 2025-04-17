@@ -90,9 +90,9 @@ const realms = [
     iconType: "glyph",
   },
   {
-    id: "rubiks",
-    name: "RUBIKS",
-    theme: "Spatial Harmony",
+    id: "cryptic",
+    name: "CRYPTIC",
+    theme: "Spatial and Harmony",
     description: "A realm of 3D puzzles where colors must be aligned in perfect harmony. Navigate spatial dimensions to restore color patterns to their original state.",
     color: "from-green-400 to-blue-600",
     brightColor: "from-green-300 to-blue-400",
