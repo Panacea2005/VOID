@@ -57,7 +57,7 @@ export async function generateMusic(params: MusicGenerationParams): Promise<Musi
     title: params.title,
     instrumental: instrumental,
     custom_mode: params.customMode ?? true,
-    model: "V3_5",
+    model: params.model || "V3_5",
     negative_tags: params.negativeTags,
     callBackUrl: CALLBACK_URL,
   };
@@ -68,6 +68,7 @@ export async function generateMusic(params: MusicGenerationParams): Promise<Musi
   }
 
   try {
+    // Input validation
     if (params.customMode) {
       if (params.style && params.style.length > 200) {
         throw new Error("Style must not exceed 200 characters");
@@ -106,34 +107,54 @@ export async function generateMusic(params: MusicGenerationParams): Promise<Musi
 
     console.log("Sending payload to API:", payload);
 
-    const response = await apiClient.post("/generate", payload);
-    const data = response.data;
-    console.log("Raw API response from generateMusic:", data);
+    try {
+      const response = await apiClient.post("/generate", payload);
+      const data = response.data;
+      console.log("Raw API response from generateMusic:", data);
 
-    if (data.code !== 200) {
-      throw new Error(data.msg || "Failed to generate music");
+      if (!data) {
+        throw new Error("Empty response received from API");
+      }
+
+      if (data.code !== 200) {
+        throw new Error(data.msg || "Failed to generate music");
+      }
+
+      const taskId = data.data?.taskId || data.data?.id;
+      if (!taskId) {
+        throw new Error("Task ID not found in API response");
+      }
+
+      return {
+        id: taskId,
+        status: data.data.status || "PENDING",
+        audio_url: data.data.audio_url,
+        error: data.msg !== "success" ? data.msg : undefined,
+      };
+    } catch (apiError: any) {
+      // Handle specific axios errors
+      if (apiError.response) {
+        // The server responded with a status code outside the 2xx range
+        console.error("API Error Response:", apiError.response.data);
+        throw new Error(`API Error (${apiError.response.status}): ${
+          apiError.response.data?.msg || apiError.response.statusText || "Unknown error"
+        }`);
+      } else if (apiError.request) {
+        // The request was made but no response was received
+        console.error("No response received from API");
+        throw new Error("No response received from music API. Please check your network connection.");
+      } else {
+        // Something happened in setting up the request
+        throw apiError;
+      }
     }
-
-    const taskId = data.data?.taskId || data.data?.id;
-    if (!taskId) {
-      throw new Error("Task ID not found in API response");
-    }
-
-    return {
-      id: taskId,
-      status: data.data.status || "PENDING",
-      audio_url: data.data.audio_url,
-      error: data.msg !== "success" ? data.msg : undefined,
-    };
   } catch (error: any) {
     console.error("Error generating music:", {
       message: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-      url: error.config?.url,
-      payload,
+      name: error.name,
+      stack: error.stack,
     });
-    throw new Error(error.response?.data?.msg || error.message || "Failed to generate music");
+    throw new Error(error.message || "Failed to generate music");
   }
 }
 
@@ -143,29 +164,59 @@ export async function getMusicGenerationDetails(taskId: string): Promise<MusicRe
       throw new Error("taskId is required");
     }
 
-    const response = await apiClient.get("/generate/record-info", {
-      params: { taskId },
-    });
-    const data = response.data;
-    console.log("Raw API response from getMusicGenerationDetails:", data); // Debug log
+    console.log(`Fetching details for music generation task: ${taskId}`);
 
-    if (data.code !== 200) {
-      throw new Error(data.msg || "Failed to fetch music generation details");
+    try {
+      const response = await apiClient.get("/generate/record-info", {
+        params: { taskId },
+      });
+      const data = response.data;
+      console.log("Raw API response from getMusicGenerationDetails:", data);
+
+      if (!data) {
+        throw new Error("Empty response received from API");
+      }
+
+      if (data.code !== 200) {
+        throw new Error(data.msg || "Failed to fetch music generation details");
+      }
+
+      // Handle different response structures
+      const result: MusicRecordInfoResponse = {
+        id: data.data.id || taskId,
+        status: data.data.status || "PENDING",
+        audio_url: data.data.audio_url || data.data.audioUrl,
+        error: data.msg !== "success" ? data.msg : undefined,
+      };
+
+      // Log the final processed result
+      console.log("Processed music generation details:", result);
+
+      return result;
+    } catch (apiError: any) {
+      // Handle specific axios errors
+      if (apiError.response) {
+        // The server responded with a status code outside the 2xx range
+        console.error("API Error Response:", apiError.response.data);
+        throw new Error(`API Error (${apiError.response.status}): ${
+          apiError.response.data?.msg || apiError.response.statusText || "Unknown error"
+        }`);
+      } else if (apiError.request) {
+        // The request was made but no response was received
+        console.error("No response received from API");
+        throw new Error("No response received from music details API. Please check your network connection.");
+      } else {
+        // Something happened in setting up the request
+        throw apiError;
+      }
     }
-
-    return {
-      id: data.data.id || taskId,
-      status: data.data.status || "PENDING",
-      audio_url: data.data.audio_url || data.data.audioUrl, // Added fallback for audioUrl
-      error: data.msg !== "success" ? data.msg : undefined,
-    };
   } catch (error: any) {
     console.error("Error fetching music generation details:", {
       message: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-      url: error.config?.url,
+      name: error.name,
+      stack: error.stack,
+      taskId,
     });
-    throw new Error(error.response?.data?.msg || error.message || "Failed to fetch music generation details");
+    throw new Error(error.message || "Failed to fetch music generation details");
   }
 }
