@@ -813,7 +813,7 @@ export default function AIPage() {
         }
       };
 
-      const pollingInterval = setInterval(pollStatus, 100000);
+      const pollingInterval = setInterval(pollStatus, 10000);
 
       return () => clearInterval(pollingInterval);
     } catch (error) {

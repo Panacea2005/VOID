@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { put, get, list, del } from "@vercel/blob";
+import * as vercelBlob from "@vercel/blob";
 
 // In-memory fallback for local development without Blob token
 const localCache = new Map();
@@ -8,11 +8,12 @@ const localCache = new Map();
 async function storeData(key: string, data: any) {
   try {
     // Try to use Vercel Blob first
-    const blob = await put(`music-callbacks/${key}.json`, JSON.stringify(data), {
+    const response = await vercelBlob.put(`music-callbacks/${key}.json`, JSON.stringify(data), {
       contentType: "application/json",
       access: "public"
     });
-    return blob.url;
+    console.log(`Successfully stored data in Blob storage at: ${response.url}`);
+    return response.url;
   } catch (error) {
     console.warn("Failed to use Vercel Blob, falling back to local cache:", error);
     // Fall back to in-memory cache if Blob storage fails
@@ -24,16 +25,29 @@ async function storeData(key: string, data: any) {
 async function getData(key: string) {
   try {
     // Try to get from Vercel Blob first
-    const response = await get(`music-callbacks/${key}.json`);
-    if (response) {
-      const text = await response.blob.text();
-      return JSON.parse(text);
+    try {
+      const response = await vercelBlob.list({ prefix: `music-callbacks/${key}.json` });
+      if (response.blobs && response.blobs.length > 0) {
+        const blobUrl = response.blobs[0].url;
+        const fetchResponse = await fetch(blobUrl);
+        if (!fetchResponse.ok) {
+          throw new Error(`Failed to fetch blob data: ${fetchResponse.status} ${fetchResponse.statusText}`);
+        }
+        const text = await fetchResponse.text();
+        return JSON.parse(text);
+      }
+    } catch (blobError) {
+      console.warn("Blob retrieval error:", blobError);
+      // Fall back to in-memory cache if Blob storage fails
     }
-    return null;
+    
+    // Return data from local cache if blob storage failed
+    const cachedData = localCache.get(key);
+    console.log(`Retrieved data from ${cachedData ? 'local cache' : 'nowhere'} for key: ${key}`);
+    return cachedData || null;
   } catch (error) {
-    console.warn("Failed to use Vercel Blob, falling back to local cache:", error);
-    // Fall back to in-memory cache if Blob storage fails
-    return localCache.get(key) || null;
+    console.error("Failed to retrieve data:", error);
+    return null;
   }
 }
 
@@ -60,9 +74,13 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString(),
     };
 
+    // Log all fields in data to check where audio URL might be
+    console.log("All fields in received data:", Object.keys(data));
+    console.log("Saving callback data:", callbackData);
+
     // Store in Blob or fall back to local cache
-    await storeData(taskId, callbackData);
-    console.log(`Stored callback data for taskId ${taskId}`);
+    const storageUrl = await storeData(taskId, callbackData);
+    console.log(`Stored callback data for taskId ${taskId}${storageUrl ? ` at ${storageUrl}` : ' in local cache'}`);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
@@ -86,6 +104,8 @@ export async function GET(request: Request) {
     // Try to get data from Blob or local cache
     const data = await getData(taskId);
     
+    console.log(`GET request for taskId ${taskId}:`, data ? "Data found" : "No data found");
+    
     if (!data) {
       return NextResponse.json({ 
         id: taskId,
@@ -97,6 +117,14 @@ export async function GET(request: Request) {
           "Content-Type": "application/json"
         }
       });
+    }
+
+    // Log fields in data to diagnose audio_url issue
+    console.log(`Data fields for taskId ${taskId}:`, Object.keys(data));
+    if (data.audio_url) {
+      console.log("Audio URL found:", data.audio_url);
+    } else {
+      console.log("No audio_url in data. Full data:", JSON.stringify(data, null, 2));
     }
 
     return NextResponse.json(data, { 
