@@ -237,7 +237,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({ onReturn, selectedCubeId = 
     });
     
     // Wait a bit for the animation
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, 150));
     
     // Then, update the adjacent faces
     setFaces(prevFaces => {
@@ -245,7 +245,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({ onReturn, selectedCubeId = 
       
       // Define which cells are affected on each adjacent face
       let adjacentFaces: [number, number[]][] = [];
-      let cycleOrder: number[] = []; // Initialize with a default value
+      let cycleOrder: number[] = [];
       
       switch (faceIndex) {
         case FACE.RIGHT: // Right face
@@ -320,12 +320,6 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({ onReturn, selectedCubeId = 
       
       // Determine the cycle of faces
       let cycle: [number, number[]][] = [];
-      
-      // Make sure cycleOrder is defined even if switch case didn't set it
-      if (!cycleOrder) {
-        cycleOrder = clockwise ? [0, 1, 2, 3] : [0, 3, 2, 1];
-      }
-      
       for (let i = 0; i < adjacentFaces.length; i++) {
         cycle.push(adjacentFaces[cycleOrder[i]]);
       }
@@ -376,7 +370,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({ onReturn, selectedCubeId = 
     setMoves(prev => prev + 1);
     
     // Wait a bit for the animation to complete
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
     setIsAnimating(false);
   };
   
@@ -402,7 +396,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({ onReturn, selectedCubeId = 
   
   // Mouse event handlers for rotating the cube view
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (gameState !== "playing" || isAnimating) return;
+    if (gameState !== "playing" || isAnimating || dragFaceState.isDragging) return;
     
     // Start dragging to rotate the cube view
     setIsDragging(true);
@@ -413,6 +407,13 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({ onReturn, selectedCubeId = 
   };
   
   const handleMouseMove = (e: React.MouseEvent) => {
+    // Handle face dragging
+    if (dragFaceState.isDragging) {
+      handleFaceMouseMove(e);
+      return;
+    }
+    
+    // Handle cube rotation
     if (!isDragging || gameState !== "playing") return;
     
     const deltaX = e.clientX - dragStart.x;
@@ -431,17 +432,32 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({ onReturn, selectedCubeId = 
   
   const handleMouseUp = () => {
     setIsDragging(false);
+    handleFaceMouseUp();
   };
   
-  // Handle face click to rotate a face
-  const handleFaceClick = (faceIndex: number, e: React.MouseEvent) => {
+  // Face drag state
+  const [dragFaceState, setDragFaceState] = useState({
+    isDragging: false,
+    faceIndex: -1,
+    startX: 0,
+    startY: 0,
+    currentRotation: 0,
+    isCommitted: false
+  });
+  
+  // Handle face mouse down
+  const handleFaceMouseDown = (faceIndex: number, e: React.MouseEvent) => {
     if (gameState !== "playing" || isAnimating) return;
     
-    // Determine if it's a left or right click to set rotation direction
-    const isClockwise = e.button !== 2; // Right click = counter-clockwise
-    
-    // Rotate the face
-    performMove(faceIndex, isClockwise);
+    // Start dragging a face
+    setDragFaceState({
+      isDragging: true,
+      faceIndex,
+      startX: e.clientX,
+      startY: e.clientY,
+      currentRotation: 0,
+      isCommitted: false
+    });
     
     try {
       audio.playSound("click");
@@ -451,11 +467,112 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({ onReturn, selectedCubeId = 
     
     // Prevent context menu on right-click
     e.preventDefault();
+    e.stopPropagation(); // Prevent the cube drag from activating
+  };
+  
+  // Handle face drag
+  const handleFaceMouseMove = (e: React.MouseEvent) => {
+    if (!dragFaceState.isDragging || dragFaceState.isCommitted || isAnimating) return;
+    
+    // Calculate drag distance
+    const deltaX = e.clientX - dragFaceState.startX;
+    const deltaY = e.clientY - dragFaceState.startY;
+    
+    // Determine how far the user has dragged (for animation)
+    let rotation = 0;
+    
+    // Different calculation based on the face being dragged
+    switch (dragFaceState.faceIndex) {
+      case FACE.RIGHT:
+      case FACE.LEFT:
+        // For side faces, use Y drag
+        rotation = deltaY * 0.5;
+        break;
+      case FACE.TOP:
+      case FACE.BOTTOM:
+        // For top/bottom faces, use X drag
+        rotation = deltaX * 0.5;
+        break;
+      case FACE.FRONT:
+      case FACE.BACK:
+        // For front/back faces, use circular drag
+        rotation = deltaX * 0.5;
+        break;
+      default:
+        break;
+    }
+    
+    // Update rotation state for visual feedback
+    setDragFaceState(prev => ({
+      ...prev,
+      currentRotation: rotation
+    }));
+    
+    // If rotation exceeds threshold, commit the move
+    if (Math.abs(rotation) > 30 && !dragFaceState.isCommitted) {
+      const isClockwise = rotation > 0;
+      
+      // Set as committed to prevent multiple moves
+      setDragFaceState(prev => ({
+        ...prev,
+        isCommitted: true
+      }));
+      
+      // Perform the actual move
+      performMove(dragFaceState.faceIndex, isClockwise);
+    }
+  };
+  
+  // Handle face mouse up
+  const handleFaceMouseUp = () => {
+    if (dragFaceState.isDragging) {
+      setDragFaceState({
+        isDragging: false,
+        faceIndex: -1,
+        startX: 0,
+        startY: 0,
+        currentRotation: 0,
+        isCommitted: false
+      });
+    }
   };
   
   // Render a single face of the cube
-  const renderFace = (faceIndex: number, transform: string) => {
+  const renderFace = (faceIndex: number, baseTransform: string) => {
     if (!faces[faceIndex]) return null;
+    
+    // Calculate additional rotation for drag animation
+    let dragRotation = "";
+    if (dragFaceState.isDragging && dragFaceState.faceIndex === faceIndex) {
+      const rotation = dragFaceState.currentRotation;
+      
+      // Different rotation axis based on the face
+      switch (faceIndex) {
+        case FACE.RIGHT:
+          dragRotation = `rotateX(${rotation}deg)`;
+          break;
+        case FACE.LEFT:
+          dragRotation = `rotateX(${-rotation}deg)`;
+          break;
+        case FACE.TOP:
+          dragRotation = `rotateY(${rotation}deg)`;
+          break;
+        case FACE.BOTTOM:
+          dragRotation = `rotateY(${-rotation}deg)`;
+          break;
+        case FACE.FRONT:
+          dragRotation = `rotateZ(${rotation}deg)`;
+          break;
+        case FACE.BACK:
+          dragRotation = `rotateZ(${-rotation}deg)`;
+          break;
+        default:
+          break;
+      }
+    }
+    
+    // Combine base transform with drag rotation
+    const transform = dragRotation ? `${baseTransform} ${dragRotation}` : baseTransform;
     
     return (
       <div
@@ -469,10 +586,10 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({ onReturn, selectedCubeId = 
           transformStyle: "preserve-3d",
           transform,
           backfaceVisibility: "visible",
-          cursor: isAnimating ? "not-allowed" : "pointer"
+          cursor: isAnimating ? "not-allowed" : "grab",
+          transition: isAnimating ? "transform 0.3s ease-out" : "none"
         }}
-        onClick={(e) => handleFaceClick(faceIndex, e)}
-        onContextMenu={(e) => handleFaceClick(faceIndex, e)}
+        onMouseDown={(e) => handleFaceMouseDown(faceIndex, e)}
       >
         <div className="grid grid-cols-3 grid-rows-3 w-full h-full">
           {faces[faceIndex].map((color, i) => (
@@ -652,7 +769,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({ onReturn, selectedCubeId = 
                 className="text-lg text-blue-300 flex items-center justify-center gap-2"
               >
                 <span>
-                  {isAnimating ? "Animating..." : "Left-click to rotate clockwise, right-click for counter-clockwise."}
+                  {isAnimating ? "Animating..." : "Drag on faces to rotate layers. Drag elsewhere to change view."}
                 </span>
               </motion.p>
             )}
@@ -680,15 +797,49 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({ onReturn, selectedCubeId = 
           {renderCube()}
         </motion.div>
         
-        {/* Instructions for drag rotation */}
+        {/* Visual instruction guide */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="mb-4 text-center"
         >
-          <p className="text-gray-300">
-            Drag anywhere to rotate the cube view.
-          </p>
+          <div className="flex items-center justify-center gap-6">
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 bg-black/30 border border-blue-500/30 rounded-md flex items-center justify-center mb-2">
+                <motion.div 
+                  animate={{ 
+                    x: [0, 10, 0, -10, 0],
+                    rotateZ: [0, 30, 0, -30, 0]
+                  }}
+                  transition={{ 
+                    repeat: Infinity, 
+                    duration: 3,
+                    ease: "easeInOut" 
+                  }}
+                  className="w-10 h-10 bg-gradient-to-br from-purple-500/70 to-pink-500/70 rounded-md"
+                />
+              </div>
+              <p className="text-gray-300 text-xs">Drag on face</p>
+            </div>
+            
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 bg-black/30 border border-green-500/30 rounded-md flex items-center justify-center mb-2">
+                <motion.div 
+                  animate={{ 
+                    rotateY: [0, 45, 0, -45, 0],
+                    rotateX: [0, 15, 0, -15, 0]
+                  }}
+                  transition={{ 
+                    repeat: Infinity, 
+                    duration: 5,
+                    ease: "easeInOut" 
+                  }}
+                  className="w-10 h-10 bg-gradient-to-br from-blue-500/70 to-teal-500/70 rounded-md"
+                />
+              </div>
+              <p className="text-gray-300 text-xs">Drag elsewhere</p>
+            </div>
+          </div>
         </motion.div>
         
         {/* Game controls */}
@@ -783,9 +934,9 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({ onReturn, selectedCubeId = 
           >
             <h3 className="text-purple-300 mb-2 text-lg">How to Play:</h3>
             <ul className="text-gray-300 space-y-1 text-sm">
-              <li>• Left-click on any face to rotate it clockwise</li>
-              <li>• Right-click to rotate counter-clockwise</li>
-              <li>• Drag anywhere to rotate the whole cube view</li>
+              <li>• Drag on a face to rotate it (left/right or up/down)</li>
+              <li>• The layer will follow your drag direction</li>
+              <li>• Drag anywhere else to rotate the whole cube view</li>
               <li>• Arrange each face to have all squares of the same color</li>
             </ul>
           </motion.div>
