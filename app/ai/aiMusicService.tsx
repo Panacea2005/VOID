@@ -1,106 +1,171 @@
-// aiMusicService.tsx
-import { MUSIC_API_KEY, MUSIC_AI_API_URL } from "../config/env";
+import axios from "axios";
 
-interface Prompt {
-  text: string;
+interface MusicGenerationParams {
+  prompt?: string;
+  style?: string;
+  title?: string;
+  instrumental: boolean;
+  customMode?: boolean;
+  model?: string;
+  negativeTags?: string;
 }
 
-interface ComposeTrackPayload {
-  prompt: Prompt;
-  format?: "mp3" | "aac" | "wav";
-  looping?: boolean;
-}
-
-interface ComposeTrackResponse {
+interface MusicGenerationResponse {
+  id: string;
   status: string;
-  task_id: string;
+  audio_url?: string;
+  error?: string;
 }
 
-interface TaskStatusResponse {
+interface MusicRecordInfoResponse {
+  id: string;
   status: string;
-  meta?: {
-    project_id: string;
-    track_id: string;
-    prompt: Prompt;
-    version: number;
-    track_url: string;
-    stems_url: {
-      bass: string;
-      chords: string;
-      melody: string;
-      percussion: string;
+  audio_url?: string;
+  error?: string;
+}
+
+const MUSIC_AI_API_URL = process.env.NEXT_PUBLIC_MUSIC_AI_API_URL || "https://apibox.erweima.ai/api/v1";
+const API_KEY = process.env.NEXT_PUBLIC_MUSIC_API_KEY;
+const CALLBACK_URL = process.env.NEXT_PUBLIC_APP_URL
+  ? `${process.env.NEXT_PUBLIC_APP_URL}/api/music/callback`
+  : "https://void-resonance.vercel.app/ai";
+
+if (!API_KEY) {
+  throw new Error("NEXT_PUBLIC_MUSIC_API_KEY is not defined in environment variables");
+}
+
+if (!CALLBACK_URL) {
+  throw new Error("NEXT_PUBLIC_APP_URL is not defined in environment variables for callback URL");
+}
+
+const apiClient = axios.create({
+  baseURL: MUSIC_AI_API_URL,
+  headers: {
+    Authorization: `Bearer ${API_KEY}`,
+    "Content-Type": "application/json",
+  },
+});
+
+export async function generateMusic(params: MusicGenerationParams): Promise<MusicGenerationResponse> {
+  const instrumental = params.instrumental ?? false;
+  console.log("generateMusic received params:", params);
+  console.log("instrumental value after fallback:", instrumental);
+
+  const payload = {
+    prompt: params.prompt,
+    tags: params.style,
+    title: params.title,
+    instrumental: instrumental,
+    custom_mode: params.customMode ?? true,
+    model: "V3_5",
+    negative_tags: params.negativeTags,
+    callBackUrl: CALLBACK_URL,
+  };
+
+  if (payload.instrumental == null) {
+    console.warn("instrumental was null, setting to false");
+    payload.instrumental = false;
+  }
+
+  try {
+    if (params.customMode) {
+      if (params.style && params.style.length > 200) {
+        throw new Error("Style must not exceed 200 characters");
+      }
+      if (params.title && params.title.length > 80) {
+        throw new Error("Title must not exceed 80 characters");
+      }
+      if (!instrumental && params.prompt && params.prompt.length > 3000) {
+        throw new Error("Prompt must not exceed 3000 characters");
+      }
+    } else {
+      if (params.prompt && params.prompt.length > 400) {
+        throw new Error("Prompt must not exceed 400 characters in Non-custom Mode");
+      }
+    }
+
+    if (params.customMode) {
+      if (!params.style || !params.title) {
+        throw new Error("Style and title are required in Custom Mode");
+      }
+      if (!instrumental && !params.prompt) {
+        throw new Error("Prompt is required when instrumental is false in Custom Mode");
+      }
+    } else {
+      if (!params.prompt) {
+        throw new Error("Prompt is required in Non-custom Mode");
+      }
+    }
+
+    const validModels = ["V3_5", "V4"];
+    const selectedModel = params.model || "V3_5";
+    if (!validModels.includes(selectedModel)) {
+      throw new Error("Model must be either V3_5 or V4");
+    }
+    payload.model = selectedModel;
+
+    console.log("Sending payload to API:", payload);
+
+    const response = await apiClient.post("/generate", payload);
+    const data = response.data;
+    console.log("Raw API response from generateMusic:", data);
+
+    if (data.code !== 200) {
+      throw new Error(data.msg || "Failed to generate music");
+    }
+
+    const taskId = data.data?.taskId || data.data?.id;
+    if (!taskId) {
+      throw new Error("Task ID not found in API response");
+    }
+
+    return {
+      id: taskId,
+      status: data.data.status || "PENDING",
+      audio_url: data.data.audio_url,
+      error: data.msg !== "success" ? data.msg : undefined,
     };
-  };
+  } catch (error: any) {
+    console.error("Error generating music:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      url: error.config?.url,
+      payload,
+    });
+    throw new Error(error.response?.data?.msg || error.message || "Failed to generate music");
+  }
 }
 
-const headers = {
-  Authorization: `Bearer ${MUSIC_API_KEY}`,
-  "Content-Type": "application/json",
-};
-
-export const composeTrack = async (
-  prompt: string,
-  format: "mp3" | "aac" | "wav" = "mp3",
-  looping: boolean = false
-): Promise<ComposeTrackResponse> => {
-  const payload: ComposeTrackPayload = {
-    prompt: { text: prompt },
-    format,
-    looping,
-  };
-
+export async function getMusicGenerationDetails(taskId: string): Promise<MusicRecordInfoResponse> {
   try {
-    const response = await fetch(`${MUSIC_AI_API_URL}/api/v1/tracks/compose`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload),
+    if (!taskId) {
+      throw new Error("taskId is required");
+    }
+
+    const response = await apiClient.get("/generate/record-info", {
+      params: { taskId },
     });
+    const data = response.data;
+    console.log("Raw API response from getMusicGenerationDetails:", data); // Debug log
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (data.code !== 200) {
+      throw new Error(data.msg || "Failed to fetch music generation details");
     }
 
-    return await response.json();
-  } catch (error) {
-    console.error("Error composing track:", error);
-    throw error;
-  }
-};
-
-export const checkTaskStatus = async (taskId: string): Promise<TaskStatusResponse> => {
-  try {
-    const response = await fetch(`${MUSIC_AI_API_URL}/api/v1/tasks/${taskId}`, {
-      method: "GET",
-      headers,
+    return {
+      id: data.data.id || taskId,
+      status: data.data.status || "PENDING",
+      audio_url: data.data.audio_url || data.data.audioUrl, // Added fallback for audioUrl
+      error: data.msg !== "success" ? data.msg : undefined,
+    };
+  } catch (error: any) {
+    console.error("Error fetching music generation details:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      url: error.config?.url,
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error checking task status:", error);
-    throw error;
+    throw new Error(error.response?.data?.msg || error.message || "Failed to fetch music generation details");
   }
-};
-
-// Polling function to wait for track composition to complete
-export const waitForTrack = async (taskId: string, interval = 3000, maxAttempts = 20): Promise<string> => {
-  let attempts = 0;
-
-  const poll = async (): Promise<string> => {
-    const result = await checkTaskStatus(taskId);
-    if (result.status === "composed" && result.meta?.track_url) {
-      return result.meta.track_url;
-    }
-    if (attempts >= maxAttempts) {
-      throw new Error("Max polling attempts reached");
-    }
-    attempts++;
-    await new Promise((resolve) => setTimeout(resolve, interval));
-    return poll();
-  };
-
-  return poll();
-};
+}
