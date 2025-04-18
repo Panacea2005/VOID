@@ -30,13 +30,12 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.png" />
       </head>
       <body>
-        <Suspense fallback={<div>Loading...</div>}>
-          <ConditionalLayout>{children}</ConditionalLayout>
-        </Suspense>
         <ThemeProvider attribute="class" defaultTheme="dark">
-          <ClientRoot>
-            {children}
-          </ClientRoot>
+          <Suspense fallback={<div>Loading...</div>}>
+            <ClientRoot>
+              <ConditionalLayout>{children}</ConditionalLayout>
+            </ClientRoot>
+          </Suspense>
         </ThemeProvider>
       </body>
     </html>
