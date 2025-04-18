@@ -299,44 +299,58 @@ const identifyMaterialQualities = (text: string): Partial<MaterialParams> => {
 };
 
 const identifyTexturePattern = (text: string, params: Partial<MaterialParams> = {}): { pattern: string | null; maps: { map?: string; normalMap?: string; roughnessMap?: string; displacementMap?: string } } => {
-  const patterns = [
-    { name: 'hologram', type: 'hologram' },
-    { name: 'galaxy', type: 'galaxy' },
-    { name: 'marble', type: 'marble' },
-    { name: 'carbon fiber', type: 'carbon_fiber' },
-    { name: 'nebula', type: 'nebula' },
-    { name: 'circuit', type: 'circuit' },
-    { name: 'brushed_metal', type: 'brushed_metal' },
-    { name: 'velvet', type: 'velvet' },
-    { name: 'sandstone', type: 'sandstone' },
-    { name: 'plasma', type: 'plasma' },
-    { name: 'wood', type: 'wood' },
-    { name: 'rust', type: 'rust' },
-  ];
-
   const lowerText = text.toLowerCase();
-  for (const pattern of patterns) {
-    if (lowerText.includes(pattern.name)) {
-      const map = generateProceduralTexture(pattern.type, 512, params);
-      const normalMap = generateProceduralTexture(pattern.type + '_normal', 512, params);
-      const roughnessMap = generateProceduralTexture(pattern.type + '_roughness', 512, params);
-      const displacementMap = ['marble', 'sandstone', 'wood', 'rust'].includes(pattern.type)
-        ? generateProceduralTexture(pattern.type + '_displacement', 512, params)
-        : undefined;
+  const result: { pattern: string | null; maps: { map?: string; normalMap?: string; roughnessMap?: string; displacementMap?: string } } = {
+    pattern: null,
+    maps: {},
+  };
 
-      return {
-        pattern: pattern.name,
-        maps: {
-          map,
-          normalMap,
-          roughnessMap,
-          displacementMap,
-        },
-      };
+  if (lowerText.match(/\b(marble|veined|smooth stone)\b/)) {
+    result.pattern = 'marble';
+    result.maps.map = generateProceduralTexture('marble', 512, params);
+    result.maps.normalMap = generateProceduralTexture('marble_normal', 512, params);
+    result.maps.roughnessMap = generateProceduralTexture('marble_roughness', 512, params);
+    result.maps.displacementMap = generateProceduralTexture('marble_displacement', 512, params);
+  } else if (lowerText.match(/\b(hologram|holographic|rainbow)\b/)) {
+    result.pattern = 'hologram';
+    result.maps.map = generateProceduralTexture('hologram', 512, params);
+    result.maps.normalMap = generateProceduralTexture('hologram_normal', 512, params);
+  } else if (lowerText.match(/\b(carbon fiber|woven carbon|carbon weave)\b/)) {
+    result.pattern = 'carbon_fiber';
+    result.maps.map = generateProceduralTexture('carbon_fiber', 512, params);
+    result.maps.normalMap = generateProceduralTexture('carbon_fiber_normal', 512, params);
+    result.maps.roughnessMap = generateProceduralTexture('carbon_fiber_roughness', 512, params);
+  } else if (lowerText.match(/\b(nebula|galaxy|cosmic|universe)\b/)) {
+    result.pattern = 'nebula';
+    result.maps.map = generateProceduralTexture('nebula', 512, params);
+    result.maps.normalMap = generateProceduralTexture('nebula_normal', 512, params);
+    result.maps.roughnessMap = generateProceduralTexture('nebula_roughness', 512, params);
+  } else if (lowerText.match(/\b(stripes|striped|stripe pattern|white stripes)\b/)) {
+    result.pattern = 'stripes';
+
+    // Extract secondary color for stripes if specified
+    let secondaryColor = '#ffffff'; // Default to white stripes
+    if (lowerText.includes('white stripes')) {
+      secondaryColor = '#ffffff';
+    } else if (lowerText.includes('black stripes')) {
+      secondaryColor = '#000000';
+    } else if (lowerText.includes('red stripes')) {
+      secondaryColor = '#ff0000';
+    } else if (lowerText.includes('gold stripes')) {
+      secondaryColor = '#ffcc00';
+    } else if (lowerText.includes('silver stripes')) {
+      secondaryColor = '#cccccc';
     }
+
+    // Generate the stripes texture
+    result.maps.map = generateProceduralTexture('stripes', 512, {
+      ...params,
+      secondaryColor: secondaryColor
+    });
+    result.maps.normalMap = generateProceduralTexture('stripes_normal', 512, params);
   }
 
-  return { pattern: null, maps: {} };
+  return result;
 };
 
 export const generateProceduralTexture = (type: string, size: number = 512, params: Partial<MaterialParams> = {}): string => {
@@ -776,6 +790,32 @@ export const generateProceduralTexture = (type: string, size: number = 512, para
         context.fillRect(x, y, 1, 1);
       }
     }
+  } else if (type === 'stripes') {
+    // Generate stripes pattern
+    const stripeWidth = 20 / textureScale;
+    const primaryColor = params.color || '#ffffff';
+    const secondaryColor = params.secondaryColor || '#000000';
+
+    for (let x = 0; x < size; x++) {
+      for (let y = 0; y < size; y++) {
+        // Calculate if we're in an even or odd stripe
+        const isEvenStripe = Math.floor(x / stripeWidth) % 2 === 0;
+        // Set color based on stripe position
+        context.fillStyle = isEvenStripe ? primaryColor : secondaryColor;
+        context.fillRect(x, y, 1, 1);
+      }
+    }
+  } else if (type === 'stripes_normal') {
+    for (let x = 0; x < size; x++) {
+      for (let y = 0; y < size; y++) {
+        const value = layeredNoise(x * textureScale, y * textureScale);
+        const r = Math.floor((value + 1) * 127.5);
+        const g = Math.floor((value + 1) * 127.5);
+        const b = 255;
+        context.fillStyle = `rgb(${r}, ${g}, ${b})`;
+        context.fillRect(x, y, 1, 1);
+      }
+    }
   }
 
   return canvas.toDataURL();
@@ -896,7 +936,9 @@ const generateEnhancedMaterialParams = (prompt: string): MaterialParams => {
       params.proceduralTexture = generateProceduralTexture('circuit', 512, params);
       params.textureScale = 1.5;
       params.normalScale = 1.0;
-    } else if (lowerPrompt.match(/\b(plasma|energy|electric)\b/)) {
+      params.emissiveIntensity = 1.5;
+      params.animateEmissive = true;
+    } else if (lowerPrompt.match(/\b(plasma|energy|glow)\b/)) {
       params.proceduralTexture = generateProceduralTexture('plasma', 512, params);
       params.textureScale = 2.0;
       params.emissiveIntensity = 1.5;
@@ -1016,6 +1058,31 @@ export const generateCubeSkin = async ({ prompt }: GenerateCubeSkinParams): Prom
   try {
     let materialParams = await generateAIMaterialParams(prompt);
     materialParams = enhanceMaterialParams(materialParams, prompt);
+
+    // Kiểm tra cụ thể cho trường hợp stripes
+    const lowerPrompt = prompt.toLowerCase();
+    if (lowerPrompt.includes('stripes') && !materialParams.map) {
+      // Xác định màu sọc
+      let secondaryColor = '#ffffff'; // Mặc định sọc trắng
+      if (lowerPrompt.includes('white stripes')) {
+        secondaryColor = '#ffffff';
+      } else if (lowerPrompt.includes('black stripes')) {
+        secondaryColor = '#000000';
+      } else if (lowerPrompt.includes('red stripes')) {
+        secondaryColor = '#ff0000';
+      } else if (lowerPrompt.includes('gold stripes')) {
+        secondaryColor = '#ffcc00';
+      } else if (lowerPrompt.includes('silver stripes')) {
+        secondaryColor = '#cccccc';
+      }
+
+      // Áp dụng texture stripes
+      materialParams.texturePattern = 'stripes';
+      materialParams.map = generateProceduralTexture('stripes', 512, {
+        color: materialParams.color,
+        secondaryColor
+      });
+    }
 
     if (!materialParams.color && !materialParams.gradientColors) {
       const theme = analyzeTheme(prompt);

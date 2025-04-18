@@ -1,5 +1,15 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { ThemeProvider } from '@/components/theme-provider'
+import ClientRoot from '@/components/ClientRoot'
+import { Press_Start_2P } from 'next/font/google'
+
+// Cấu hình font Press Start 2P
+const pixelFont = Press_Start_2P({
+  weight: ['400'],
+  subsets: ['latin'],
+  variable: '--font-pixel',
+})
 
 export const metadata: Metadata = {
   title: 'VOID',
@@ -13,11 +23,17 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={pixelFont.variable}>
       <head>
         <link rel="icon" href="/favicon.png" />
       </head>
-      <body>{children}</body>
+      <body>
+        <ThemeProvider attribute="class" defaultTheme="dark">
+          <ClientRoot>
+            {children}
+          </ClientRoot>
+        </ThemeProvider>
+      </body>
     </html>
   )
 }

@@ -8,16 +8,18 @@ import AbstractShape from "./abstract-shape"
 import PixelHeading from "./pixel-heading"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
+import { useWallet } from "@solana/wallet-adapter-react"
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui"
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
-  const [isWalletConnected, setIsWalletConnected] = useState(false)
   const [showLeftScroll, setShowLeftScroll] = useState(false)
   const [showRightScroll, setShowRightScroll] = useState(false)
   const navScrollRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
   const router = useRouter()
+  const { connected, publicKey, disconnect } = useWallet()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -71,17 +73,9 @@ export default function Navigation() {
     { name: "MARKET", path: "/market" },
   ]
 
-  const connectWallet = () => {
-    // This would be replaced with actual wallet connection logic
-    console.log("Connecting wallet...")
-    setIsWalletConnected(true)
-  }
-
   const handleWalletClick = () => {
-    if (isWalletConnected) {
+    if (connected) {
       router.push("/profile")
-    } else {
-      connectWallet()
     }
   }
 
@@ -94,6 +88,11 @@ export default function Navigation() {
         behavior: "smooth",
       })
     }
+  }
+
+  // Format wallet address
+  const shortenAddress = (address: string, chars = 4) => {
+    return `${address.slice(0, chars)}...${address.slice(-chars)}`
   }
 
   const menuVariants = {
@@ -134,9 +133,8 @@ export default function Navigation() {
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.5 }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-6 py-4 ${
-          isScrolled || isOpen ? "bg-black/80 backdrop-blur-md" : "bg-transparent"
-        }`}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-6 py-4 ${isScrolled || isOpen ? "bg-black/80 backdrop-blur-md" : "bg-transparent"
+          }`}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link
@@ -148,23 +146,19 @@ export default function Navigation() {
 
           <div className="flex items-center space-x-4">
             {/* Wallet Connection Button */}
-            <Button
-              onClick={handleWalletClick}
-              className={`bg-transparent border ${
-                isWalletConnected
-                  ? "border-pink-500 hover:bg-pink-950/30 text-pink-400"
-                  : "border-purple-500 hover:bg-purple-950/30 text-purple-400"
-              } rounded-none px-4 py-2 text-sm font-pixel tracking-wide z-50`}
-            >
-              {isWalletConnected ? (
-                <>
-                  <span className="mr-2 w-2 h-2 bg-green-500 rounded-full inline-block"></span>
-                  0x8F...3E4A
-                </>
-              ) : (
-                "CONNECT"
-              )}
-            </Button>
+            {connected ? (
+              <Button
+                onClick={handleWalletClick}
+                className="bg-transparent border border-pink-500 hover:bg-pink-950/30 text-pink-400 rounded-none px-4 py-2 text-sm font-pixel tracking-wide z-50"
+              >
+                <span className="mr-2 w-2 h-2 bg-green-500 rounded-full inline-block"></span>
+                {publicKey ? shortenAddress(publicKey.toString()) : "CONNECTED"}
+              </Button>
+            ) : (
+              <div className="wallet-adapter-button-wrapper">
+                <WalletMultiButton className="bg-transparent border border-purple-500 hover:bg-purple-950/30 text-purple-400 rounded-none px-4 py-2 text-sm font-pixel tracking-wide z-50" />
+              </div>
+            )}
 
             {/* Menu Toggle Button */}
             <motion.button
@@ -240,9 +234,8 @@ export default function Navigation() {
                         <motion.div key={link.path} variants={itemVariants}>
                           <Link
                             href={link.path}
-                            className={`group relative text-5xl md:text-7xl font-black tracking-tighter transition-colors duration-300 font-pixel ${
-                              pathname === link.path ? "text-purple-400" : "text-white hover:text-purple-300"
-                            }`}
+                            className={`group relative text-5xl md:text-7xl font-black tracking-tighter transition-colors duration-300 font-pixel ${pathname === link.path ? "text-purple-400" : "text-white hover:text-purple-300"
+                              }`}
                           >
                             <span className="relative z-10">{link.name}</span>
                             <span className="absolute -left-4 top-0 text-sm text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-pixel">

@@ -10,11 +10,13 @@ import PixelHeading from "@/components/pixel-heading"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
+import { useWallet } from "@solana/wallet-adapter-react"
 
 export default function MarketPage() {
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 })
   const [cursorHover, setCursorHover] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const { connected } = useWallet()
 
   // Handle cursor effects
   useEffect(() => {
@@ -325,7 +327,7 @@ export default function MarketPage() {
               </div>
 
               <div className="flex space-x-4">
-                <select
+                <select title="sort"
                   className="bg-black border-2 border-purple-900 focus:border-purple-500 rounded-none p-2 text-white font-pixel"
                   onMouseEnter={() => setCursorHover(true)}
                   onMouseLeave={() => setCursorHover(false)}
@@ -383,13 +385,12 @@ export default function MarketPage() {
                       >
                         <div className="h-48 overflow-hidden relative">
                           <AbstractShape
-                            className={`w-full h-full ${
-                              collection.color === "purple"
-                                ? "text-purple-500/70"
-                                : collection.color === "pink"
-                                  ? "text-pink-500/70"
-                                  : "text-blue-500/70"
-                            }`}
+                            className={`w-full h-full ${collection.color === "purple"
+                              ? "text-purple-500/70"
+                              : collection.color === "pink"
+                                ? "text-pink-500/70"
+                                : "text-blue-500/70"
+                              }`}
                             type={collection.bannerType as any}
                             animate
                           />
@@ -431,13 +432,12 @@ export default function MarketPage() {
                       >
                         <div className="aspect-square overflow-hidden relative">
                           <AbstractShape
-                            className={`w-full h-full ${
-                              nft.color === "purple"
-                                ? "text-purple-500/70"
-                                : nft.color === "pink"
-                                  ? "text-pink-500/70"
-                                  : "text-blue-500/70"
-                            }`}
+                            className={`w-full h-full ${nft.color === "purple"
+                              ? "text-purple-500/70"
+                              : nft.color === "pink"
+                                ? "text-pink-500/70"
+                                : "text-blue-500/70"
+                              }`}
                             type={nft.shapeType as any}
                             animate
                           />
@@ -478,13 +478,12 @@ export default function MarketPage() {
                       >
                         <div className="aspect-square overflow-hidden relative">
                           <AbstractShape
-                            className={`w-full h-full ${
-                              nft.color === "purple"
-                                ? "text-purple-500/70"
-                                : nft.color === "pink"
-                                  ? "text-pink-500/70"
-                                  : "text-blue-500/70"
-                            }`}
+                            className={`w-full h-full ${nft.color === "purple"
+                              ? "text-purple-500/70"
+                              : nft.color === "pink"
+                                ? "text-pink-500/70"
+                                : "text-blue-500/70"
+                              }`}
                             type={nft.shapeType as any}
                             animate
                           />
@@ -561,13 +560,12 @@ export default function MarketPage() {
                 >
                   <div className="aspect-square overflow-hidden relative">
                     <AbstractShape
-                      className={`w-full h-full ${
-                        index % 3 === 0
-                          ? "text-purple-500/70"
-                          : index % 3 === 1
-                            ? "text-pink-500/70"
-                            : "text-blue-500/70"
-                      }`}
+                      className={`w-full h-full ${index % 3 === 0
+                        ? "text-purple-500/70"
+                        : index % 3 === 1
+                          ? "text-pink-500/70"
+                          : "text-blue-500/70"
+                        }`}
                       type={index % 4 === 0 ? "complex" : index % 4 === 1 ? "grid" : index % 4 === 2 ? "dots" : "noise"}
                       animate
                     />

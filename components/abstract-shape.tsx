@@ -6,6 +6,7 @@ type AbstractShapeProps = {
   className?: string
   type: "circle" | "square" | "triangle" | "complex" | "wave" | "grid" | "dots" | "noise" | "loading" | "gamepad"
   animate?: boolean
+  color?: "purple" | "pink" | "blue"
 }
 
 export default function AbstractShape({ className, type, animate = false }: AbstractShapeProps) {
@@ -19,18 +20,18 @@ export default function AbstractShape({ className, type, animate = false }: Abst
             animate={
               animate
                 ? {
-                    scale: [1, 1.05, 1],
-                    rotate: [0, 5, 0],
-                  }
+                  scale: [1, 1.05, 1],
+                  rotate: [0, 5, 0],
+                }
                 : undefined
             }
             transition={
               animate
                 ? {
-                    duration: 8,
-                    repeat: Number.POSITIVE_INFINITY,
-                    ease: "easeInOut",
-                  }
+                  duration: 8,
+                  repeat: Number.POSITIVE_INFINITY,
+                  ease: "easeInOut",
+                }
                 : undefined
             }
           >
@@ -46,17 +47,17 @@ export default function AbstractShape({ className, type, animate = false }: Abst
             animate={
               animate
                 ? {
-                    rotate: [0, 90, 0],
-                  }
+                  rotate: [0, 90, 0],
+                }
                 : undefined
             }
             transition={
               animate
                 ? {
-                    duration: 20,
-                    repeat: Number.POSITIVE_INFINITY,
-                    ease: "easeInOut",
-                  }
+                  duration: 20,
+                  repeat: Number.POSITIVE_INFINITY,
+                  ease: "easeInOut",
+                }
                 : undefined
             }
           >
@@ -72,17 +73,17 @@ export default function AbstractShape({ className, type, animate = false }: Abst
             animate={
               animate
                 ? {
-                    rotate: [0, 360],
-                  }
+                  rotate: [0, 360],
+                }
                 : undefined
             }
             transition={
               animate
                 ? {
-                    duration: 30,
-                    repeat: Number.POSITIVE_INFINITY,
-                    ease: "linear",
-                  }
+                  duration: 30,
+                  repeat: Number.POSITIVE_INFINITY,
+                  ease: "linear",
+                }
                 : undefined
             }
           >
@@ -98,18 +99,18 @@ export default function AbstractShape({ className, type, animate = false }: Abst
             animate={
               animate
                 ? {
-                    scale: [1, 1.05, 1],
-                    rotate: [0, 10, 0],
-                  }
+                  scale: [1, 1.05, 1],
+                  rotate: [0, 10, 0],
+                }
                 : undefined
             }
             transition={
               animate
                 ? {
-                    duration: 10,
-                    repeat: Number.POSITIVE_INFINITY,
-                    ease: "easeInOut",
-                  }
+                  duration: 10,
+                  repeat: Number.POSITIVE_INFINITY,
+                  ease: "easeInOut",
+                }
                 : undefined
             }
           >
@@ -138,17 +139,17 @@ export default function AbstractShape({ className, type, animate = false }: Abst
             animate={
               animate
                 ? {
-                    y: [0, 5, 0],
-                  }
+                  y: [0, 5, 0],
+                }
                 : undefined
             }
             transition={
               animate
                 ? {
-                    duration: 5,
-                    repeat: Number.POSITIVE_INFINITY,
-                    ease: "easeInOut",
-                  }
+                  duration: 5,
+                  repeat: Number.POSITIVE_INFINITY,
+                  ease: "easeInOut",
+                }
                 : undefined
             }
           >
