@@ -27,6 +27,37 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
+  webpack: async (config, { isServer }) => {
+    // Chỉ áp dụng cho client-side bundles
+    if (!isServer) {
+      // Sử dụng import động thay vì require trong ESM
+      const { default: MiniCssExtractPlugin } = await import('mini-css-extract-plugin');
+
+      // Tìm rule cho CSS
+      const cssRule = config.module.rules.find(rule =>
+        rule.test && rule.test.toString().includes('css')
+      );
+
+      if (cssRule) {
+        // Đảm bảo loader sử dụng mini-css-extract-plugin
+        cssRule.use = [
+          MiniCssExtractPlugin.loader,
+          'css-loader',
+          'postcss-loader'
+        ];
+      }
+
+      // Thêm plugin vào danh sách plugins
+      config.plugins.push(
+        new MiniCssExtractPlugin({
+          filename: 'static/css/[name].[contenthash:8].css',
+          chunkFilename: 'static/css/[name].[contenthash:8].chunk.css',
+        })
+      );
+    }
+
+    return config;
+  },
 }
 
 if (userConfig) {

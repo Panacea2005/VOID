@@ -83,6 +83,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -94,10 +95,12 @@
     transform: scale(1);
     opacity: 0.8;
   }
+
   50% {
     transform: scale(1.2);
     opacity: 1;
   }
+
   100% {
     transform: scale(1);
     opacity: 0.8;
@@ -113,9 +116,11 @@
   0% {
     opacity: 0.1;
   }
+
   50% {
     opacity: 0.3;
   }
+
   100% {
     opacity: 0.1;
   }
@@ -181,4 +186,56 @@
 * {
   scrollbar-width: thin;
   scrollbar-color: #a855f7 #000000;
+
+.wallet-adapter-button {
+  @apply bg-transparent border border-purple-500 hover:bg-purple-950/30 text-purple-400 rounded-none px-4 py-2 text-sm font-pixel tracking-wide;
+}
+
+.wallet-adapter-button-trigger {
+  @apply bg-transparent !important;
+}
+
+.wallet-adapter-button:not([disabled]):hover {
+  @apply bg-purple-950/30 !important;
+}
+
+.wallet-adapter-modal-wrapper {
+  @apply backdrop-blur-lg bg-black/90 border border-purple-500/50 !important;
+}
+
+.wallet-adapter-modal-button-close {
+  @apply text-purple-400 !important;
+}
+
+.wallet-adapter-modal-title {
+  @apply text-purple-400 font-pixel !important;
+}
+
+.wallet-adapter-modal-content {
+  @apply text-white !important;
+}
+
+.wallet-adapter-modal-list .wallet-adapter-button {
+  @apply border border-purple-500/50 !important;
+}
+
+.wallet-adapter-dropdown-list {
+  @apply bg-black border border-purple-500/50 !important;
+}
+
+.wallet-adapter-dropdown-list-item {
+  @apply text-purple-400 hover:text-white hover:bg-purple-950/30 !important;
+}
+
+/* Hide scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+} 
 }

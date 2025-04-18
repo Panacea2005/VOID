@@ -13,9 +13,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function NFTDetailPage() {
   const params = useParams()
-  const id = params.id
+  const id = params?.id || '0'
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 })
   const [cursorHover, setCursorHover] = useState(false)
+  const [showModelViewer, setShowModelViewer] = useState(false)
+  const [modelUrl, setModelUrl] = useState("")
 
   // Handle cursor effects
   useEffect(() => {
@@ -62,6 +64,97 @@ export default function NFTDetailPage() {
     ],
   }
 
+  // Thêm hàm xử lý khi người dùng muốn xem 3D model
+  const handleView3DModel = () => {
+    try {
+      console.log("Mở 3D model viewer cho NFT:", nft.name);
+
+      // Sử dụng GLB model dựa trên ID của NFT để có sự đa dạng
+      let modelUrl;
+
+      // Thử tìm kiếm trong localStorage xem có NFT với ID này không
+      if (typeof window !== 'undefined') {
+        try {
+          const userNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
+          const matchedNft = userNfts.find((item: any) => item.id === nft.id.toString() || item.id === `void-cube-${nft.id}`);
+
+          if (matchedNft) {
+            // Kiểm tra model trực tiếp từ modelViewerUrl nếu có
+            if (matchedNft.modelViewerUrl) {
+              console.log("Tìm thấy modelViewerUrl của NFT trong localStorage:", matchedNft.modelViewerUrl);
+              modelUrl = matchedNft.modelViewerUrl;
+            }
+            // Kiểm tra model3d URL
+            else if (matchedNft.model3d) {
+              console.log("Tìm thấy model 3D của NFT trong localStorage:", matchedNft.model3d);
+              // Kiểm tra xem có phải URL model viewer không
+              if (matchedNft.model3d.includes('modelviewer.dev')) {
+                modelUrl = matchedNft.model3d;
+              } else {
+                // Tạo URL model viewer từ model3d URL
+                modelUrl = `https://modelviewer.dev/viewer.html#src=${encodeURIComponent(matchedNft.model3d)}`;
+              }
+            }
+            // Kiểm tra model3dHash
+            else if (matchedNft.model3dHash) {
+              console.log("Tìm thấy hash model 3D của NFT trong localStorage:", matchedNft.model3dHash);
+              const directModelUrl = `https://ipfs.io/ipfs/${matchedNft.model3dHash}`;
+              modelUrl = `https://modelviewer.dev/viewer.html#src=${encodeURIComponent(directModelUrl)}`;
+            }
+            // Kiểm tra URL model trong properties.files của NFT
+            else if (matchedNft.properties?.files?.length > 0) {
+              const modelFile = matchedNft.properties.files.find((file: any) =>
+                file.type === 'model/gltf-binary' ||
+                file.type === 'model/gltf+json'
+              );
+
+              if (modelFile && modelFile.uri) {
+                console.log("Tìm thấy model trong properties.files:", modelFile.uri);
+                modelUrl = `https://modelviewer.dev/viewer.html#src=${encodeURIComponent(modelFile.uri)}`;
+              }
+            }
+          }
+
+          // Nếu không tìm thấy, sử dụng một trong các model mẫu dựa trên ID
+          if (!modelUrl) {
+            const sampleModels = [
+              "https://modelviewer.dev/shared-assets/models/Astronaut.glb",
+              "https://modelviewer.dev/shared-assets/models/Cube.gltf",
+              "https://modelviewer.dev/shared-assets/models/NeilArmstrong.glb",
+              "https://modelviewer.dev/shared-assets/models/RobotExpressive.glb",
+            ];
+
+            modelUrl = sampleModels[nft.id % sampleModels.length];
+            console.log("Không tìm thấy model thực tế, sử dụng model mẫu:", modelUrl);
+          }
+        } catch (error) {
+          console.error("Lỗi khi tìm NFT trong localStorage:", error);
+          modelUrl = "https://modelviewer.dev/shared-assets/models/Astronaut.glb";
+        }
+      } else {
+        modelUrl = "https://modelviewer.dev/shared-assets/models/Astronaut.glb";
+      }
+
+      // Kiểm tra xem URL đã có phần modelviewer.dev hay chưa
+      if (!modelUrl.includes('modelviewer.dev')) {
+        modelUrl = `https://modelviewer.dev/viewer.html#src=${encodeURIComponent(modelUrl)}`;
+      }
+
+      console.log("URL model viewer cuối cùng:", modelUrl);
+      setModelUrl(modelUrl);
+      setShowModelViewer(true);
+    } catch (error) {
+      console.error("Lỗi khi hiển thị model 3D:", error);
+      alert("Có lỗi xảy ra khi tải 3D Model. Vui lòng thử lại sau.");
+      setModelUrl("https://modelviewer.dev/shared-assets/models/Astronaut.glb");
+      setShowModelViewer(true);
+    }
+  };
+
+  const handleCloseModelViewer = () => {
+    setShowModelViewer(false);
+  };
+
   return (
     <div className="relative bg-black text-white overflow-hidden font-pixel">
       {/* Custom cursor */}
@@ -95,13 +188,12 @@ export default function NFTDetailPage() {
               <div>
                 <div className="aspect-square bg-black border-2 border-purple-900/50 overflow-hidden">
                   <AbstractShape
-                    className={`w-full h-full ${
-                      nft.color === "purple"
-                        ? "text-purple-500/70"
-                        : nft.color === "pink"
-                          ? "text-pink-500/70"
-                          : "text-blue-500/70"
-                    }`}
+                    className={`w-full h-full ${nft.color === "purple"
+                      ? "text-purple-500/70"
+                      : nft.color === "pink"
+                        ? "text-pink-500/70"
+                        : "text-blue-500/70"
+                      }`}
                     type={nft.shapeType as any}
                     animate
                   />
@@ -178,13 +270,21 @@ export default function NFTDetailPage() {
                       <p className="text-gray-400 font-pixel">CURRENT PRICE</p>
                       <p className="text-3xl font-bold text-white font-pixel">{nft.price} SOL</p>
                     </div>
-                    <div>
+                    <div className="flex space-x-4">
                       <Button
                         className="bg-transparent border-2 border-purple-500 hover:bg-purple-950/30 text-white rounded-none px-8 py-4 text-lg font-pixel tracking-wide"
                         onMouseEnter={() => setCursorHover(true)}
                         onMouseLeave={() => setCursorHover(false)}
                       >
                         BUY NOW
+                      </Button>
+                      <Button
+                        className="bg-transparent border-2 border-blue-500 hover:bg-blue-950/30 text-white rounded-none px-8 py-4 text-lg font-pixel tracking-wide"
+                        onMouseEnter={() => setCursorHover(true)}
+                        onMouseLeave={() => setCursorHover(false)}
+                        onClick={handleView3DModel}
+                      >
+                        VIEW 3D MODEL
                       </Button>
                     </div>
                   </div>
@@ -272,13 +372,12 @@ export default function NFTDetailPage() {
                   >
                     <div className="aspect-square overflow-hidden relative">
                       <AbstractShape
-                        className={`w-full h-full ${
-                          index % 3 === 0
-                            ? "text-purple-500/70"
-                            : index % 3 === 1
-                              ? "text-pink-500/70"
-                              : "text-blue-500/70"
-                        }`}
+                        className={`w-full h-full ${index % 3 === 0
+                          ? "text-purple-500/70"
+                          : index % 3 === 1
+                            ? "text-pink-500/70"
+                            : "text-blue-500/70"
+                          }`}
                         type={
                           index % 4 === 0 ? "complex" : index % 4 === 1 ? "grid" : index % 4 === 2 ? "dots" : "noise"
                         }
@@ -298,6 +397,75 @@ export default function NFTDetailPage() {
           </div>
         </div>
       </section>
+
+      {/* 3D Model Viewer Modal */}
+      {showModelViewer && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-black border-2 border-purple-500 p-8 max-w-5xl w-full h-[80vh] relative"
+          >
+            <button
+              onClick={handleCloseModelViewer}
+              className="absolute top-4 right-4 text-white hover:text-pink-500 transition-colors"
+              title="Close 3D Model Viewer"
+              aria-label="Close 3D Model Viewer"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            <h3 className="text-2xl font-bold text-white mb-6 font-pixel">3D MODEL VIEWER - {nft.name}</h3>
+
+            <div className="w-full h-[90%] flex items-center justify-center bg-black/50 relative">
+              {modelUrl ? (
+                <>
+                  <iframe
+                    src={modelUrl}
+                    title="3D Model Viewer"
+                    className="w-full h-full border-0"
+                    allow="camera; microphone; fullscreen; autoplay; xr-spatial-tracking"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                    loading="eager"
+                    referrerPolicy="no-referrer"
+                    onLoad={() => console.log("iframe đã tải xong!")}
+                    onError={() => {
+                      console.error("Lỗi khi tải iframe");
+                      setModelUrl("https://modelviewer.dev/shared-assets/models/Astronaut.glb");
+                    }}
+                  ></iframe>
+                  <div className="absolute bottom-4 right-4 flex space-x-2">
+                    <button
+                      onClick={() => window.open(modelUrl, '_blank')}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded"
+                    >
+                      Mở trong cửa sổ mới
+                    </button>
+                    <button
+                      onClick={() => setModelUrl('https://modelviewer.dev/shared-assets/models/Astronaut.glb')}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded"
+                    >
+                      Thử với model mẫu
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center p-8">
+                  <p className="text-gray-400 mb-4">Không thể tải model 3D. Vui lòng thử lại sau.</p>
+                  <button
+                    onClick={() => setModelUrl('https://modelviewer.dev/shared-assets/models/Astronaut.glb')}
+                    className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded"
+                  >
+                    Thử với model mẫu
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Footer */}
       <Footer />
