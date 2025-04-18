@@ -11,6 +11,7 @@ export interface MockNFTMetadata {
         trait_type: string;
         value: string;
     }>;
+    audioUrl?: string;
 }
 
 // Mô phỏng quá trình mint NFT và lưu vào localStorage để hiển thị trong profile

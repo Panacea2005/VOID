@@ -1658,7 +1658,8 @@ export default function AIPage() {
           description: nftDescription,
           // For music, we'd need to handle the audio file differently - this is a placeholder
           audioUrl: musicGeneration.audio_url,
-          attributes
+          attributes,
+          image: new File([""], "placeholder.png", { type: "image/png" })
         });
         
         alert("Music NFT has been created! View it in your Profile page.");
