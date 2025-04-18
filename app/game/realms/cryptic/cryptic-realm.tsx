@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence, useAnimationControls } from "framer-motion";
 import { cubeCollection } from "../../cube/realm-cube";
 import { useAudio } from "../../contexts/audio-context";
 
@@ -8,1170 +8,1185 @@ interface CrypticRealmProps {
   selectedCubeId?: string;
 }
 
-// Improved Rubik's Cube with proper layer rotation mechanics
+// Classic 2D Tetris Game with realm cube colors
 const CrypticRealm: React.FC<CrypticRealmProps> = ({
   onReturn,
   selectedCubeId = "pink-neon",
 }) => {
-  // Game state
-  const [gameState, setGameState] = useState<"intro" | "playing" | "success">(
-    "intro"
-  );
-  const [moves, setMoves] = useState(0);
-  const [startTime, setStartTime] = useState<number | null>(null);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [bestTime, setBestTime] = useState<number | null>(null);
+  // Game states
+  const [gameState, setGameState] = useState<
+    "waiting" | "playing" | "paused" | "gameOver"
+  >("waiting");
   const [score, setScore] = useState(0);
+  const [level, setLevel] = useState(1);
+  const [lines, setLines] = useState(0);
+  const [highScore, setHighScore] = useState(0);
+  const gameStateRef = useRef("waiting");
+  const isAnimatingRef = useRef(false);
+  const lastDropTimeRef = useRef(0);
+  const dropIntervalRef = useRef(1000);
 
-  // Cube size (3x3 standard Rubik's cube)
-  const cubeSize = 3;
+  // Game grid dimensions
+  const gridWidth = 10;
+  const gridHeight = 20;
 
-  // Cube rotation state
-  const [cubeRotation, setCubeRotation] = useState({ x: 20, y: 20 });
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
+  // Grid state
+  const [grid, setGrid] = useState<number[][]>([]);
+
+  // Current tetromino state
+  const [currentPiece, setCurrentPiece] = useState<{
+    shape: number[][];
+    position: { x: number; y: number };
+    color: string;
+    rotation: number;
+  } | null>(null);
+
+  // Next piece preview
+  const [nextPiece, setNextPiece] = useState<{
+    shape: number[][];
+    color: string;
+  } | null>(null);
+
+  // Held piece
+  const [heldPiece, setHeldPiece] = useState<{
+    shape: number[][];
+    color: string;
+  } | null>(null);
+  const [canHold, setCanHold] = useState(true);
+
+  // Game speed - milliseconds per drop
+  const [dropInterval, setDropInterval] = useState(1000);
+  const [lastDropTime, setLastDropTime] = useState(0);
+
+  // Animation state
   const [isAnimating, setIsAnimating] = useState(false);
+  const [clearedLines, setClearedLines] = useState<number[]>([]);
 
-  // References
-  const containerRef = useRef<HTMLDivElement>(null);
+  // Help overlay
+  const [showControls, setShowControls] = useState(false);
 
-  // Get cube colors
+  // Animation controls
+  const gridControls = useAnimationControls();
+
+  // Grid background reference
+  const gridRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Game loop interval
+  const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
+  const requestRef = useRef<number>(0);
+
+  // Mouse position for ambient lighting
+  const [ambientLightPosition, setAmbientLightPosition] = useState({
+    x: 50,
+    y: 50,
+  });
+
+  // Audio context
+  const audio = useAudio();
+
+  // Get selected cube from collection
   const defaultCube = cubeCollection[0];
   const selectedCube =
     cubeCollection.find((cube) => cube.id === selectedCubeId) || defaultCube;
   const cubeColors = [...selectedCube.colors];
 
-  // Ensure we have 6 colors for all faces
-  while (cubeColors.length < 6) {
-    cubeColors.push(
-      defaultCube.colors[cubeColors.length % defaultCube.colors.length]
-    );
+  // Background gradient based on cube colors
+  const mainColor = cubeColors[0] || "#ec4899";
+  const secondaryColor = cubeColors[1] || "#8B5CF6";
+
+  // Ensure we have enough colors
+  while (cubeColors.length < 7) {
+    cubeColors.push(cubeColors[cubeColors.length % cubeColors.length]);
   }
 
-  // Individual face state
-  // Each face has 9 cells (3x3)
-  const [faces, setFaces] = useState<string[][]>([]);
+  // Define Tetromino shapes
+  const tetrominoes = [
+    {
+      // I piece
+      shape: [
+        [0, 0, 0, 0],
+        [1, 1, 1, 1],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+      ],
+      color: cubeColors[0],
+    },
+    {
+      // O piece
+      shape: [
+        [1, 1],
+        [1, 1],
+      ],
+      color: cubeColors[1],
+    },
+    {
+      // T piece
+      shape: [
+        [0, 1, 0],
+        [1, 1, 1],
+        [0, 0, 0],
+      ],
+      color: cubeColors[2],
+    },
+    {
+      // L piece
+      shape: [
+        [0, 0, 1],
+        [1, 1, 1],
+        [0, 0, 0],
+      ],
+      color: cubeColors[3],
+    },
+    {
+      // J piece
+      shape: [
+        [1, 0, 0],
+        [1, 1, 1],
+        [0, 0, 0],
+      ],
+      color: cubeColors[4],
+    },
+    {
+      // S piece
+      shape: [
+        [0, 1, 1],
+        [1, 1, 0],
+        [0, 0, 0],
+      ],
+      color: cubeColors[5],
+    },
+    {
+      // Z piece
+      shape: [
+        [1, 1, 0],
+        [0, 1, 1],
+        [0, 0, 0],
+      ],
+      color: cubeColors[6],
+    },
+  ];
 
-  // Audio context
-  const audio = useAudio();
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+  
+  useEffect(() => {
+    isAnimatingRef.current = isAnimating;
+  }, [isAnimating]);
+  
+  useEffect(() => {
+    lastDropTimeRef.current = lastDropTime;
+  }, [lastDropTime]);
+  
+  useEffect(() => {
+    dropIntervalRef.current = dropInterval;
+  }, [dropInterval]);
 
-  // Reference for raycaster and intersection detection
-  const cubeRef = useRef<HTMLDivElement>(null);
+  // Handle mouse movement for ambient lighting and parallax
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
 
-  // Initialize the cube
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+      setAmbientLightPosition({ x, y });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  // Initialize game
   useEffect(() => {
     try {
-      audio.changeTrack("rubiks");
+      audio.changeTrack("tetris");
     } catch (error) {
       console.log("Could not set audio track");
     }
 
-    // Initialize cube state - each face has 9 cells of the same color
-    initializeCube();
-  }, []);
+    // Initialize grid
+    initializeGrid();
 
-  // Timer logic
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    if (gameState === "playing" && startTime) {
-      interval = setInterval(() => {
-        setCurrentTime(Math.floor((Date.now() - startTime) / 1000));
-      }, 1000);
+    // Load high score from localStorage
+    const savedHighScore = localStorage.getItem("tetrisHighScore");
+    if (savedHighScore) {
+      setHighScore(parseInt(savedHighScore));
     }
 
     return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [gameState, startTime]);
-
-  // Check for solved state after moves
-  useEffect(() => {
-    if (
-      gameState === "playing" &&
-      !isAnimating &&
-      faces.length > 0 &&
-      moves > 0
-    ) {
-      if (checkSolved()) {
-        // Success!
-        const finalTime = Math.floor((Date.now() - (startTime || 0)) / 1000);
-
-        // Update best time if better
-        if (bestTime === null || finalTime < bestTime) {
-          setBestTime(finalTime);
-        }
-
-        // Calculate score
-        const timeBonus = Math.max(300 - finalTime, 0);
-        const movesPenalty = moves * 2;
-        const calculatedScore = Math.max(500 + timeBonus - movesPenalty, 100);
-
-        setScore(calculatedScore);
-        setGameState("success");
-
-        try {
-          audio.playSound("success");
-        } catch (e) {
-          console.log("Could not play success sound");
-        }
+      if (gameLoopRef.current) {
+        clearInterval(gameLoopRef.current);
       }
+      cancelAnimationFrame(requestRef.current);
+    };
+  }, []);
+
+  // Initialize the grid
+  const initializeGrid = () => {
+    const newGrid: number[][] = [];
+
+    for (let y = 0; y < gridHeight; y++) {
+      const row: number[] = [];
+      for (let x = 0; x < gridWidth; x++) {
+        row.push(0); // 0 means empty
+      }
+      newGrid.push(row);
     }
-  }, [faces, isAnimating, moves]);
 
-  // Initialize cube with solved state
-  const initializeCube = () => {
-    const newFaces: string[][] = [];
-
-    // Initialize 6 faces, each with 9 cells of the same color
-    for (let i = 0; i < 6; i++) {
-      const face: string[] = Array(9).fill(cubeColors[i]);
-      newFaces.push(face);
-    }
-
-    setFaces(newFaces);
+    setGrid(newGrid);
   };
 
-  // Map face indices for convenience
-  const FACE = {
-    RIGHT: 0,
-    LEFT: 1,
-    TOP: 2,
-    BOTTOM: 3,
-    FRONT: 4,
-    BACK: 5,
-  };
-
-  // Layer types for rotation
-  const LAYER_TYPE = {
-    ROW: "row", // Horizontal layers (parallel to TOP/BOTTOM faces)
-    COLUMN: "column", // Vertical layers (parallel to LEFT/RIGHT faces)
-    DEPTH: "depth", // Depth layers (parallel to FRONT/BACK faces)
-  };
-
-  // Start the game
+  // Start game
   const startGame = () => {
-    setMoves(0);
-    setStartTime(Date.now());
-    setCurrentTime(0);
-    setGameState("playing");
+    if (gameState === "playing") return;
 
     try {
       audio.playSound("start");
     } catch (e) {
       console.log("Could not play start sound");
     }
+
+    // Reset game state
+    setScore(0);
+    setLevel(1);
+    setLines(0);
+    setDropInterval(1000);
+    setHeldPiece(null);
+    setCanHold(true);
+    initializeGrid();
+    setGameState("playing");
+
+    // CRITICAL: Set the initial lastDropTime to current time
+    setLastDropTime(Date.now());
+
+    // Animate grid
+    gridControls.start({
+      scale: [0.95, 1.05, 1],
+      opacity: [0.8, 1],
+      transition: { duration: 1 },
+    });
+
+    // Generate first and next pieces
+    generateNewPiece();
+
+    // Start game loop
+    startGameLoop();
+
+    // Show controls briefly
+    setShowControls(true);
+    setTimeout(() => setShowControls(false), 3000);
   };
 
-  // Reset the cube
-  const resetCube = () => {
-    initializeCube();
-    setMoves(0);
-    if (gameState === "playing") {
-      setStartTime(Date.now());
-      setCurrentTime(0);
+  // Start the game loop
+  const startGameLoop = () => {
+    // Clear any existing interval
+    if (gameLoopRef.current) {
+      clearInterval(gameLoopRef.current);
+    }
+
+    // Set new interval
+    gameLoopRef.current = setInterval(() => {
+      if (gameState === "playing" && !isAnimating) {
+        const now = Date.now();
+        if (now - lastDropTime >= dropInterval) {
+          const moved = moveDown();
+          // Only update lastDropTime if we actually moved down
+          if (moved) {
+            setLastDropTime(now);
+          }
+        }
+      }
+    }, 16); // Check at ~60fps for smoother gameplay
+
+    // Start animation frame for smoother animations
+    const animate = () => {
+      requestRef.current = requestAnimationFrame(animate);
+    };
+    requestRef.current = requestAnimationFrame(animate);
+  };
+
+  // Generate a new tetromino piece
+  const generateNewPiece = () => {
+    // Use next piece if available, otherwise generate new
+    let newShape, newColor;
+
+    if (nextPiece) {
+      newShape = nextPiece.shape;
+      newColor = nextPiece.color;
+    } else {
+      const randomIndex = Math.floor(Math.random() * tetrominoes.length);
+      newShape = tetrominoes[randomIndex].shape;
+      newColor = tetrominoes[randomIndex].color;
+    }
+
+    // Generate next piece for preview
+    const nextIndex = Math.floor(Math.random() * tetrominoes.length);
+    setNextPiece({
+      shape: tetrominoes[nextIndex].shape,
+      color: tetrominoes[nextIndex].color,
+    });
+
+    // Set the new current piece
+    const newPiece = {
+      shape: newShape,
+      position: {
+        x: Math.floor(gridWidth / 2) - Math.floor(getWidth(newShape) / 2),
+        y: gridHeight - getHeight(newShape),
+      },
+      color: newColor,
+      rotation: 0,
+    };
+
+    // Check if the new piece can be placed (game over check)
+    if (!isValidPosition(newPiece)) {
+      // Game over
+      setGameState("gameOver");
 
       try {
-        audio.playSound("reset");
+        audio.playSound("gameover");
       } catch (e) {
-        console.log("Could not play reset sound");
+        console.log("Could not play game over sound");
       }
+
+      // Update high score if needed
+      if (score > highScore) {
+        setHighScore(score);
+        localStorage.setItem("tetrisHighScore", score.toString());
+      }
+
+      return;
     }
+
+    setCurrentPiece(newPiece);
   };
 
-  // Scramble the cube with random moves
-  const scrambleCube = async () => {
-    if (gameState !== "playing" || isAnimating) return;
-
-    setIsAnimating(true);
-
-    try {
-      audio.playSound("scramble");
-    } catch (e) {
-      console.log("Could not play scramble sound");
-    }
-
-    // Perform 20 random moves
-    const possibleMoves = [
-      "R",
-      "L",
-      "U",
-      "D",
-      "F",
-      "B",
-      "M",
-      "E",
-      "S",
-      "R'",
-      "L'",
-      "U'",
-      "D'",
-      "F'",
-      "B'",
-      "M'",
-      "E'",
-      "S'",
-    ];
-
-    for (let i = 0; i < 20; i++) {
-      const move =
-        possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-      const isClockwise = !move.includes("'");
-      const face = move.replace("'", "");
-
-      let faceIndex;
-      let layerType;
-      let layerIndex;
-
-      switch (face) {
-        case "R": // Right face
-          faceIndex = FACE.RIGHT;
-          layerType = LAYER_TYPE.COLUMN;
-          layerIndex = 2; // Rightmost column
-          break;
-        case "L": // Left face
-          faceIndex = FACE.LEFT;
-          layerType = LAYER_TYPE.COLUMN;
-          layerIndex = 0; // Leftmost column
-          break;
-        case "U": // Top face
-          faceIndex = FACE.TOP;
-          layerType = LAYER_TYPE.ROW;
-          layerIndex = 0; // Top row
-          break;
-        case "D": // Bottom face
-          faceIndex = FACE.BOTTOM;
-          layerType = LAYER_TYPE.ROW;
-          layerIndex = 2; // Bottom row
-          break;
-        case "F": // Front face
-          faceIndex = FACE.FRONT;
-          layerType = LAYER_TYPE.DEPTH;
-          layerIndex = 0; // Front depth layer
-          break;
-        case "B": // Back face
-          faceIndex = FACE.BACK;
-          layerType = LAYER_TYPE.DEPTH;
-          layerIndex = 2; // Back depth layer
-          break;
-        case "M": // Middle slice (between L and R)
-          layerType = LAYER_TYPE.COLUMN;
-          layerIndex = 1; // Middle column
-          faceIndex = -1; // No specific face
-          break;
-        case "E": // Equatorial slice (between U and D)
-          layerType = LAYER_TYPE.ROW;
-          layerIndex = 1; // Middle row
-          faceIndex = -1; // No specific face
-          break;
-        case "S": // Standing slice (between F and B)
-          layerType = LAYER_TYPE.DEPTH;
-          layerIndex = 1; // Middle depth
-          faceIndex = -1; // No specific face
-          break;
-        default:
-          faceIndex = FACE.FRONT;
-          layerType = LAYER_TYPE.DEPTH;
-          layerIndex = 0;
-      }
-
-      await rotateLayer(layerType, layerIndex, isClockwise);
-      await new Promise((resolve) => setTimeout(resolve, 150));
-    }
-
-    setIsAnimating(false);
-    setMoves(0); // Reset moves after scramble
-  };
-
-  const handleLayerMouseUp = () => {
-    if (layerDragState.isDragging) {
-      setLayerDragState({
-        isDragging: false,
-        layerType: "",
-        layerIndex: -1,
-        startX: 0,
-        startY: 0,
-        currentRotation: 0,
-        isCommitted: false,
-      });
-    }
-  };
-
-  const handleLayerMouseDown = (
-    layerType: string,
-    layerIndex: number,
-    e: React.MouseEvent
-  ) => {
-    if (gameState !== "playing" || isAnimating) return;
-
-    // Start dragging a layer
-    setLayerDragState({
-      isDragging: true,
-      layerType,
-      layerIndex,
-      startX: e.clientX,
-      startY: e.clientY,
-      currentRotation: 0,
-      isCommitted: false,
-    });
-
-    try {
-      audio.playSound("click");
-    } catch (e) {
-      // Silent fail
-    }
-
-    // Prevent context menu on right-click
-    e.preventDefault();
-    e.stopPropagation(); // Prevent the cube drag from activating
-
-    // Add window event listeners to ensure drag continues even if cursor leaves the element
-    window.addEventListener("mousemove", handleWindowMouseMove);
-    window.addEventListener("mouseup", handleWindowMouseUp);
-  };
-
-  // Perform a rotation of a specific layer
-  const rotateLayer = async (
-    layerType: string,
-    layerIndex: number,
-    clockwise: boolean = true
-  ) => {
-    if (isAnimating) return;
-    setIsAnimating(true);
-
-    try {
-      audio.playSound("rotate");
-    } catch (e) {
-      // Silent fail
-    }
-
-    // Update the faces data
-    setFaces((prevFaces) => {
-      const newFaces = prevFaces.map((face) => [...face]);
-
-      // Apply the rotation to the cube data
-      switch (layerType) {
-        case LAYER_TYPE.ROW:
-          rotateHorizontalLayer(newFaces, layerIndex, clockwise);
-          break;
-        case LAYER_TYPE.COLUMN:
-          rotateVerticalLayer(newFaces, layerIndex, clockwise);
-          break;
-        case LAYER_TYPE.DEPTH:
-          rotateDepthLayer(newFaces, layerIndex, clockwise);
-          break;
-      }
-
-      return newFaces;
-    });
-
-    setMoves((prev) => prev + 1);
-
-    // Wait for the animation to complete
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    setIsAnimating(false);
-  };
-
-  const rotateFaceData = (faceData: string[], clockwise: boolean): string[] => {
-    if (clockwise) {
-      return [
-        faceData[6], faceData[3], faceData[0],
-        faceData[7], faceData[4], faceData[1],
-        faceData[8], faceData[5], faceData[2]
-      ];
-    } else {
-      return [
-        faceData[2], faceData[5], faceData[8],
-        faceData[1], faceData[4], faceData[7],
-        faceData[0], faceData[3], faceData[6]
-      ];
-    }
-  };
-
-  // Rotate a horizontal layer (row) of the cube
-  const rotateHorizontalLayer = (faces: string[][], rowIndex: number, clockwise: boolean) => {
-    // For a horizontal row rotation, we need to:
-    // 1. Rotate the cells in this row across FRONT, RIGHT, BACK, LEFT
-    // 2. If it's the top or bottom row, also rotate the TOP or BOTTOM face
-  
-    // Calculate row indices for the relevant faces
-    const frontRowIndices = [rowIndex * 3, rowIndex * 3 + 1, rowIndex * 3 + 2];
-    const rightRowIndices = [rowIndex * 3, rowIndex * 3 + 1, rowIndex * 3 + 2];
-    const leftRowIndices = [rowIndex * 3, rowIndex * 3 + 1, rowIndex * 3 + 2];
-    
-    // For BACK face, we need to flip the row index and reverse the order
-    // If rowIndex is 0 (top), we need row 2 of BACK, etc.
-    const backRowIndex = 2 - rowIndex;
-    const backRowIndices = [backRowIndex * 3, backRowIndex * 3 + 1, backRowIndex * 3 + 2];
-  
-    // Save the original values from each face
-    const frontValues = frontRowIndices.map(idx => faces[FACE.FRONT][idx]);
-    const rightValues = rightRowIndices.map(idx => faces[FACE.RIGHT][idx]);
-    const backValues = backRowIndices.map(idx => faces[FACE.BACK][idx]);
-    const leftValues = leftRowIndices.map(idx => faces[FACE.LEFT][idx]);
-  
-    // Apply the rotation based on direction
-    if (clockwise) {
-      // Clockwise: FRONT -> RIGHT -> BACK -> LEFT -> FRONT
-      // FRONT gets values from LEFT
-      frontRowIndices.forEach((idx, i) => {
-        faces[FACE.FRONT][idx] = leftValues[i];
-      });
-      
-      // RIGHT gets values from FRONT
-      rightRowIndices.forEach((idx, i) => {
-        faces[FACE.RIGHT][idx] = frontValues[i];
-      });
-      
-      // BACK gets values from RIGHT (reversed)
-      backRowIndices.forEach((idx, i) => {
-        faces[FACE.BACK][idx] = rightValues[2 - i];
-      });
-      
-      // LEFT gets values from BACK (reversed)
-      leftRowIndices.forEach((idx, i) => {
-        faces[FACE.LEFT][idx] = backValues[2 - i];
-      });
-      
-      // Rotate the corresponding face if it's the top or bottom row
-      if (rowIndex === 0) {
-        // If rotating top row, also rotate TOP face clockwise
-        faces[FACE.TOP] = rotateFaceData(faces[FACE.TOP], true);
-      } else if (rowIndex === 2) {
-        // If rotating bottom row, also rotate BOTTOM face clockwise
-        faces[FACE.BOTTOM] = rotateFaceData(faces[FACE.BOTTOM], true);
-      }
-    } else {
-      // Counter-clockwise: FRONT -> LEFT -> BACK -> RIGHT -> FRONT
-      // FRONT gets values from RIGHT
-      frontRowIndices.forEach((idx, i) => {
-        faces[FACE.FRONT][idx] = rightValues[i];
-      });
-      
-      // LEFT gets values from FRONT
-      leftRowIndices.forEach((idx, i) => {
-        faces[FACE.LEFT][idx] = frontValues[i];
-      });
-      
-      // BACK gets values from LEFT (reversed)
-      backRowIndices.forEach((idx, i) => {
-        faces[FACE.BACK][idx] = leftValues[2 - i];
-      });
-      
-      // RIGHT gets values from BACK (reversed)
-      rightRowIndices.forEach((idx, i) => {
-        faces[FACE.RIGHT][idx] = backValues[2 - i];
-      });
-      
-      // Rotate the corresponding face if it's the top or bottom row
-      if (rowIndex === 0) {
-        // If rotating top row, also rotate TOP face counter-clockwise
-        faces[FACE.TOP] = rotateFaceData(faces[FACE.TOP], false);
-      } else if (rowIndex === 2) {
-        // If rotating bottom row, also rotate BOTTOM face counter-clockwise
-        faces[FACE.BOTTOM] = rotateFaceData(faces[FACE.BOTTOM], false);
-      }
-    }
-  };
-
-  // Rotate a vertical layer (column) of the cube
-  const rotateVerticalLayer = (faces: string[][], colIndex: number, clockwise: boolean) => {
-    // For a vertical column rotation, we need to:
-    // 1. Rotate the cells in this column across TOP, FRONT, BOTTOM, BACK
-    // 2. If it's the left or right column, also rotate the LEFT or RIGHT face
-  
-    // Calculate column indices for each face
-    const topColIndices = [colIndex, colIndex + 3, colIndex + 6];
-    const frontColIndices = [colIndex, colIndex + 3, colIndex + 6];
-    const bottomColIndices = [colIndex, colIndex + 3, colIndex + 6];
-    
-    // For BACK face, we need to flip the column index and reverse the order
-    const backColIndex = 2 - colIndex;
-    const backColIndices = [backColIndex, backColIndex + 3, backColIndex + 6];
-  
-    // Save the original values from each face
-    const topValues = topColIndices.map(idx => faces[FACE.TOP][idx]);
-    const frontValues = frontColIndices.map(idx => faces[FACE.FRONT][idx]);
-    const bottomValues = bottomColIndices.map(idx => faces[FACE.BOTTOM][idx]);
-    const backValues = backColIndices.map(idx => faces[FACE.BACK][idx]);
-  
-    // Apply the rotation based on direction
-    if (clockwise) {
-      // Clockwise: TOP -> BACK (reversed) -> BOTTOM -> FRONT -> TOP
-      // TOP gets values from FRONT
-      topColIndices.forEach((idx, i) => {
-        faces[FACE.TOP][idx] = frontValues[i];
-      });
-      
-      // BACK gets values from TOP (reversed)
-      backColIndices.forEach((idx, i) => {
-        faces[FACE.BACK][idx] = topValues[2 - i];
-      });
-      
-      // BOTTOM gets values from BACK (reversed)
-      bottomColIndices.forEach((idx, i) => {
-        faces[FACE.BOTTOM][idx] = backValues[2 - i];
-      });
-      
-      // FRONT gets values from BOTTOM
-      frontColIndices.forEach((idx, i) => {
-        faces[FACE.FRONT][idx] = bottomValues[i];
-      });
-      
-      // Rotate the corresponding face if it's the left or right column
-      if (colIndex === 0) {
-        // If rotating left column, also rotate LEFT face counter-clockwise
-        faces[FACE.LEFT] = rotateFaceData(faces[FACE.LEFT], false);
-      } else if (colIndex === 2) {
-        // If rotating right column, also rotate RIGHT face clockwise
-        faces[FACE.RIGHT] = rotateFaceData(faces[FACE.RIGHT], true);
-      }
-    } else {
-      // Counter-clockwise: TOP -> FRONT -> BOTTOM -> BACK (reversed) -> TOP
-      // TOP gets values from BACK (reversed)
-      topColIndices.forEach((idx, i) => {
-        faces[FACE.TOP][idx] = backValues[2 - i];
-      });
-      
-      // FRONT gets values from TOP
-      frontColIndices.forEach((idx, i) => {
-        faces[FACE.FRONT][idx] = topValues[i];
-      });
-      
-      // BOTTOM gets values from FRONT
-      bottomColIndices.forEach((idx, i) => {
-        faces[FACE.BOTTOM][idx] = frontValues[i];
-      });
-      
-      // BACK gets values from BOTTOM (reversed)
-      backColIndices.forEach((idx, i) => {
-        faces[FACE.BACK][idx] = bottomValues[2 - i];
-      });
-      
-      // Rotate the corresponding face if it's the left or right column
-      if (colIndex === 0) {
-        // If rotating left column, also rotate LEFT face clockwise
-        faces[FACE.LEFT] = rotateFaceData(faces[FACE.LEFT], true);
-      } else if (colIndex === 2) {
-        // If rotating right column, also rotate RIGHT face counter-clockwise
-        faces[FACE.RIGHT] = rotateFaceData(faces[FACE.RIGHT], false);
-      }
-    }
-  };
-
-  // Rotate a depth layer of the cube
-  const rotateDepthLayer = (faces: string[][], depthIndex: number, clockwise: boolean) => {
-    // For a depth layer rotation, we need to:
-    // 1. Rotate the cells in this depth across TOP, RIGHT, BOTTOM, LEFT
-    // 2. If it's the front or back depth, also rotate the FRONT or BACK face
-    
-    // Calculate indices for the depth on each face based on depthIndex
-    let topIndices, rightIndices, bottomIndices, leftIndices;
-    
-    if (depthIndex === 0) { // Front depth
-      topIndices = [6, 7, 8]; // Bottom row of TOP
-      rightIndices = [0, 3, 6]; // Left column of RIGHT
-      bottomIndices = [0, 1, 2]; // Top row of BOTTOM
-      leftIndices = [2, 5, 8]; // Right column of LEFT
-    } else if (depthIndex === 1) { // Middle depth
-      topIndices = [3, 4, 5]; // Middle row of TOP
-      rightIndices = [1, 4, 7]; // Middle column of RIGHT
-      bottomIndices = [3, 4, 5]; // Middle row of BOTTOM
-      leftIndices = [1, 4, 7]; // Middle column of LEFT
-    } else { // Back depth (depthIndex === 2)
-      topIndices = [0, 1, 2]; // Top row of TOP
-      rightIndices = [2, 5, 8]; // Right column of RIGHT
-      bottomIndices = [6, 7, 8]; // Bottom row of BOTTOM
-      leftIndices = [0, 3, 6]; // Left column of LEFT
-    }
-    
-    // Save the original values
-    const topValues = topIndices.map(idx => faces[FACE.TOP][idx]);
-    const rightValues = rightIndices.map(idx => faces[FACE.RIGHT][idx]);
-    const bottomValues = bottomIndices.map(idx => faces[FACE.BOTTOM][idx]);
-    const leftValues = leftIndices.map(idx => faces[FACE.LEFT][idx]);
-    
-    if (clockwise) {
-      // Clockwise rotation: TOP -> RIGHT -> BOTTOM -> LEFT -> TOP
-      // The tricky part is that we need to correct the orientation
-      
-      // TOP gets values from LEFT
-      for (let i = 0; i < 3; i++) {
-        faces[FACE.TOP][topIndices[i]] = leftValues[2 - i];
-      }
-      
-      // RIGHT gets values from TOP
-      for (let i = 0; i < 3; i++) {
-        faces[FACE.RIGHT][rightIndices[i]] = topValues[i];
-      }
-      
-      // BOTTOM gets values from RIGHT
-      for (let i = 0; i < 3; i++) {
-        faces[FACE.BOTTOM][bottomIndices[i]] = rightValues[2 - i];
-      }
-      
-      // LEFT gets values from BOTTOM
-      for (let i = 0; i < 3; i++) {
-        faces[FACE.LEFT][leftIndices[i]] = bottomValues[i];
-      }
-      
-      // Rotate the corresponding face if needed
-      if (depthIndex === 0) {
-        // Front face rotates clockwise
-        faces[FACE.FRONT] = rotateFaceData(faces[FACE.FRONT], true);
-      } else if (depthIndex === 2) {
-        // Back face rotates counter-clockwise (because of orientation)
-        faces[FACE.BACK] = rotateFaceData(faces[FACE.BACK], false);
-      }
-    } else {
-      // Counter-clockwise rotation: TOP -> LEFT -> BOTTOM -> RIGHT -> TOP
-      
-      // TOP gets values from RIGHT
-      for (let i = 0; i < 3; i++) {
-        faces[FACE.TOP][topIndices[i]] = rightValues[i];
-      }
-      
-      // LEFT gets values from TOP
-      for (let i = 0; i < 3; i++) {
-        faces[FACE.LEFT][leftIndices[i]] = topValues[2 - i];
-      }
-      
-      // BOTTOM gets values from LEFT
-      for (let i = 0; i < 3; i++) {
-        faces[FACE.BOTTOM][bottomIndices[i]] = leftValues[i];
-      }
-      
-      // RIGHT gets values from BOTTOM
-      for (let i = 0; i < 3; i++) {
-        faces[FACE.RIGHT][rightIndices[i]] = bottomValues[2 - i];
-      }
-      
-      // Rotate the corresponding face if needed
-      if (depthIndex === 0) {
-        // Front face rotates counter-clockwise
-        faces[FACE.FRONT] = rotateFaceData(faces[FACE.FRONT], false);
-      } else if (depthIndex === 2) {
-        // Back face rotates clockwise (because of orientation)
-        faces[FACE.BACK] = rotateFaceData(faces[FACE.BACK], true);
-      }
-    }
-  };
-
-  // Check if the cube is solved (each face has all cells of the same color)
-  const checkSolved = () => {
-    for (const face of faces) {
-      const firstColor = face[0];
-      for (const cell of face) {
-        if (cell !== firstColor) {
-          return false;
+  // Get piece dimensions
+  const getHeight = (shape: number[][]) => {
+    let height = 0;
+    for (let y = 0; y < shape.length; y++) {
+      for (let x = 0; x < shape[y].length; x++) {
+        if (shape[y][x]) {
+          height = Math.max(height, y + 1);
         }
       }
     }
+    return height;
+  };
+
+  const getWidth = (shape: number[][]) => {
+    let width = 0;
+    for (let y = 0; y < shape.length; y++) {
+      for (let x = 0; x < shape[y].length; x++) {
+        if (shape[y][x]) {
+          width = Math.max(width, x + 1);
+        }
+      }
+    }
+    return width;
+  };
+
+  // Check if position is valid for the current piece
+  const isValidPosition = (piece = currentPiece) => {
+    if (!piece) return false;
+
+    const { shape, position } = piece;
+
+    // Check each cell of the piece
+    for (let y = 0; y < shape.length; y++) {
+      for (let x = 0; x < shape[y].length; x++) {
+        // If this cell has a block
+        if (shape[y][x]) {
+          // Calculate the position on the grid
+          const gridX = position.x + x;
+          const gridY = position.y - y;
+
+          // Check boundaries
+          if (
+            gridX < 0 ||
+            gridX >= gridWidth ||
+            gridY < 0 ||
+            gridY >= gridHeight
+          ) {
+            return false;
+          }
+
+          // Check collision with existing blocks
+          if (gridY >= 0 && grid[gridY][gridX] !== 0) {
+            return false;
+          }
+        }
+      }
+    }
+
     return true;
   };
 
-  // Format time display
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
+  // Move the current piece down
+  const moveDown = () => {
+    if (!currentPiece || isAnimating) return false;
+
+    const newPosition = {
+      ...currentPiece.position,
+      y: currentPiece.position.y - 1,
+    };
+
+    const newPiece = {
+      ...currentPiece,
+      position: newPosition,
+    };
+
+    if (isValidPosition(newPiece)) {
+      setCurrentPiece(newPiece);
+      return true; // Movement was successful
+    } else {
+      // Lock the piece in place
+      lockPiece();
+      return false; // Movement was blocked
+    }
   };
 
-  // Layer drag state
-  const [layerDragState, setLayerDragState] = useState({
-    isDragging: false,
-    layerType: "",
-    layerIndex: -1,
-    startX: 0,
-    startY: 0,
-    currentRotation: 0,
-    isCommitted: false,
-  });
+  // Move the current piece left
+  const moveLeft = () => {
+    if (!currentPiece || isAnimating) return;
 
-  // Mouse event handlers for rotating the cube view
-  const handleMouseDown = (e: React.MouseEvent) => {
-    // Only allow cube rotation when clicking outside the cube faces
-    // Check if the target is part of the cube
-    const target = e.target as HTMLElement;
-    const isCubePiece = target.closest(".cube-face") !== null;
+    const newPosition = {
+      ...currentPiece.position,
+      x: currentPiece.position.x - 1,
+    };
 
-    if (
-      isCubePiece ||
-      gameState !== "playing" ||
-      isAnimating ||
-      layerDragState.isDragging
-    ) {
-      return;
+    const newPiece = {
+      ...currentPiece,
+      position: newPosition,
+    };
+
+    if (isValidPosition(newPiece)) {
+      setCurrentPiece(newPiece);
+
+      try {
+        audio.playSound("move");
+      } catch (e) {
+        // Silent fail
+      }
+    }
+  };
+
+  // Move the current piece right
+  const moveRight = () => {
+    if (!currentPiece || isAnimating) return;
+
+    const newPosition = {
+      ...currentPiece.position,
+      x: currentPiece.position.x + 1,
+    };
+
+    const newPiece = {
+      ...currentPiece,
+      position: newPosition,
+    };
+
+    if (isValidPosition(newPiece)) {
+      setCurrentPiece(newPiece);
+
+      try {
+        audio.playSound("move");
+      } catch (e) {
+        // Silent fail
+      }
+    }
+  };
+
+  // Rotate the current piece
+  const rotatePiece = () => {
+    if (!currentPiece || isAnimating) return;
+
+    // Create a new rotated shape matrix
+    const { shape } = currentPiece;
+    const size = shape.length;
+    const rotatedShape = Array(size)
+      .fill(0)
+      .map(() => Array(size).fill(0));
+
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        rotatedShape[x][size - 1 - y] = shape[y][x];
+      }
     }
 
-    // Start dragging to rotate the cube view
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX,
-      y: e.clientY,
+    const newPiece = {
+      ...currentPiece,
+      shape: rotatedShape,
+      rotation: (currentPiece.rotation + 90) % 360,
+    };
+
+    // Try to rotate, and if it fails due to boundary, adjust position
+    if (isValidPosition(newPiece)) {
+      setCurrentPiece(newPiece);
+
+      try {
+        audio.playSound("rotate");
+      } catch (e) {
+        // Silent fail
+      }
+    } else {
+      // Try wall kicking
+      const kicks = [
+        { x: -1, y: 0 }, // move left
+        { x: 1, y: 0 }, // move right
+        { x: 2, y: 0 }, // move 2 right
+        { x: -2, y: 0 }, // move 2 left
+        { x: 0, y: 1 }, // move up
+        { x: -1, y: 1 }, // move up and left
+        { x: 1, y: 1 }, // move up and right
+      ];
+
+      for (const kick of kicks) {
+        const kickedPiece = {
+          ...newPiece,
+          position: {
+            x: newPiece.position.x + kick.x,
+            y: newPiece.position.y + kick.y,
+          },
+        };
+
+        if (isValidPosition(kickedPiece)) {
+          setCurrentPiece(kickedPiece);
+
+          try {
+            audio.playSound("rotate");
+          } catch (e) {
+            // Silent fail
+          }
+
+          break;
+        }
+      }
+    }
+  };
+
+  // Hold the current piece
+  const holdPiece = () => {
+    if (!currentPiece || isAnimating || !canHold) return;
+
+    const currentShape = currentPiece.shape;
+    const currentColor = currentPiece.color;
+
+    try {
+      audio.playSound("hold");
+    } catch (e) {
+      // Silent fail
+    }
+
+    if (heldPiece) {
+      // Swap with held piece
+      const newPiece = {
+        shape: heldPiece.shape,
+        position: {
+          x:
+            Math.floor(gridWidth / 2) -
+            Math.floor(getWidth(heldPiece.shape) / 2),
+          y: gridHeight - getHeight(heldPiece.shape),
+        },
+        color: heldPiece.color,
+        rotation: 0,
+      };
+
+      setCurrentPiece(newPiece);
+    } else {
+      // No held piece yet, generate a new piece
+      generateNewPiece();
+    }
+
+    setHeldPiece({
+      shape: currentShape,
+      color: currentColor,
     });
 
-    e.preventDefault();
+    setCanHold(false);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    // Handle layer dragging
-    if (layerDragState.isDragging) {
-      handleLayerMouseMove(e);
-      return;
+  // Hard drop - move piece all the way down
+  const hardDrop = () => {
+    if (!currentPiece || isAnimating) return;
+
+    try {
+      // Create a deep copy of the current piece
+      const piece = JSON.parse(JSON.stringify(currentPiece));
+
+      // Find the lowest valid position
+      let newY = piece.position.y;
+      let foundBottom = false;
+
+      // Move down until collision
+      while (!foundBottom) {
+        newY -= 1;
+
+        const testPosition = {
+          x: piece.position.x,
+          y: newY,
+        };
+
+        const testPiece = {
+          ...piece,
+          position: testPosition,
+        };
+
+        if (!isValidPosition(testPiece)) {
+          // We found the bottom position, move back up one
+          newY += 1;
+          foundBottom = true;
+        }
+      }
+
+      // Create final position
+      const finalPosition = {
+        x: piece.position.x,
+        y: newY,
+      };
+
+      // First update the position
+      setCurrentPiece((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          position: finalPosition,
+        };
+      });
+
+      // Then lock piece in new position - use immediate callback to avoid race conditions
+      // Ensure we're using current grid state
+      setTimeout(() => {
+        // Manually create the updated grid
+        const newGrid = JSON.parse(JSON.stringify(grid));
+        const { shape, color } = piece;
+
+        // Convert the color to a number representation (index + 1)
+        const colorIndex = cubeColors.indexOf(color) + 1;
+
+        // Add the piece to the grid at final position
+        for (let y = 0; y < shape.length; y++) {
+          for (let x = 0; x < shape[y].length; x++) {
+            if (shape[y][x]) {
+              const gridY = finalPosition.y - y;
+              const gridX = finalPosition.x + x;
+
+              // Make sure we're within bounds
+              if (
+                gridY >= 0 &&
+                gridY < gridHeight &&
+                gridX >= 0 &&
+                gridX < gridWidth
+              ) {
+                newGrid[gridY][gridX] = colorIndex;
+              }
+            }
+          }
+        }
+
+        // Update the grid
+        setGrid(newGrid);
+        setCurrentPiece(null);
+        setCanHold(true);
+
+        // Play lock sound
+        try {
+          audio.playSound("lock");
+        } catch (e) {
+          // Silent fail
+        }
+
+        // Check lines with the new grid
+        checkLines(newGrid);
+      }, 10);
+
+      try {
+        audio.playSound("drop");
+      } catch (e) {
+        // Silent fail
+      }
+    } catch (e) {
+      console.error("Error during hard drop:", e);
+    }
+  };
+
+  // Lock the current piece in place
+  const lockPiece = () => {
+    if (!currentPiece) return;
+
+    // Create a new grid with the piece locked in
+    const newGrid = JSON.parse(JSON.stringify(grid)); // Deep copy
+    const { shape, position, color } = currentPiece;
+
+    // Convert the color to a number representation (index + 1)
+    const colorIndex = cubeColors.indexOf(color) + 1;
+
+    // Add the piece to the grid
+    for (let y = 0; y < shape.length; y++) {
+      for (let x = 0; x < shape[y].length; x++) {
+        if (shape[y][x]) {
+          const gridY = position.y - y;
+          const gridX = position.x + x;
+
+          // Make sure we're within bounds
+          if (
+            gridY >= 0 &&
+            gridY < gridHeight &&
+            gridX >= 0 &&
+            gridX < gridWidth
+          ) {
+            newGrid[gridY][gridX] = colorIndex;
+          }
+        }
+      }
     }
 
-    // Handle cube rotation
-    if (!isDragging || gameState !== "playing") return;
+    setGrid(newGrid);
+    setCurrentPiece(null); // Important: clear current piece immediately
 
-    const deltaX = e.clientX - dragStart.x;
-    const deltaY = e.clientY - dragStart.y;
+    try {
+      audio.playSound("lock");
+    } catch (e) {
+      // Silent fail
+    }
 
-    setCubeRotation((prev) => ({
-      x: prev.x - deltaY * 0.5,
-      y: prev.y + deltaX * 0.5,
-    }));
+    // Reset can hold
+    setCanHold(true);
 
-    setDragStart({
-      x: e.clientX,
-      y: e.clientY,
+    // Check for completed lines
+    checkLines(newGrid);
+  };
+
+  // Check for and clear completed lines
+  const checkLines = (currentGrid: number[][]) => {
+    setIsAnimating(true);
+
+    // Find completed lines
+    const completedLines: number[] = [];
+
+    for (let y = 0; y < gridHeight; y++) {
+      let lineComplete = true;
+      for (let x = 0; x < gridWidth; x++) {
+        if (currentGrid[y][x] === 0) {
+          lineComplete = false;
+          break;
+        }
+      }
+
+      if (lineComplete) {
+        completedLines.push(y);
+      }
+    }
+
+    if (completedLines.length > 0) {
+      // Animate line clearing
+      setClearedLines(completedLines);
+
+      try {
+        if (completedLines.length >= 4) {
+          audio.playSound("tetris");
+        } else {
+          audio.playSound("lineclear");
+        }
+      } catch (e) {
+        // Silent fail
+      }
+
+      // After animation, clear the lines and continue
+      setTimeout(() => {
+        clearLines(completedLines, currentGrid);
+      }, 500);
+    } else {
+      // IMPORTANT: No completed lines, reset animation flag immediately
+      setIsAnimating(false);
+
+      // Generate new piece immediately
+      generateNewPiece();
+    }
+  };
+
+  // Clear the completed lines and update score
+  const clearLines = (completedLines: number[], currentGrid: number[][]) => {
+    let newGrid = [...currentGrid.map((row) => [...row])];
+
+    // Sort lines from top to bottom
+    completedLines.sort((a, b) => b - a);
+
+    // Remove completed lines
+    completedLines.forEach((line) => {
+      // Remove this line
+      newGrid.splice(line, 1);
+
+      // Add a new empty line at the top
+      newGrid.push(Array(gridWidth).fill(0));
     });
 
-    e.preventDefault();
-  };
+    setGrid(newGrid);
+    setClearedLines([]);
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    handleLayerMouseUp(); // Call the correct function
-  };
+    // Update score, lines and level
+    const newLines = lines + completedLines.length;
+    const newLevel = Math.floor(newLines / 10) + 1;
 
-  // Handle layer drag operation with auto-layer detection
-  const handleLayerDrag = (faceIndex: number, e: React.MouseEvent) => {
-    if (gameState !== "playing" || isAnimating || layerDragState.isDragging) {
-      e.stopPropagation();
-      return;
-    }
-
-    // Get the face element and its dimensions
-    const faceElement = e.currentTarget as HTMLElement;
-    const faceRect = faceElement.getBoundingClientRect();
-
-    // Calculate click position as percentage within face (0-1)
-    const percentX = (e.clientX - faceRect.left) / faceRect.width;
-    const percentY = (e.clientY - faceRect.top) / faceRect.height;
-
-    // Determine which layer to rotate based on face and click position
-    let selectedLayerType = "";
-    let selectedLayerIndex = -1;
-
-    // Edge threshold - how close to edge to consider it an edge click (0.2 = 20% from edge)
-    const edgeThreshold = 0.25;
-
-    // Determine if click is on edge of face
-    const isLeftEdge = percentX < edgeThreshold;
-    const isRightEdge = percentX > 1 - edgeThreshold;
-    const isTopEdge = percentY < edgeThreshold;
-    const isBottomEdge = percentY > 1 - edgeThreshold;
-
-    // Based on which face was clicked and which edge was clicked,
-    // determine the appropriate layer to rotate
-    switch (faceIndex) {
-      case FACE.FRONT:
-        if (isTopEdge) {
-          // Top edge of front face = top face's bottom row
-          selectedLayerType = LAYER_TYPE.ROW;
-          selectedLayerIndex = 2; // Bottom row of top face (connects to front face)
-        } else if (isBottomEdge) {
-          // Bottom edge of front face = bottom face's top row
-          selectedLayerType = LAYER_TYPE.ROW;
-          selectedLayerIndex = 0; // Top row of bottom face (connects to front face)
-        } else if (isLeftEdge) {
-          // Left edge of front face = left face's right column
-          selectedLayerType = LAYER_TYPE.COLUMN;
-          selectedLayerIndex = 2; // Right column of left face (connects to front face)
-        } else if (isRightEdge) {
-          // Right edge of front face = right face's left column
-          selectedLayerType = LAYER_TYPE.COLUMN;
-          selectedLayerIndex = 0; // Left column of right face (connects to front face)
-        } else {
-          // Middle of front face, rotate middle layer based on drag direction
-          selectedLayerType = LAYER_TYPE.DEPTH;
-          selectedLayerIndex = 0; // Front slice (will adjust in drag)
-        }
+    // Calculate score (more points for more lines at once)
+    let lineScore = 0;
+    switch (completedLines.length) {
+      case 1:
+        lineScore = 100;
         break;
-
-      case FACE.BACK:
-        if (isTopEdge) {
-          // Top edge of back face = top face's top row
-          selectedLayerType = LAYER_TYPE.ROW;
-          selectedLayerIndex = 0; // Top row of top face (connects to back face)
-        } else if (isBottomEdge) {
-          // Bottom edge of back face = bottom face's bottom row
-          selectedLayerType = LAYER_TYPE.ROW;
-          selectedLayerIndex = 2; // Bottom row of bottom face (connects to back face)
-        } else if (isLeftEdge) {
-          // Left edge of back face = right face's right column (mirrored)
-          selectedLayerType = LAYER_TYPE.COLUMN;
-          selectedLayerIndex = 2; // Right column of right face (connects to back face)
-        } else if (isRightEdge) {
-          // Right edge of back face = left face's left column (mirrored)
-          selectedLayerType = LAYER_TYPE.COLUMN;
-          selectedLayerIndex = 0; // Left column of left face (connects to back face)
-        } else {
-          // Middle of back face, rotate middle layer based on drag direction
-          selectedLayerType = LAYER_TYPE.DEPTH;
-          selectedLayerIndex = 2; // Back slice (will adjust in drag)
-        }
+      case 2:
+        lineScore = 300;
         break;
-
-      case FACE.TOP:
-        if (isTopEdge) {
-          // Top edge of top face = back face's top edge
-          selectedLayerType = LAYER_TYPE.ROW;
-          selectedLayerIndex = 0; // Top row (connects top and back)
-        } else if (isBottomEdge) {
-          // Bottom edge of top face = front face's top edge
-          selectedLayerType = LAYER_TYPE.ROW;
-          selectedLayerIndex = 0; // Top row (connects top and front)
-        } else if (isLeftEdge) {
-          // Left edge of top face = left face's top edge
-          selectedLayerType = LAYER_TYPE.COLUMN;
-          selectedLayerIndex = 0; // Left column (connects top and left)
-        } else if (isRightEdge) {
-          // Right edge of top face = right face's top edge
-          selectedLayerType = LAYER_TYPE.COLUMN;
-          selectedLayerIndex = 2; // Right column (connects top and right)
-        } else {
-          // Middle of top face - equatorial layer based on drag
-          selectedLayerType = LAYER_TYPE.ROW;
-          selectedLayerIndex = 0; // Default to top row, will adjust
-        }
+      case 3:
+        lineScore = 500;
         break;
-
-      case FACE.BOTTOM:
-        if (isTopEdge) {
-          // Top edge of bottom face = front face's bottom edge
-          selectedLayerType = LAYER_TYPE.ROW;
-          selectedLayerIndex = 2; // Bottom row (connects bottom and front)
-        } else if (isBottomEdge) {
-          // Bottom edge of bottom face = back face's bottom edge
-          selectedLayerType = LAYER_TYPE.ROW;
-          selectedLayerIndex = 2; // Bottom row (connects bottom and back)
-        } else if (isLeftEdge) {
-          // Left edge of bottom face = left face's bottom edge
-          selectedLayerType = LAYER_TYPE.COLUMN;
-          selectedLayerIndex = 0; // Left column (connects bottom and left)
-        } else if (isRightEdge) {
-          // Right edge of bottom face = right face's bottom edge
-          selectedLayerType = LAYER_TYPE.COLUMN;
-          selectedLayerIndex = 2; // Right column (connects bottom and right)
-        } else {
-          // Middle of bottom face - equatorial layer based on drag
-          selectedLayerType = LAYER_TYPE.ROW;
-          selectedLayerIndex = 2; // Default to bottom row, will adjust
-        }
+      case 4:
+        lineScore = 800;
         break;
-
-      case FACE.LEFT:
-        if (isTopEdge) {
-          // Top edge of left face = top face's left edge
-          selectedLayerType = LAYER_TYPE.ROW;
-          selectedLayerIndex = 0; // Top row
-        } else if (isBottomEdge) {
-          // Bottom edge of left face = bottom face's left edge
-          selectedLayerType = LAYER_TYPE.ROW;
-          selectedLayerIndex = 2; // Bottom row
-        } else if (isLeftEdge) {
-          // Left edge of left face = back face's right edge (mirrored)
-          selectedLayerType = LAYER_TYPE.DEPTH;
-          selectedLayerIndex = 2; // Back layer
-        } else if (isRightEdge) {
-          // Right edge of left face = front face's left edge
-          selectedLayerType = LAYER_TYPE.DEPTH;
-          selectedLayerIndex = 0; // Front layer
-        } else {
-          // Middle of left face - use left column
-          selectedLayerType = LAYER_TYPE.COLUMN;
-          selectedLayerIndex = 0; // Left column
-        }
-        break;
-
-      case FACE.RIGHT:
-        if (isTopEdge) {
-          // Top edge of right face = top face's right edge
-          selectedLayerType = LAYER_TYPE.ROW;
-          selectedLayerIndex = 0; // Top row
-        } else if (isBottomEdge) {
-          // Bottom edge of right face = bottom face's right edge
-          selectedLayerType = LAYER_TYPE.ROW;
-          selectedLayerIndex = 2; // Bottom row
-        } else if (isLeftEdge) {
-          // Left edge of right face = front face's right edge
-          selectedLayerType = LAYER_TYPE.DEPTH;
-          selectedLayerIndex = 0; // Front layer
-        } else if (isRightEdge) {
-          // Right edge of right face = back face's left edge (mirrored)
-          selectedLayerType = LAYER_TYPE.DEPTH;
-          selectedLayerIndex = 2; // Back layer
-        } else {
-          // Middle of right face - use right column
-          selectedLayerType = LAYER_TYPE.COLUMN;
-          selectedLayerIndex = 2; // Right column
-        }
-        break;
-    }
-
-    // Setup the layer dragging state
-    console.log(
-      `Starting drag on face ${faceIndex}, layer type ${selectedLayerType}, index ${selectedLayerIndex}`
-    );
-
-    handleLayerMouseDown(selectedLayerType, selectedLayerIndex, e);
-
-    // Prevent cube rotation
-    e.stopPropagation();
-    e.preventDefault();
-  };
-
-  // Handle window mouse move (for layer drag that goes outside the element)
-  const handleWindowMouseMove = (e: MouseEvent) => {
-    // Convert MouseEvent to a React.MouseEvent-like object
-    const syntheticEvent = {
-      clientX: e.clientX,
-      clientY: e.clientY,
-      preventDefault: () => e.preventDefault(),
-      stopPropagation: () => e.stopPropagation(),
-    } as unknown as React.MouseEvent;
-
-    handleLayerMouseMove(syntheticEvent);
-  };
-
-  // Handle window mouse up
-  const handleWindowMouseUp = () => {
-    handleLayerMouseUp(); // Call the correct function
-
-    // Remove window event listeners
-    window.removeEventListener("mousemove", handleWindowMouseMove);
-    window.removeEventListener("mouseup", handleWindowMouseUp);
-  };
-
-  // Handle layer mouse move
-  const handleLayerMouseMove = (e: React.MouseEvent) => {
-    if (!layerDragState.isDragging || layerDragState.isCommitted || isAnimating)
-      return;
-
-    // Calculate drag distance
-    const deltaX = e.clientX - layerDragState.startX;
-    const deltaY = e.clientY - layerDragState.startY;
-
-    // Determine dominant direction
-    const isHorizontalDrag = Math.abs(deltaX) > Math.abs(deltaY);
-    const dragDistance = isHorizontalDrag ? deltaX : deltaY;
-
-    // Determine rotation direction based on layer type
-    let rotation = 0;
-
-    // Get current layer type
-    const { layerType, layerIndex } = layerDragState;
-
-    switch (layerType) {
-      case LAYER_TYPE.ROW:
-        // For rows, horizontal drag determines direction
-        rotation = deltaX * 0.5;
-        break;
-
-      case LAYER_TYPE.COLUMN:
-        // For columns, vertical drag determines direction
-        rotation = deltaY * 0.5;
-        break;
-
-      case LAYER_TYPE.DEPTH:
-        // For depth, select dominant direction
-        rotation = isHorizontalDrag ? deltaX * 0.5 : deltaY * 0.5;
-        break;
-    }
-
-    // Update rotation state for visual feedback
-    setLayerDragState((prev) => ({
-      ...prev,
-      currentRotation: rotation,
-    }));
-
-    // If rotation exceeds threshold, commit the move
-    if (Math.abs(rotation) > 30 && !layerDragState.isCommitted) {
-      const isClockwise = rotation > 0;
-
-      // Set as committed to prevent multiple moves
-      setLayerDragState((prev) => ({
-        ...prev,
-        isCommitted: true,
-      }));
-
-      // Perform the actual move with the correct rotation direction
-      rotateLayer(layerType, layerIndex, isClockwise);
-    }
-
-    // Prevent propagation to stop cube rotation
-    e.stopPropagation();
-    e.preventDefault();
-  };
-
-  // Calculate rotation for layer animation
-  const getLayerRotationStyle = (layerType: string, layerIndex: number) => {
-    if (
-      !layerDragState.isDragging ||
-      layerDragState.layerType !== layerType ||
-      layerDragState.layerIndex !== layerIndex
-    ) {
-      return "";
-    }
-
-    const rotation = layerDragState.currentRotation;
-
-    switch (layerType) {
-      case LAYER_TYPE.ROW:
-        return `rotateY(${rotation}deg)`;
-      case LAYER_TYPE.COLUMN:
-        return `rotateX(${-rotation}deg)`;
-      case LAYER_TYPE.DEPTH:
-        return `rotateZ(${rotation}deg)`;
       default:
-        return "";
+        lineScore = completedLines.length * 100;
+        break;
     }
+
+    const newScore = score + lineScore * level;
+
+    setScore(newScore);
+    setLines(newLines);
+
+    // Level up if needed
+    if (newLevel > level) {
+      setLevel(newLevel);
+
+      // Use an exponential difficulty curve for more dynamic gameplay
+      // This formula makes higher levels dramatically harder:
+      // Level 1: 1000ms (1 drop/second)
+      // Level 5: ~409ms (2.44 drops/second)
+      // Level 10: ~134ms (7.46 drops/second)
+      // Level 15+: 50ms (20 drops/second)
+      const newDropInterval = Math.max(
+        50,
+        Math.floor(1000 * Math.pow(0.8, newLevel - 1))
+      );
+      setDropInterval(newDropInterval);
+
+      try {
+        audio.playSound("levelup");
+      } catch (e) {
+        // Silent fail
+      }
+    }
+
+    setIsAnimating(false);
+
+    // Generate new piece
+    generateNewPiece();
   };
 
-  // Render a single cell of the cube
-  const renderCell = (faceIndex: number, cellIndex: number, color: string) => {
-    // Calculate cell row and column
-    const row = Math.floor(cellIndex / 3); // 0, 1, or 2
-    const col = cellIndex % 3; // 0, 1, or 2
+  useEffect(() => {
+    // This makes sure the game loop is stopped when not playing
+    if (gameState !== "playing" && gameLoopRef.current) {
+      clearInterval(gameLoopRef.current);
+      gameLoopRef.current = null;
+    }
 
-    // Determine which layer this cell belongs to
-    const rowLayer = row;
-    const colLayer = col;
-    const depthLayer =
-      faceIndex === FACE.FRONT ? 0 : faceIndex === FACE.BACK ? 2 : 1;
+    // Restart the game loop when going back to playing
+    if (gameState === "playing" && !gameLoopRef.current) {
+      startGameLoop();
+    }
+  }, [gameState]);
 
-    // Calculate layer rotation for animations
-    const rowRotation = getLayerRotationStyle(LAYER_TYPE.ROW, rowLayer);
-    const colRotation = getLayerRotationStyle(LAYER_TYPE.COLUMN, colLayer);
-    const depthRotation = getLayerRotationStyle(LAYER_TYPE.DEPTH, depthLayer);
+  // Calculate the position for the ghost piece
+  const getGhostPosition = () => {
+    if (!currentPiece) return null;
 
-    // Highlight active layers
-    const isActiveRow =
-      layerDragState.isDragging &&
-      layerDragState.layerType === LAYER_TYPE.ROW &&
-      layerDragState.layerIndex === rowLayer;
+    let ghostPosition = { ...currentPiece.position };
+    let testPiece = { ...currentPiece, position: ghostPosition };
 
-    const isActiveCol =
-      layerDragState.isDragging &&
-      layerDragState.layerType === LAYER_TYPE.COLUMN &&
-      layerDragState.layerIndex === colLayer;
+    // Keep moving down until invalid
+    while (isValidPosition(testPiece)) {
+      ghostPosition.y -= 1;
+      testPiece.position = { ...ghostPosition };
+    }
 
-    const isActiveDepth =
-      layerDragState.isDragging &&
-      layerDragState.layerType === LAYER_TYPE.DEPTH &&
-      layerDragState.layerIndex === depthLayer;
+    // Move back up one (to last valid position)
+    ghostPosition.y += 1;
 
-    const isActive = isActiveRow || isActiveCol || isActiveDepth;
+    return ghostPosition;
+  };
 
-    // Combine rotations if multiple apply
-    const combinedRotation =
-      `${rowRotation} ${colRotation} ${depthRotation}`.trim();
+  // Format score with commas
+  const formatNumber = (num: number) => {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  // Render piece preview (next or held)
+  const renderPiecePreview = (
+    pieceData: { shape: number[][]; color: string } | null,
+    label: string
+  ) => {
+    if (!pieceData)
+      return (
+        <div className="flex flex-col items-center">
+          <h3 className="text-gray-300 mb-2">{label}</h3>
+          <div className="bg-black/30 border border-gray-700 w-24 h-24 flex items-center justify-center">
+            <span className="text-gray-500">Empty</span>
+          </div>
+        </div>
+      );
+
+    const { shape, color } = pieceData;
+
+    // Calculate display dimensions
+    const cellSize = 18;
+    const maxDimension = Math.max(shape.length, shape[0]?.length || 0);
+    const previewSize = maxDimension * cellSize;
 
     return (
-      <div
-        key={`face${faceIndex}-${cellIndex}`}
-        className={`border border-black transition-all duration-200 ${
-          isActive ? "border-white" : ""
-        }`}
+      <div className="flex flex-col items-center">
+        <h3 className="text-gray-300 mb-2">{label}</h3>
+        <div
+          className="bg-black/30 border border-gray-700 p-2 flex items-center justify-center"
+          style={{ width: "80px", height: "80px" }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${shape[0].length}, ${cellSize}px)`,
+              gridTemplateRows: `repeat(${shape.length}, ${cellSize}px)`,
+              gap: "1px",
+            }}
+          >
+            {shape.map((row, y) =>
+              row.map((cell, x) => (
+                <div
+                  key={`${label}-${y}-${x}`}
+                  style={{
+                    width: `${cellSize}px`,
+                    height: `${cellSize}px`,
+                    backgroundColor: cell ? color : "transparent",
+                    border: cell ? `1px solid rgba(255,255,255,0.5)` : "none",
+                    boxShadow: cell
+                      ? `inset 0 0 5px rgba(255,255,255,0.3)`
+                      : "none",
+                  }}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Generate background particles
+  const renderParticles = () => {
+    return Array.from({ length: 60 }).map((_, i) => (
+      <motion.div
+        key={`particle-${i}`}
+        className="absolute rounded-full bg-gradient-to-r from-blue-300 to-purple-400"
+        animate={{
+          x: [
+            Math.random() * window.innerWidth,
+            Math.random() * window.innerWidth,
+          ],
+          y: [
+            Math.random() * window.innerHeight,
+            Math.random() * window.innerHeight,
+          ],
+          opacity: [0.1, 0.3, 0.1],
+        }}
+        transition={{
+          duration: Math.random() * 20 + 10,
+          repeat: Infinity,
+          ease: "linear",
+        }}
         style={{
-          backgroundColor: color,
-          boxShadow: isActive
-            ? "inset 0 0 15px rgba(255,255,255,0.7), 0 0 5px rgba(255,255,255,0.7)"
-            : "inset 0 0 10px rgba(0,0,0,0.2)",
-          transform: combinedRotation || "none",
-          transformStyle: "preserve-3d",
-          transition: isAnimating ? "transform 0.3s ease-out" : "none",
-          zIndex: isActive ? 10 : 1,
+          width: `${Math.random() * 4 + 1}px`,
+          height: `${Math.random() * 4 + 1}px`,
+          boxShadow: `0 0 ${Math.random() * 8 + 2}px ${mainColor}`,
         }}
       />
-    );
+    ));
   };
 
-  // Render a single face of the cube
-  const renderFace = (faceIndex: number, baseTransform: string) => {
-    if (!faces[faceIndex]) return null;
+  // Handle key presses
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (gameState === "waiting") {
+        if (e.key === "Enter") {
+          startGame();
+        }
+        return;
+      }
+
+      if (gameState === "gameOver") {
+        if (e.key === "Enter") {
+          startGame();
+        }
+        return;
+      }
+
+      if (gameState === "paused") {
+        if (e.key === "p" || e.key === "P" || e.key === "Escape") {
+          setGameState("playing");
+        }
+        return;
+      }
+
+      if (gameState !== "playing" || isAnimating) return;
+
+      switch (e.key) {
+        case "ArrowLeft":
+          moveLeft();
+          break;
+        case "ArrowRight":
+          moveRight();
+          break;
+        case "ArrowDown":
+          moveDown();
+          setLastDropTime(Date.now());
+          break;
+        case "z":
+        case "Z":
+          rotatePiece();
+          break;
+        case " ": // Space
+          hardDrop();
+          break;
+        case "c":
+        case "C":
+          holdPiece();
+          break;
+        case "p":
+        case "P":
+        case "Escape":
+          // Toggle pause
+          setGameState("paused");
+          break;
+        case "h":
+        case "H":
+          // Toggle help
+          setShowControls(!showControls);
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    gameState,
+    currentPiece,
+    isAnimating,
+    grid,
+    showControls,
+    canHold,
+    heldPiece,
+  ]);
+
+  // Render the game grid with all pieces
+  const renderGrid = () => {
+    // Ghost position calculation
+    const ghostPosition = getGhostPosition();
 
     return (
-      <div
-        className="cube-face"
-        data-face-index={faceIndex}
+      <motion.div
+        ref={gridRef}
+        className="relative border-2 border-gray-800 bg-black/70 overflow-hidden"
         style={{
-          position: "absolute",
-          width: "200px",
-          height: "200px",
-          left: "50px",
-          top: "50px",
-          transformStyle: "preserve-3d",
-          transform: baseTransform,
-          backfaceVisibility: "visible",
-          cursor: isAnimating ? "not-allowed" : "grab",
-          transition: isAnimating ? "transform 0.3s ease-out" : "none",
+          display: "grid",
+          gridTemplateColumns: `repeat(${gridWidth}, 30px)`,
+          gridTemplateRows: `repeat(${gridHeight}, 30px)`,
+          gap: "1px",
         }}
-        onMouseDown={(e) => handleLayerDrag(faceIndex, e)}
+        animate={gridControls}
       >
-        <div className="grid grid-cols-3 grid-rows-3 w-full h-full">
-          {faces[faceIndex].map((color, i) => renderCell(faceIndex, i, color))}
-        </div>
-      </div>
-    );
-  };
+        {/* Background grid cells */}
+        {Array.from({ length: gridHeight }).map((_, y) =>
+          Array.from({ length: gridWidth }).map((_, x) => (
+            <div
+              key={`cell-${y}-${x}`}
+              className="bg-gray-900/50"
+              style={{ width: "30px", height: "30px" }}
+            />
+          ))
+        )}
 
-  // Render the cube
-  const renderCube = () => {
-    return (
-      <div
-        className="perspective-container"
-        style={{
-          perspective: "1200px",
-          width: "300px",
-          height: "300px",
-        }}
-      >
-        <div
-          ref={cubeRef}
-          className="cube-container"
-          style={{
-            width: "100%",
-            height: "100%",
-            position: "relative",
-            transformStyle: "preserve-3d",
-            transform: `rotateX(${cubeRotation.x}deg) rotateY(${cubeRotation.y}deg)`,
-            transition: isDragging ? "none" : "transform 0.5s ease-out",
-          }}
-        >
-          {/* Right Face (0) */}
-          {renderFace(FACE.RIGHT, "rotateY(90deg) translateZ(100px)")}
+        {/* Ghost piece */}
+        {currentPiece &&
+          ghostPosition &&
+          currentPiece.shape.map((row, y) =>
+            row.map((cell, x) =>
+              cell ? (
+                <div
+                  key={`ghost-${y}-${x}`}
+                  className="absolute border border-white/30"
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    backgroundColor: `${currentPiece.color}30`,
+                    border: `1px dashed ${currentPiece.color}`,
+                    left: `${(ghostPosition.x + x) * 31}px`,
+                    bottom: `${(ghostPosition.y - y) * 31}px`,
+                    zIndex: 1,
+                  }}
+                />
+              ) : null
+            )
+          )}
 
-          {/* Left Face (1) */}
-          {renderFace(FACE.LEFT, "rotateY(-90deg) translateZ(100px)")}
+        {/* Placed blocks */}
+        {grid.map((row, y) =>
+          row.map((cell, x) =>
+            cell ? (
+              <div
+                key={`block-${y}-${x}`}
+                className={`absolute ${
+                  clearedLines.includes(y) ? "animate-pulse" : ""
+                }`}
+                style={{
+                  width: "28px",
+                  height: "28px",
+                  backgroundColor: cubeColors[cell - 1],
+                  border: `1px solid ${cubeColors[cell - 1]}99`,
+                  boxShadow: `inset 0 0 8px rgba(255,255,255,0.5)${
+                    clearedLines.includes(y) ? ", 0 0 10px white" : ""
+                  }`,
+                  left: `${x * 31}px`,
+                  bottom: `${y * 31}px`,
+                  zIndex: 2,
+                }}
+              />
+            ) : null
+          )
+        )}
 
-          {/* Top Face (2) */}
-          {renderFace(FACE.TOP, "rotateX(90deg) translateZ(100px)")}
-
-          {/* Bottom Face (3) */}
-          {renderFace(FACE.BOTTOM, "rotateX(-90deg) translateZ(100px)")}
-
-          {/* Front Face (4) */}
-          {renderFace(FACE.FRONT, "translateZ(100px)")}
-
-          {/* Back Face (5) */}
-          {renderFace(FACE.BACK, "rotateY(180deg) translateZ(100px)")}
-        </div>
-      </div>
+        {/* Current piece */}
+        {currentPiece &&
+          currentPiece.shape.map((row, y) =>
+            row.map((cell, x) =>
+              cell ? (
+                <div
+                  key={`current-${y}-${x}`}
+                  className="absolute"
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    backgroundColor: currentPiece.color,
+                    border: `1px solid ${currentPiece.color}99`,
+                    boxShadow: "inset 0 0 8px rgba(255,255,255,0.5)",
+                    left: `${(currentPiece.position.x + x) * 31}px`,
+                    bottom: `${(currentPiece.position.y - y) * 31}px`,
+                    zIndex: 3,
+                  }}
+                />
+              ) : null
+            )
+          )}
+      </motion.div>
     );
   };
 
@@ -1179,361 +1194,327 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
     <div
       ref={containerRef}
       className="relative min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden bg-gradient-to-b from-purple-900/30 via-black to-black"
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
     >
       {/* Background particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {Array.from({ length: 40 }).map((_, i) => (
+        {renderParticles()}
+      </div>
+
+      {/* Gradient background with dynamic lighting */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-900/30 via-black to-black opacity-70"></div>
+
+        {/* Dynamic ambient light that follows mouse */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `radial-gradient(circle at ${ambientLightPosition.x}% ${ambientLightPosition.y}%, ${mainColor}20 0%, transparent 70%)`,
+            filter: "blur(40px)",
+          }}
+        />
+      </div>
+
+      {/* Atmosphere effect with ripples */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        {/* Central energy pulse */}
+        <motion.div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+          animate={{
+            scale: [1, 1.5, 1],
+            opacity: [0.1, 0.15, 0.1],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          style={{
+            width: "300px",
+            height: "300px",
+            background: `radial-gradient(circle, ${mainColor}30 0%, transparent 70%)`,
+          }}
+        />
+
+        {/* Echo ripples */}
+        {[1, 2, 3].map((i) => (
           <motion.div
-            key={`particle-${i}`}
-            className="absolute rounded-full"
+            key={`ripple-${i}`}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-purple-500/10"
+            initial={{ scale: 0.1, opacity: 0.5 }}
             animate={{
-              x: [
-                Math.random() * window.innerWidth,
-                Math.random() * window.innerWidth,
-              ],
-              y: [
-                Math.random() * window.innerHeight,
-                Math.random() * window.innerHeight,
-              ],
-              opacity: [0.1, 0.3, 0.1],
-              scale: [Math.random() * 0.5 + 0.5, Math.random() * 0.5 + 0.5],
+              scale: [0.1, 3],
+              opacity: [0.5, 0],
             }}
             transition={{
-              duration: Math.random() * 20 + 10,
+              duration: 8,
               repeat: Infinity,
-              ease: "linear",
+              delay: i * 2,
+              ease: "easeOut",
             }}
             style={{
-              width: `${Math.random() * 4 + 1}px`,
-              height: `${Math.random() * 4 + 1}px`,
-              background: `linear-gradient(to right, ${cubeColors[0]}30, ${cubeColors[1]}30)`,
-              boxShadow: `0 0 ${Math.random() * 8 + 2}px ${cubeColors[0]}`,
+              width: "100px",
+              height: "100px",
             }}
           />
         ))}
       </div>
 
-      <div className="relative z-10 flex flex-col items-center w-full max-w-4xl">
-        {/* Header with realm styling */}
+      {/* Header with advanced styling */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1, delay: 0.3 }}
+        className="text-center mb-6"
+      >
+        <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600 mb-2 font-pixel tracking-wider">
+          CRYPTIC REALM
+        </h1>
+
+        <div className="flex items-center justify-center gap-4">
+          <div className="h-px w-16 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
+          <p className="text-xl text-blue-300 font-light">Tetris Evolution</p>
+          <div className="h-px w-16 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
+        </div>
+      </motion.div>
+
+      {/* Main game layout */}
+      <div className="relative z-10 flex flex-row items-start justify-center gap-8">
+        {/* Left panel - Game information */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.3 }}
-          className="text-center mb-6"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 0.7 }}
+          className="bg-black/50 backdrop-blur-md rounded-lg p-4 max-w-xs self-start border border-purple-500/20"
         >
-          <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600 mb-2 font-pixel tracking-wider">
-            RUBIK'S REALM
-          </h1>
+          <h3 className="text-purple-400 font-bold mb-2 text-lg">
+            {gameState === "playing" ? "Game Status" : "Tetris Evolution"}
+          </h3>
 
-          <div className="flex items-center justify-center gap-4">
-            <div className="h-px w-16 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
-            <p className="text-xl text-blue-300 font-light">
-              {gameState === "intro"
-                ? "Pattern Harmonization"
-                : gameState === "success"
-                ? "Pattern Mastery Achieved"
-                : "Master the Cube"}
-            </p>
-            <div className="h-px w-16 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
-          </div>
-        </motion.div>
-
-        {/* Status display with enhanced UI */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.5 }}
-          className="mb-6 text-center backdrop-blur-sm bg-black/20 px-6 py-3 rounded-lg border border-purple-500/20"
-        >
-          <div className="flex items-center justify-center gap-4 mb-2">
-            <div className="text-lg text-gray-300">Moves</div>
-            <div className="text-2xl text-pink-300 font-bold">{moves}</div>
-            <div className="h-4 w-px bg-purple-500/30"></div>
-            <div className="text-lg text-gray-300">Time</div>
-            <motion.div
-              key={currentTime}
-              initial={{ scale: 1 }}
-              animate={{
-                scale:
-                  currentTime % 10 === 0 && currentTime > 0 ? [1, 1.2, 1] : 1,
-              }}
-              transition={{ duration: 0.5 }}
-              className="text-2xl text-green-300 font-bold"
-            >
-              {formatTime(currentTime)}
-            </motion.div>
-
-            {bestTime !== null && (
-              <>
-                <div className="h-4 w-px bg-purple-500/30"></div>
-                <div className="text-lg text-gray-300">Best</div>
-                <div className="text-xl text-yellow-300 font-bold">
-                  {formatTime(bestTime)}
-                </div>
-              </>
-            )}
-          </div>
-
-          <motion.div>
-            {gameState === "intro" && (
-              <motion.p
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-lg text-gray-300"
-              >
-                Align each face to have all squares of the same color.
-              </motion.p>
-            )}
-            {gameState === "playing" && (
-              <motion.div
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-lg text-blue-300 flex items-center justify-center gap-2"
-              >
+          {gameState === "waiting" && (
+            <ul className="text-gray-300 text-sm space-y-2">
+              <li className="flex items-start gap-2">
+                <span className="text-purple-400 mt-1">•</span>
+                <span>Arrange falling blocks to create complete lines</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-purple-400 mt-1">•</span>
                 <span>
-                  {isAnimating
-                    ? "Animating..."
-                    : "Click and drag on any cube piece to rotate its layer"}
+                  Use arrow keys to move the pieces left, right and down
                 </span>
-              </motion.div>
-            )}
-            {gameState === "success" && (
-              <motion.p
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-lg text-green-400 font-semibold"
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-purple-400 mt-1">•</span>
+                <span>Press Z to rotate and Space for hard drop</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-purple-400 mt-1">•</span>
+                <span>Hold pieces with C key for strategic gameplay</span>
+              </li>
+            </ul>
+          )}
+
+          {(gameState === "playing" ||
+            gameState === "paused" ||
+            gameState === "gameOver") && (
+            <div className="bg-black/30 p-3 rounded-lg text-sm">
+              <div className="grid grid-cols-2 gap-y-2">
+                <div className="text-gray-300">Score:</div>
+                <div className="text-right text-pink-300 font-bold">
+                  {formatNumber(score)}
+                </div>
+
+                <div className="text-gray-300">Level:</div>
+                <div className="text-right text-green-300 font-bold">
+                  {level}
+                </div>
+
+                <div className="text-gray-300">Lines:</div>
+                <div className="text-right text-blue-300 font-bold">
+                  {lines}
+                </div>
+
+                <div className="text-gray-300">High Score:</div>
+                <div className="text-right text-yellow-300 font-bold">
+                  {formatNumber(highScore)}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Held piece and next piece previews */}
+          <div className="flex flex-col gap-4 mt-4">
+            <div className="flex flex-col items-center p-3 bg-black/40 border border-gray-800 rounded-lg backdrop-blur-sm">
+              {renderPiecePreview(heldPiece, "HOLD (C)")}
+            </div>
+
+            <div className="flex flex-col items-center p-3 bg-black/40 border border-gray-800 rounded-lg backdrop-blur-sm">
+              {renderPiecePreview(nextPiece, "NEXT")}
+            </div>
+          </div>
+
+          {/* Game controls */}
+          <div className="mt-4 flex flex-col gap-2">
+            {gameState === "waiting" && (
+              <button
+                onClick={startGame}
+                className="w-full py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-md font-pixel transition-transform hover:scale-105 active:scale-95"
               >
-                Cube alignment complete! Score: {score}
-              </motion.p>
+                Start Game
+              </button>
             )}
-          </motion.div>
-        </motion.div>
 
-        {/* 3D Cube Display */}
-        <motion.div
-          className="relative w-full h-96 flex items-center justify-center mb-8 transform-gpu"
-          style={{ perspective: "1200px" }}
-          onMouseDown={handleMouseDown}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8 }}
-        >
-          {renderCube()}
-        </motion.div>
+            {gameState === "playing" && (
+              <button
+                onClick={() => setGameState("paused")}
+                className="w-full py-2 bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white rounded-md font-pixel transition-transform hover:scale-105 active:scale-95"
+              >
+                Pause Game
+              </button>
+            )}
 
-        {/* Visual instruction guide */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mb-4 text-center"
-        >
-          <div className="flex items-center justify-center gap-6">
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-black/30 border border-blue-500/30 rounded-md flex items-center justify-center mb-2">
-                <motion.div
-                  animate={{
-                    rotateZ: [0, 90, 0, -90, 0],
-                  }}
-                  transition={{
-                    repeat: Infinity,
-                    duration: 3,
-                    ease: "easeInOut",
-                  }}
-                  className="w-10 h-10 grid grid-cols-3 grid-rows-3 gap-0.5"
-                >
-                  {Array.from({ length: 9 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="bg-gradient-to-br from-purple-500/70 to-pink-500/70"
-                      style={{
-                        transform: i % 3 === 1 ? "translateZ(1px)" : "none",
-                      }}
-                    />
-                  ))}
-                </motion.div>
-              </div>
-              <p className="text-gray-300 text-xs">Drag on cells</p>
-            </div>
+            {gameState === "paused" && (
+              <button
+                onClick={() => setGameState("playing")}
+                className="w-full py-2 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-500 hover:to-blue-500 text-white rounded-md font-pixel transition-transform hover:scale-105 active:scale-95"
+              >
+                Resume Game
+              </button>
+            )}
 
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-black/30 border border-green-500/30 rounded-md flex items-center justify-center mb-2">
-                <motion.div
-                  animate={{
-                    rotateY: [0, 45, 0, -45, 0],
-                    rotateX: [0, 15, 0, -15, 0],
-                  }}
-                  transition={{
-                    repeat: Infinity,
-                    duration: 5,
-                    ease: "easeInOut",
-                  }}
-                  className="w-10 h-10 bg-gradient-to-br from-blue-500/70 to-teal-500/70 rounded-md"
-                />
-              </div>
-              <p className="text-gray-300 text-xs">Drag elsewhere</p>
-            </div>
+            {gameState === "gameOver" && (
+              <button
+                onClick={startGame}
+                className="w-full py-2 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 text-white rounded-md font-pixel transition-transform hover:scale-105 active:scale-95"
+              >
+                Play Again
+              </button>
+            )}
+
+            <button
+              onClick={onReturn}
+              className="w-full py-2 bg-black border border-purple-500/50 hover:bg-purple-900/20 text-white rounded-md font-pixel transition-transform hover:scale-105 active:scale-95"
+            >
+              Return to Hub
+            </button>
+
+            <button
+              onClick={() => setShowControls(!showControls)}
+              className="w-full py-2 bg-black border border-blue-500/50 hover:bg-blue-900/20 text-white rounded-md font-pixel transition-transform hover:scale-105 active:scale-95"
+            >
+              {showControls ? "Hide Controls" : "Show Controls"}
+            </button>
           </div>
         </motion.div>
 
-        {/* Game controls */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="mt-2 flex gap-4 justify-center flex-wrap"
-        >
-          {gameState === "intro" && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              onClick={startGame}
-              className="px-8 py-3 relative group overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 group-hover:from-blue-500 group-hover:to-purple-500 rounded-md transition-all duration-300"></div>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-50 transition-opacity duration-300 bg-white/10 rounded-md"></div>
-              <span className="relative text-white font-pixel text-lg tracking-wider">
-                Start Challenge
-              </span>
-            </motion.button>
-          )}
-
-          {gameState === "playing" && (
-            <>
-              <motion.button
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                onClick={scrambleCube}
-                disabled={isAnimating}
-                className="px-8 py-3 relative group overflow-hidden"
-              >
-                <div
-                  className={`absolute inset-0 bg-gradient-to-r from-yellow-600 to-amber-600 ${
-                    !isAnimating
-                      ? "group-hover:from-yellow-500 group-hover:to-amber-500"
-                      : "opacity-50"
-                  } rounded-md transition-all duration-300`}
-                ></div>
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-50 transition-opacity duration-300 bg-white/10 rounded-md"></div>
-                <span className="relative text-white font-pixel text-lg tracking-wider">
-                  {isAnimating ? "Scrambling..." : "Scramble"}
-                </span>
-              </motion.button>
-
-              <motion.button
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                onClick={resetCube}
-                disabled={isAnimating}
-                className="px-8 py-3 relative group overflow-hidden"
-              >
-                <div
-                  className={`absolute inset-0 bg-gradient-to-r from-red-600 to-purple-600 ${
-                    !isAnimating
-                      ? "group-hover:from-red-500 group-hover:to-purple-500"
-                      : "opacity-50"
-                  } rounded-md transition-all duration-300`}
-                ></div>
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-50 transition-opacity duration-300 bg-white/10 rounded-md"></div>
-                <span className="relative text-white font-pixel text-lg tracking-wider">
-                  Reset Cube
-                </span>
-              </motion.button>
-            </>
-          )}
-
-          {gameState === "success" && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              onClick={() => {
-                resetCube();
-                setGameState("playing");
-              }}
-              className="px-8 py-3 relative group overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-teal-600 group-hover:from-green-500 group-hover:to-teal-500 rounded-md transition-all duration-300"></div>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-50 transition-opacity duration-300 bg-white/10 rounded-md"></div>
-              <span className="relative text-white font-pixel text-lg tracking-wider">
-                Play Again
-              </span>
-            </motion.button>
-          )}
-
-          {/* Return to hub button */}
-          <motion.button
-            onClick={onReturn}
-            className="px-6 py-3 relative group overflow-hidden"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <div className="absolute inset-0 bg-black border border-purple-500/50 group-hover:bg-purple-900/20 rounded-md transition-all duration-300"></div>
-            <span className="relative text-white font-pixel tracking-wider flex items-center gap-2">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M19 12H5" />
-                <path d="M12 19l-7-7 7-7" />
-              </svg>
-              Return to Hub
-            </span>
-          </motion.button>
-        </motion.div>
-
-        {/* Help information */}
-        {gameState === "playing" && (
+        {/* Center - Game Grid */}
+        <div className="flex flex-col">
+          {/* Game status indicator */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="mt-6 text-center max-w-md"
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="mb-2 text-center backdrop-blur-sm bg-black/20 px-6 py-2 rounded-lg border border-purple-500/20"
           >
-            <h3 className="text-purple-300 mb-2 text-lg">How to Play:</h3>
-            <ul className="text-gray-300 space-y-1 text-sm">
-              <li>• Click and drag on any colored piece to rotate its layer</li>
-              <li>
-                • Drag left/right for horizontal rotation, up/down for vertical
-              </li>
-              <li>
-                • Click and drag empty space to rotate the entire cube view
-              </li>
-              <li>• Match all colors on each face to win</li>
-              <li>• Stuck? Try using Reset or Scramble to restart</li>
-            </ul>
+            <div className="flex items-center justify-center gap-4 mb-1">
+              <div className="text-lg text-gray-300">Status</div>
+              <div className="text-lg font-medium">
+                {gameState === "waiting" ? (
+                  <span className="text-blue-300">Ready to Start</span>
+                ) : gameState === "playing" ? (
+                  <span className="text-green-300">Playing</span>
+                ) : gameState === "paused" ? (
+                  <span className="text-amber-300">Paused</span>
+                ) : (
+                  <span className="text-red-300">Game Over</span>
+                )}
+              </div>
+              <div className="h-4 w-px bg-purple-500/30"></div>
+              <div className="text-lg text-gray-300">Level</div>
+              <motion.div
+                key={level}
+                initial={{ scale: 1 }}
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 0.5 }}
+                className="text-lg text-pink-300 font-bold"
+              >
+                {level}
+              </motion.div>
+            </div>
           </motion.div>
-        )}
+
+          {/* Game grid */}
+          <div className="relative flex justify-center">{renderGrid()}</div>
+
+          {/* Controls hint below the grid */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="mt-4 text-center text-gray-300 text-sm bg-black/30 py-2 px-4 rounded-md border border-purple-500/20"
+          >
+            <span className="flex items-center justify-center gap-2">
+              Move: Arrow Keys &nbsp;|&nbsp; Rotate: Z &nbsp;|&nbsp; Hard Drop:
+              Space &nbsp;|&nbsp; Hold: C
+            </span>
+          </motion.div>
+        </div>
       </div>
 
-      {/* Critical CSS fixes for 3D rendering */}
+      {/* Controls help overlay */}
+      {showControls && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="text-center p-6 rounded-lg backdrop-blur-sm bg-black/80 border border-blue-500/30 max-w-md"
+          >
+            <h2 className="text-2xl font-bold text-blue-400 mb-4">
+              KEYBOARD CONTROLS
+            </h2>
+
+            <div className="flex flex-col gap-3 mb-4 text-left">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-gray-300">←</div>
+                <div className="text-white">Move Left</div>
+
+                <div className="text-gray-300">→</div>
+                <div className="text-white">Move Right</div>
+
+                <div className="text-gray-300">↓</div>
+                <div className="text-white">Move Down</div>
+
+                <div className="text-gray-300">Z</div>
+                <div className="text-white">Rotate</div>
+
+                <div className="text-gray-300">C</div>
+                <div className="text-white">Hold Piece</div>
+
+                <div className="text-gray-300">Space</div>
+                <div className="text-white">Hard Drop</div>
+
+                <div className="text-gray-300">P / Esc</div>
+                <div className="text-white">Pause/Resume</div>
+
+                <div className="text-gray-300">H</div>
+                <div className="text-white">Show/Hide Help</div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowControls(false)}
+              className="px-6 py-2 bg-blue-600 rounded-md text-white font-bold hover:bg-blue-500 transition-all duration-300"
+            >
+              CLOSE
+            </button>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Global styles */}
       <style jsx global>{`
-        /* Force preserve-3d on all elements that need it */
-        .perspective-container,
-        .cube-container,
-        .cube-face {
-          transform-style: preserve-3d !important;
-          -webkit-transform-style: preserve-3d !important;
-        }
-
-        /* Fix for some browsers - ensure cube edges are visible */
-        .cube-face {
-          backface-visibility: visible !important;
-          -webkit-backface-visibility: visible !important;
-          opacity: 1 !important;
-        }
-
-        /* Font styling */
         .font-pixel {
-          font-family: monospace;
+          font-family: "Press Start 2P", monospace;
           letter-spacing: 0.05em;
         }
       `}</style>

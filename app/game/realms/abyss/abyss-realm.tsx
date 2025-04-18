@@ -31,14 +31,14 @@ interface PortalPosition {
 type Direction = "up" | "down" | "left" | "right";
 
 // Game states
-type GameState = "intro" | "playing" | "paused" | "gameOver" | "levelComplete";
+type GameState = "waiting" | "playing" | "paused" | "gameOver" | "levelComplete";
 
 const AbyssRealm: React.FC<AbyssRealmProps> = ({
   onReturn,
   selectedCubeId = "pink-neon",
 }) => {
   // Game state
-  const [gameState, setGameState] = useState<GameState>("intro");
+  const [gameState, setGameState] = useState<GameState>("waiting");
   const [level, setLevel] = useState(1);
   const [score, setScore] = useState(0);
   const [snake, setSnake] = useState<SnakeSegment[]>([]);
@@ -61,8 +61,8 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
   // Game refs
   const gameLoopRef = useRef<number | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
-  const gameAreaRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const gameAreaRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Constants
   const GRID_SIZE = 20; // Grid cells (20x20)
@@ -122,7 +122,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
 
   // Initialize the game
   useEffect(() => {
-    if (gameState === "intro") {
+    if (gameState === "waiting") {
       initializeGame();
     }
   }, [gameState, level]);
@@ -579,7 +579,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
 
   const nextLevel = () => {
     setLevel((prev) => prev + 1);
-    setGameState("intro");
+    setGameState("waiting");
     
     // Animate transition to next level
     gridControls.start({
@@ -592,7 +592,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
   const restartGame = () => {
     setLevel(1);
     setScore(0);
-    setGameState("intro");
+    setGameState("waiting");
     
     // Reset animation
     gridControls.start({
@@ -916,7 +916,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
               ease: "linear",
             }}
           >
-            <div className="w-full h-full flex items-center justify-center">
+            <div className="w-full h-full flex items-center justify-center"></div>
               <div
                 className="w-4/5 h-4/5 rounded-full relative overflow-hidden"
                 style={{
@@ -974,7 +974,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
                     }}
                   />
                 ))}
-              </div>
+              {renderGameGrid()}
             </div>
           </motion.div>
         )}
@@ -1022,9 +1022,9 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
                 zIndex,
                 transformStyle: "preserve-3d",
               }}
-              initial={index === 0 && gameState === "intro" ? { scale: 0 } : { scale: 1 }}
-              animate={index === 0 && gameState === "intro" ? { scale: 1 } : {}}
-              transition={{ delay: gameState === "intro" ? 0.5 : 0 }}
+              initial={index === 0 && gameState === "waiting" ? { scale: 0 } : { scale: 1 }}
+              animate={index === 0 && gameState === "waiting" ? { scale: 1 } : {}}
+              transition={{ delay: gameState === "waiting" ? 0.5 : 0 }}
             >
               {renderSnakeCube(isHead, rotation, index)}
             </motion.div>
@@ -1051,7 +1051,10 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
                 key={`pulse-wave-${i}`}
                 className="absolute inset-0 rounded-full z-30 pointer-events-none"
                 initial={{ opacity: 0.5, scale: 0.8 }}
-                animate={{ opacity: 0, scale: 2 }}
+                animate={{
+                  opacity: [0.5, 0],
+                  scale: [0.8, 2],
+                }}
                 transition={{ 
                   duration: 1.5, 
                   delay: i * 0.2, 
@@ -1072,118 +1075,6 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
       </motion.div>
     );
   };
-
-  // Render modern intro screen
-  const renderIntroScreen = () => (
-    <div className="flex flex-col items-center justify-center h-full text-center">
-      {/* Modern, gradient title */}
-      <motion.div 
-        className="text-gradient-animation mb-10"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1 }}
-      >
-        <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600 mb-2">
-          LEVEL {level}
-        </div>
-        <div className="h-1 w-24 mx-auto bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
-      </motion.div>
-
-      {/* Game description */}
-      <motion.p 
-        className="text-gray-300 max-w-md mb-10 text-xl leading-relaxed"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1, delay: 0.3 }}
-      >
-        Navigate the void, collect light fragments, and find the portal to ascend to the next layer of the abyss.
-      </motion.p>
-
-      {/* Modern control panel */}
-      <motion.div 
-        className="grid grid-cols-2 gap-6 mb-12 max-w-md w-full mx-auto"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1, delay: 0.5 }}
-      >
-        <div className="bg-purple-900/30 backdrop-blur rounded-xl p-5 border border-purple-500/20 transform hover:scale-105 transition-transform duration-300">
-          <div className="text-purple-300 font-bold mb-3 text-left font-pixel">
-            Movement
-          </div>
-          <div className="flex gap-2 text-gray-300 text-left">
-            <div className="bg-black/40 p-1.5 rounded border border-purple-500/20 text-sm">Arrow Keys</div>
-            <div className="bg-black/40 p-1.5 rounded border border-purple-500/20 text-sm">WASD</div>
-          </div>
-        </div>
-
-        <div className="bg-blue-900/30 backdrop-blur rounded-xl p-5 border border-blue-500/20 transform hover:scale-105 transition-transform duration-300">
-          <div className="text-blue-300 font-bold mb-3 text-left font-pixel">
-            Light Pulse
-          </div>
-          <div className="bg-black/40 p-1.5 rounded border border-blue-500/20 text-gray-300 text-left inline-block text-sm">
-            Spacebar
-          </div>
-          <div className="text-gray-400 text-xs mt-2">Reveals hidden paths</div>
-        </div>
-
-        <div className="bg-pink-900/30 backdrop-blur rounded-xl p-5 border border-pink-500/20 transform hover:scale-105 transition-transform duration-300">
-          <div className="text-pink-300 font-bold mb-3 text-left font-pixel">
-            Pause Game
-          </div>
-          <div className="bg-black/40 p-1.5 rounded border border-pink-500/20 text-gray-300 text-left inline-block text-sm">
-            ESC Key
-          </div>
-        </div>
-
-        <div className="bg-indigo-900/30 backdrop-blur rounded-xl p-5 border border-indigo-500/20 transform hover:scale-105 transition-transform duration-300">
-          <div className="text-indigo-300 font-bold mb-3 text-left font-pixel">
-            Selected Cube
-          </div>
-          <div className="flex justify-center items-center h-12">
-            <div className="w-12 h-12 transform hover:scale-110 transition-transform">
-              <RealmCube
-                position="center"
-                size={48}
-                cubeId={selectedCubeId}
-                isAnimated={true}
-                onCubeClick={() => {}}
-              />
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Start button with glow effect */}
-      <motion.div 
-        className="flex gap-4"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1, delay: 0.7 }}
-      >
-        <button
-          onClick={startGame}
-          className="px-10 py-4 text-xl relative group overflow-hidden rounded-md"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 group-hover:from-blue-500 group-hover:to-purple-500 rounded-md transition-all duration-300"></div>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-50 transition-opacity duration-300 bg-[radial-gradient(closest-side_at_50%_50%,white,transparent)]"></div>
-          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-          <span className="relative text-white font-pixel text-lg tracking-wider">Enter the Void</span>
-        </button>
-
-        {/* Return to Hub button, matching Echo realm style */}
-        <button
-          onClick={onReturn}
-          className="px-6 py-4 bg-black border border-purple-500/50 hover:bg-purple-900/20 text-white rounded-md flex items-center gap-2 font-pixel transition-transform hover:scale-105 active:scale-95"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 12H5"/>
-            <path d="M12 19l-7-7 7-7"/>
-          </svg>
-          Return to Hub
-        </button>
-      </motion.div>
-    </div>
-  );
 
   // Render pause screen
   const renderPauseScreen = () => (
@@ -1402,42 +1293,60 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
     </motion.div>
   );
 
-  // HUD elements positioned like in the screenshot
+  // Status display that matches Echo and Nexus realms
   const renderHUD = () => (
     <>
-      {/* Score/Snake display - bottom left */}
+      {/* Top status display */}
       <motion.div
-        className="absolute left-0 bottom-0 z-40 bg-black/70 backdrop-blur-sm px-4 py-2 rounded-lg border border-purple-900/50"
-        style={{ transform: "translate(-10px, 10px)" }}
-        initial={{ opacity: 0, x: -30 }}
-        animate={{ opacity: 1, x: -10 }}
+        className="absolute top-4 left-0 right-0 z-40 flex justify-center"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="text-purple-300 font-bold">Score: {score}</div>
-        <div className="text-pink-300 text-sm">Snake: {snake.length}</div>
-      </motion.div>
-
-      {/* Level/Portal info - bottom right */}
-      <motion.div
-        className="absolute right-0 bottom-0 z-40 bg-black/70 backdrop-blur-sm px-4 py-2 rounded-lg border border-purple-900/50 text-right"
-        style={{ transform: "translate(10px, 10px)" }}
-        initial={{ opacity: 0, x: 30 }}
-        animate={{ opacity: 1, x: 10 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="text-blue-300 font-bold">Level: {level}</div>
-        <div className="text-green-300 text-sm">
-          {portalVisible ? (
-            <motion.span 
-              animate={{ 
-                color: ["#4ade80", "#34d399", "#4ade80"]
-              }}
-              transition={{ duration: 2, repeat: Infinity }}
+        <div className="bg-black/70 backdrop-blur-sm px-6 py-3 rounded-lg border border-purple-500/20 flex items-center gap-6">
+          <div className="flex flex-col items-center">
+            <div className="text-gray-300 text-sm">Level</div>
+            <div className="text-xl text-pink-300 font-bold">{level}</div>
+          </div>
+          
+          <div className="h-10 w-px bg-purple-500/30"></div>
+          
+          <div className="flex flex-col items-center">
+            <div className="text-gray-300 text-sm">Score</div>
+            <motion.div 
+              key={score}
+              initial={{ scale: 1 }}
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ duration: 0.5 }}
+              className="text-xl text-green-300 font-bold"
             >
-              Portal is open!
-            </motion.span>
-          ) : (
-            `Need ${Math.max(0, requiredLengthForPortal - snake.length)} more to open portal`
+              {score}
+            </motion.div>
+          </div>
+          
+          <div className="h-10 w-px bg-purple-500/30"></div>
+          
+          <div className="flex flex-col items-center">
+            <div className="text-gray-300 text-sm">Snake</div>
+            <div className="text-xl text-blue-300 font-bold">{snake.length}</div>
+          </div>
+          
+          {portalVisible && (
+            <>
+              <div className="h-10 w-px bg-purple-500/30"></div>
+              <div className="flex flex-col items-center">
+                <div className="text-gray-300 text-sm">Portal</div>
+                <motion.div 
+                  animate={{ 
+                    color: ["#4ade80", "#34d399", "#4ade80"]
+                  }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="text-xl font-bold"
+                >
+                  OPEN
+                </motion.div>
+              </div>
+            </>
           )}
         </div>
       </motion.div>
@@ -1549,94 +1458,226 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
     );
   };
 
+  // Render the main game interface with simplified controls
   return (
     <div
       ref={containerRef}
-      className="relative min-h-screen flex flex-col items-center justify-center bg-black text-white overflow-hidden"
+      className="relative min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden bg-gradient-to-b from-purple-900/30 via-black to-black"
     >
-      {/* Enhanced backdrop with animated elements */}
-      {renderAbyssBackdrop()}
-      
-      {/* Additional ambient particles */}
+      {/* Background particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {renderParticles()}
       </div>
+      
+      {/* Gradient background with dynamic lighting */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-900/30 via-black to-black opacity-70"></div>
+        
+        {/* Dynamic ambient light that follows mouse */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `radial-gradient(circle at ${ambientLightPosition.x}% ${ambientLightPosition.y}%, ${cubeColor}20 0%, transparent 70%)`,
+            filter: 'blur(40px)',
+          }}
+        />
+      </div>
 
-      {/* Header - Modern gradient text with animated underline */}
-      <motion.div 
-        className="absolute top-6 left-0 right-0 text-center z-10"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1 }}
+      {/* Abyss atmosphere effect with ripples */}
+      <div
+        className="absolute inset-0 z-0 pointer-events-none overflow-hidden"
       >
-        <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-blue-600 tracking-wider mb-1">
-          ABYSS REALM
-        </h1>
-        <motion.div 
-          className="h-1 w-40 mx-auto bg-gradient-to-r from-pink-500 to-blue-600 rounded-full"
+        {/* Central echo pulse */}
+        <motion.div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
           animate={{
-            opacity: [0.5, 1, 0.5],
-            width: ["10%", "15%", "10%"]
+            scale: [1, 1.5, 1],
+            opacity: [0.1, 0.15, 0.1],
           }}
           transition={{
-            duration: 4,
+            duration: 8,
             repeat: Infinity,
             ease: "easeInOut"
           }}
+          style={{
+            width: '300px',
+            height: '300px',
+            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%)',
+          }}
         />
-      </motion.div>
-
-      {/* Exit button - Modernized with hover effects */}
-      <motion.button
-        onClick={onReturn}
-        className="absolute top-4 right-4 px-4 py-2 bg-black/50 border border-pink-900/50 text-pink-500 hover:text-pink-400 rounded z-30 transition-colors backdrop-blur-sm group"
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.8, delay: 0.3 }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.98 }}
-      >
-        <div className="absolute bottom-0 left-0 h-0.5 w-0 group-hover:w-full bg-pink-500/50 transition-all duration-300"></div>
-      </motion.button>
-
-      {/* Main game container - centered */}
-      <div className="relative z-10">
-        {/* Game states */}
-        {gameState === "intro" && renderIntroScreen()}
-
-        {gameState === "playing" && (
-          <>
-            {renderGameGrid()}
-            {renderHUD()}
-          </>
-        )}
-
-        {gameState === "paused" && (
-          <>
-            {renderGameGrid()}
-            {renderHUD()}
-            {renderPauseScreen()}
-          </>
-        )}
-
-        {gameState === "gameOver" && (
-          <>
-            {renderGameGrid()}
-            {renderHUD()}
-            {renderGameOverScreen()}
-          </>
-        )}
-
-        {gameState === "levelComplete" && (
-          <>
-            {renderGameGrid()}
-            {renderHUD()}
-            {renderLevelCompleteScreen()}
-          </>
-        )}
+        
+        {/* Ripple effects */}
+        {[1, 2, 3].map((i) => (
+          <motion.div
+            key={`ripple-${i}`}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-purple-500/10"
+            initial={{ scale: 0.1, opacity: 0.5 }}
+            animate={{
+              scale: [0.1, 3],
+              opacity: [0.5, 0],
+            }}
+            transition={{
+              duration: 8,
+              repeat: Infinity,
+              delay: i * 2,
+              ease: "easeOut"
+            }}
+            style={{
+              width: '100px',
+              height: '100px',
+            }}
+          />
+        ))}
       </div>
 
-      {/* Add global styles */}
+      {/* Header with advanced styling */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1, delay: 0.3 }}
+        className="text-center mb-6"
+      >
+        <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600 mb-2 font-pixel tracking-wider">
+          ABYSS REALM
+        </h1>
+        
+        <div className="flex items-center justify-center gap-4">
+          <div className="h-px w-16 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
+          <p className="text-xl text-blue-300 font-light">Empty Resonance</p>
+          <div className="h-px w-16 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
+        </div>
+      </motion.div>
+
+      {/* Main container */}
+      <div className="relative z-10 flex flex-col items-center w-full max-w-4xl">
+        {/* Status display with enhanced UI */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.5 }}
+          className="mb-6 text-center backdrop-blur-sm bg-black/20 px-6 py-3 rounded-lg border border-purple-500/20"
+        >
+          <div className="flex items-center justify-center gap-4 mb-2">
+            <div className="text-lg text-gray-300">Level</div>
+            <div className="text-2xl text-pink-300 font-bold">{level}</div>
+            <div className="h-4 w-px bg-purple-500/30"></div>
+            <div className="text-lg text-gray-300">Score</div>
+            <motion.div 
+              key={score}
+              initial={{ scale: 1 }}
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ duration: 0.5 }}
+              className="text-2xl text-green-300 font-bold"
+            >
+              {score}
+            </motion.div>
+          </div>
+          
+          <AnimatePresence mode="wait">
+            {gameState === "waiting" && (
+              <motion.p 
+                key="waiting-text"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="text-lg text-gray-300"
+              >
+                Navigate the void, collect light fragments, and find the portal to ascend to the next layer of the abyss.
+              </motion.p>
+            )}
+            {gameState === "playing" && (
+              <motion.p 
+                key="playing-text"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="text-lg text-blue-300 flex items-center justify-center gap-2"
+              >
+                <span>Use arrow keys or WASD to move. Spacebar for pulse.</span>
+              </motion.p>
+            )}
+            {gameState === "gameOver" && (
+              <motion.p 
+                key="gameover-text"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="text-lg text-red-400"
+              >
+                Your cube has been lost to the depths of the void...
+              </motion.p>
+            )}
+            {gameState === "levelComplete" && (
+              <motion.p 
+                key="success-text"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="text-lg text-green-400 font-semibold"
+              >
+                You've found the portal to the next layer of the abyss!
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </motion.div>
+        
+        {/* Main content area */}
+        <div className="relative">
+          {/* Game states */}
+          {gameState === "waiting" ? (
+            <div className="flex flex-col items-center">
+              {/* Game preview display */}
+              {renderGameGrid()}
+              
+              {/* Start and Return buttons */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                className="mt-6 flex gap-4 justify-center"
+              >
+                <motion.button 
+                  onClick={startGame}
+                  className="px-8 py-3 relative group overflow-hidden"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 group-hover:from-blue-500 group-hover:to-purple-500 rounded-md transition-all duration-300"></div>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-50 transition-opacity duration-300 bg-[radial-gradient(closest-side_at_50%_50%,white,transparent)]"></div>
+                  <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+                  <span className="relative text-white font-pixel text-lg tracking-wider">Enter the Void</span>
+                </motion.button>
+                
+                <motion.button 
+                  onClick={onReturn}
+                  className="px-6 py-3 relative group overflow-hidden"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <div className="absolute inset-0 bg-black border border-purple-500/50 group-hover:bg-purple-900/20 rounded-md transition-all duration-300"></div>
+                  <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-purple-500/30 to-transparent"></div>
+                  <span className="relative text-white font-pixel tracking-wider flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 12H5"/>
+                      <path d="M12 19l-7-7 7-7"/>
+                    </svg>
+                    Return to Hub
+                  </span>
+                </motion.button>
+              </motion.div>
+            </div>
+          ) : (
+            renderGameGrid()
+          )}
+        </div>
+          
+          {/* Overlay screens */}
+          {gameState === "paused" && renderPauseScreen()}
+          {gameState === "gameOver" && renderGameOverScreen()}
+          {gameState === "levelComplete" && renderLevelCompleteScreen()}
+        </div>
+      
+      {/* Global styles */}
       <style jsx global>{`
         @keyframes pulse-fade {
           from {
@@ -1674,7 +1715,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
         }
 
         .font-pixel {
-          font-family: monospace;
+          font-family: 'Press Start 2P', monospace;
           letter-spacing: 0.05em;
         }
       `}</style>

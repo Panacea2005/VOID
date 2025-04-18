@@ -2,16 +2,25 @@
 
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
+import React from "react"
 
 type PixelHeadingProps = {
   text: string
   className?: string
   animate?: boolean
+  as?: React.ElementType
 }
 
-export default function PixelHeading({ text, className, animate = false }: PixelHeadingProps) {
+export default function PixelHeading({ 
+  text, 
+  className, 
+  animate = false,
+  as: Component = 'h2'
+}: PixelHeadingProps) {
+  // Using style inheritance instead of class inheritance
+  // This ensures the text sizing works correctly
   return (
-    <h2 className={cn("font-pixel", className)}>
+    <Component className={cn("font-pixel", className)}>
       {text.split("").map((char, index) => (
         <motion.span
           key={index}
@@ -27,10 +36,15 @@ export default function PixelHeading({ text, className, animate = false }: Pixel
               : undefined
           }
           className="inline-block"
+          style={{ 
+            // Ensure span doesn't interfere with parent text size
+            fontSize: 'inherit',
+            lineHeight: 'inherit'
+          }}
         >
           {char === " " ? "\u00A0" : char}
         </motion.span>
       ))}
-    </h2>
+    </Component>
   )
 }

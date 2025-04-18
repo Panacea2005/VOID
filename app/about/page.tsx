@@ -9,12 +9,12 @@ import AbstractShape from "@/components/abstract-shape"
 import PixelHeading from "@/components/pixel-heading"
 import { Button } from "@/components/ui/button"
 import BackgroundAudio from "@/components/background-audio"
-import { cn } from "@/lib/utils"
 
 // Enhanced TeamMember component with 3D tilt effect
 interface TeamMemberProps {
   member: {
     name: string;
+    realName: string;
     role: string;
     bio: string;
     color: "purple" | "pink" | "blue";
@@ -117,7 +117,7 @@ const TeamMember: React.FC<TeamMemberProps> = ({ member, index, setCursorHover }
           <div className={`w-16 h-16 ${colorClass.bg} mr-4 overflow-hidden group-hover:animate-pulse-slow`}>
             <AbstractShape
               className={`w-full h-full ${colorClass.text}`}
-              type={index % 2 === 0 ? "grid" : "dots"}
+              type={index % 3 === 0 ? "grid" : index % 3 === 1 ? "dots" : "wave"}
               animate
             />
           </div>
@@ -126,7 +126,8 @@ const TeamMember: React.FC<TeamMemberProps> = ({ member, index, setCursorHover }
               text={member.name}
               className={`text-2xl font-bold mb-1 text-transparent bg-clip-text bg-gradient-to-r ${colorClass.gradient}`}
             />
-            <div className="text-sm text-gray-400 uppercase tracking-wider">{member.role}</div>
+            <div className="text-sm text-gray-300 mb-1">{member.realName}</div>
+            <div className="text-xs text-gray-400 uppercase tracking-wider">{member.role}</div>
           </div>
         </div>
         <p className="text-gray-300 leading-relaxed">{member.bio}</p>
@@ -139,7 +140,7 @@ const TeamMember: React.FC<TeamMemberProps> = ({ member, index, setCursorHover }
             initial={{ y: 10, opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <span>VIEW PROFILE</span>
+            <span>GITHUB PROFILE</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
@@ -462,7 +463,7 @@ const About3DBanner = () => {
         >
           <PixelHeading
             text="VOID"
-            className="text-8xl sm:text-9xl md:text-[15rem] font-black tracking-tighter mb-6 leading-none text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
+            className="text-8xl sm:text-9xl font-black tracking-tighter mb-6 leading-none text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
             animate
           />
         </motion.div>
@@ -609,32 +610,30 @@ export default function AboutPage() {
     return () => window.removeEventListener("mousemove", handleMouseMove)
   }, [])
 
+  // Updated team members with new data
   const team: TeamMemberProps["member"][] = [
     {
-      name: "ALEX VOID",
-      role: "CREATIVE DIRECTOR",
-      bio: "Visionary artist with a background in experimental digital art and game design. Alex pushes the boundaries of interactive experiences.",
+      name: "Panacea",
+      realName: "Le Truong Thien Nguyen",
+      role: "GAME DEVELOPER",
+      bio: "Experienced game developer focused on creating immersive web3 gaming experiences with expertise in interactive environments and blockchain integration for in-game assets.",
       color: "purple",
     },
     {
-      name: "SARA PIXEL",
-      role: "LEAD DEVELOPER",
-      bio: "Code architect and technical artist who blends programming expertise with a passion for creating immersive digital worlds.",
+      name: "Menhmenh",
+      realName: "Minh Phuong Anh Mai",
+      role: "AI ENGINEER",
+      bio: "AI specialist implementing advanced algorithms for procedural content generation, adaptive gameplay, and personalized user experiences within the NFT marketplace.",
       color: "pink",
     },
     {
-      name: "MARCUS ECHO",
-      role: "SOUND DESIGNER",
-      bio: "Audio engineer specializing in procedural soundscapes and interactive music that responds to player emotions and actions.",
+      name: "Lindsay",
+      realName: "Ngoc Huyen Truong",
+      role: "BLOCKCHAIN SPECIALIST",
+      bio: "Blockchain expert leading the development of secure NFT smart contracts, marketplace integration, and cross-chain compatibility to ensure asset ownership and transferability.",
       color: "blue",
     },
-    {
-      name: "ELENA DRIFT",
-      role: "NARRATIVE DESIGNER",
-      bio: "Storyteller focused on non-linear narratives and emotional journeys that adapt to each player's unique path through the void.",
-      color: "purple",
-    },
-  ]
+  ];
 
   const process = [
     {
@@ -794,19 +793,25 @@ export default function AboutPage() {
                 transition={{ duration: 0.8, delay: 0.2 }}
                 viewport={{ once: true, margin: "-100px" }}
               >
-                <PixelHeading
-                  text="BEYOND TRADITIONAL GAMING"
-                  className="text-4xl md:text-5xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
-                />
+                <div className="relative">
+                  <PixelHeading
+                    text="BEYOND TRADITIONAL"
+                    className="text-2xl md:text-3xl font-bold mb-1 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
+                  />
+                  <PixelHeading
+                    text="GAMING"
+                    className="text-2xl md:text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 relative"
+                  />
+                  <div className="absolute -bottom-2 left-0 w-24 h-1 bg-gradient-to-r from-purple-400 to-pink-500"></div>
+                </div>
                 <p className="text-xl text-gray-300 mb-8 leading-relaxed">
-                  VOID began as an experiment in creating spaces that respond to human emotion. We wanted to challenge
-                  the conventional understanding of what a game can be, blurring the boundaries between interactive art,
-                  emotional journey, and personal reflection.
+                  VOID NFT is a web3 gaming platform that unites blockchain technology with AI to create
+                  a vibrant ecosystem where players can create, own, and use their NFTs across multiple games.
                 </p>
                 <p className="text-xl text-gray-300 mb-8 leading-relaxed">
-                  Each environment in VOID is designed to evoke specific emotional responses while adapting to the
-                  player's presence and choices. The abstract visuals and reactive soundscapes work together to create a
-                  unique experience that feels alive and deeply personal.
+                  Our marketplace enables true digital ownership, while our AI tools help generate unique in-game assets
+                  that adapt to player preferences and gameplay styles. The result is a deeply personalized gaming experience
+                  built on true asset ownership.
                 </p>
 
                 <div className="grid grid-cols-2 gap-4 mt-10">
@@ -832,9 +837,9 @@ export default function AboutPage() {
                       animate={{ scale: [1, 1.05, 1] }}
                       transition={{ duration: 2, repeat: Infinity }}
                     >
-                      84%
+                      10K+
                     </motion.div>
-                    <p className="text-gray-400">Unique emotional responses recorded during playtesting</p>
+                    <p className="text-gray-400">Unique NFTs actively traded on our marketplace</p>
                     
                     {/* Corner decorations */}
                     <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-purple-500/50 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -865,9 +870,9 @@ export default function AboutPage() {
                       animate={{ scale: [1, 1.05, 1] }}
                       transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
                     >
-                      3.2M
+                      5+
                     </motion.div>
-                    <p className="text-gray-400">Possible unique paths through the experience</p>
+                    <p className="text-gray-400">Compatible games where NFTs can be used interchangeably</p>
                     
                     {/* Corner decorations */}
                     <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-pink-500/50 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -936,10 +941,37 @@ export default function AboutPage() {
             </div>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Updated for 3-person team layout */}
+          <div className="flex flex-col gap-10 max-w-5xl mx-auto">
             {team.map((member, index) => (
               <TeamMember key={index} member={member} index={index} setCursorHover={setCursorHover} />
             ))}
+          </div>
+          
+          {/* Web3 Game Platform Description */}
+          <div className="mt-20 bg-black/50 border border-purple-900/50 p-8 max-w-4xl mx-auto">
+            <PixelHeading
+              text="WEB3 GAMING PLATFORM"
+              className="text-2xl md:text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
+            />
+            <p className="text-gray-300 mb-6">
+              Our platform combines cutting-edge blockchain technology with AI-powered game development to create a seamless ecosystem where players can create, own, and utilize their NFTs across multiple games.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+              <div className="border border-purple-500/30 p-4 bg-purple-900/10">
+                <h3 className="text-purple-400 font-bold mb-2">CREATE</h3>
+                <p className="text-gray-400 text-sm">Design unique in-game assets powered by AI generation tools that respond to your creative vision</p>
+              </div>
+              <div className="border border-pink-500/30 p-4 bg-pink-900/10">
+                <h3 className="text-pink-400 font-bold mb-2">OWN</h3>
+                <p className="text-gray-400 text-sm">Securely mint and trade your gaming NFTs on our marketplace with full ownership rights and blockchain verification</p>
+              </div>
+              <div className="border border-blue-500/30 p-4 bg-blue-900/10">
+                <h3 className="text-blue-400 font-bold mb-2">PLAY</h3>
+                <p className="text-gray-400 text-sm">Use your NFTs across multiple compatible games, creating a unified gaming experience with real digital asset value</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -1122,7 +1154,7 @@ export default function AboutPage() {
             >
               <PixelHeading
                 text="JOIN THE JOURNEY"
-                className="text-6xl md:text-7xl font-black tracking-tighter mb-8 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
+                className="text-4xl md:text-5xl font-black tracking-tighter mb-8 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
               />
               <p className="text-xl md:text-2xl text-gray-300 mb-10 font-pixel">EXPERIENCE THE VOID FOR YOURSELF</p>
 

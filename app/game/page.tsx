@@ -401,16 +401,8 @@ export default function GamePage() {
 
       {/* Global styles for animations */}
       <style jsx global>{`
-        @font-face {
-          font-family: "PixelFont";
-          src: url("/pixel-font.woff2") format("woff2");
-          font-weight: normal;
-          font-style: normal;
-          font-display: swap;
-        }
-
         .font-pixel {
-          font-family: "PixelFont", monospace;
+          font-family: 'Press Start 2P', monospace;
           letter-spacing: 0.05em;
         }
 

@@ -1700,6 +1700,11 @@ const renderIntroScreen = () => (
         .animate-pulse-slow {
           animation: pulse-slow 3s infinite ease-in-out;
         }
+
+        .font-pixel {
+          font-family: 'Press Start 2P', monospace;
+          letter-spacing: 0.05em;
+        }
       `}</style>
     </div>
   );

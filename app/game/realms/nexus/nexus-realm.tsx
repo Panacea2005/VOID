@@ -1598,7 +1598,7 @@ const NexusRealm: React.FC<NexusRealmProps> = ({
           transform: rotateX(20deg);
         }
         .font-pixel {
-          font-family: monospace;
+          font-family: 'Press Start 2P', monospace;
           letter-spacing: 0.05em;
         }
         .cursor-grab {

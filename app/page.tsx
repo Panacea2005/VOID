@@ -68,7 +68,7 @@ const FeatureCard = ({
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, delay: index * 0.2 }}
       viewport={{ once: true, margin: "-100px" }}
-      className="relative group perspective-1000"
+      className="relative group perspective-1000 font-pixel"
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setCursorHover(true)}
       onMouseLeave={handleMouseLeave}
@@ -121,7 +121,7 @@ const FeatureCard = ({
           className={`text-2xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r ${feature.color}`}
         />
 
-        <p className="text-gray-400 leading-relaxed">{feature.description}</p>
+        <p className="text-gray-400 leading-relaxed font-pixel">{feature.description}</p>
 
         {/* Interactive elements that appear on hover */}
         <div className="absolute bottom-8 right-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -184,7 +184,7 @@ const GalleryCard = ({
       whileInView={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
       viewport={{ once: true, margin: "-100px" }}
-      className="group relative overflow-hidden aspect-[4/3]"
+      className="group relative overflow-hidden aspect-[4/3] font-pixel"
       onMouseEnter={() => {
         setCursorHover(true);
         setIsHovered(true);
@@ -250,7 +250,7 @@ const GalleryCard = ({
 
         {/* View button */}
         <motion.button
-          className="mt-4 px-4 py-2 bg-purple-600/80 text-white text-xs flex items-center space-x-2 border border-purple-400/30"
+          className="mt-4 px-4 py-2 bg-purple-600/80 text-white text-xs flex items-center space-x-2 border border-purple-400/30 font-pixel"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -466,7 +466,7 @@ export default function Home() {
       <section
         id="about"
         ref={aboutRef}
-        className="relative py-32 overflow-hidden"
+        className="relative py-32 overflow-hidden font-pixel"
       >
         {/* Floating particles background */}
         <FloatingParticles />
@@ -485,7 +485,7 @@ export default function Home() {
             <motion.div style={{ x: smoothAboutTitleX }} className="mb-20">
               <PixelHeading
                 text="THE EXPERIENCE"
-                className="text-7xl md:text-8xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600"
+                className="text-5xl md:text-6xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600"
               />
 
               {/* Animated separator line */}
@@ -559,12 +559,13 @@ export default function Home() {
                 whileInView={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
                 viewport={{ once: true, margin: "-100px" }}
+                className="font-pixel"
               >
                 <PixelHeading
                   text="BEYOND BOUNDARIES"
-                  className="text-4xl md:text-5xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
+                  className="text-2xl md:text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
                 />
-                <p className="text-xl text-gray-300 mb-8 leading-relaxed">
+                <p className="text-xl text-gray-300 mb-8 leading-relaxed font-pixel">
                   VOID transcends traditional gaming experiences, blurring the
                   line between art and interaction. Each moment is a carefully
                   crafted journey through abstract landscapes and emotional
@@ -591,7 +592,7 @@ export default function Home() {
                   ].map((item, index) => (
                     <motion.div
                       key={index}
-                      className="flex items-start group"
+                      className="flex items-start group font-pixel"
                       initial={{ opacity: 0, x: 20 }}
                       whileInView={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.5, delay: 0.3 + index * 0.2 }}
@@ -620,7 +621,7 @@ export default function Home() {
                         <h4 className="text-xl font-bold text-white mb-1 font-pixel group-hover:text-purple-400 transition-colors">
                           {item.title}
                         </h4>
-                        <p className="text-gray-400">{item.description}</p>
+                        <p className="text-gray-400 font-pixel">{item.description}</p>
                       </div>
                     </motion.div>
                   ))}
@@ -632,7 +633,7 @@ export default function Home() {
       </section>
 
       {/* Features Section with enhanced cards */}
-      <section ref={featuresRef} className="relative py-32 overflow-hidden">
+      <section ref={featuresRef} className="relative py-32 overflow-hidden font-pixel">
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-black via-purple-950/20 to-black"></div>
 
@@ -669,7 +670,7 @@ export default function Home() {
           <motion.div style={{ x: smoothFeaturesTitleX }} className="mb-20">
             <PixelHeading
               text="FEATURES"
-              className="text-7xl md:text-8xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-600"
+              className="text-5xl md:text-6xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-600"
             />
 
             {/* Animated separator line */}
@@ -718,7 +719,7 @@ export default function Home() {
       </section>
 
       {/* Gallery Section with enhanced cards */}
-      <section ref={galleryRef} className="relative py-32">
+      <section ref={galleryRef} className="relative py-32 font-pixel">
         {/* Parallax floating elements */}
         <motion.div
           className="absolute inset-0 pointer-events-none"
@@ -761,7 +762,7 @@ export default function Home() {
           <motion.div style={{ x: smoothGalleryTitleX }} className="mb-20">
             <PixelHeading
               text="GALLERY"
-              className="text-7xl md:text-8xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-pink-600"
+              className="text-5xl md:text-6xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-pink-600"
             />
 
             {/* Animated separator line */}
@@ -792,7 +793,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section with enhanced effects */}
-      <section className="relative py-32 overflow-hidden">
+      <section className="relative py-32 overflow-hidden font-pixel">
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-t from-purple-950/30 via-black to-black"></div>
         </div>
@@ -865,7 +866,7 @@ export default function Home() {
             >
               <PixelHeading
                 text="READY TO TRANSCEND?"
-                className="text-6xl md:text-7xl font-black tracking-tighter mb-8 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
+                className="text-3xl md:text-4xl font-black tracking-tighter mb-8 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
               />
               <p className="text-xl md:text-2xl text-gray-300 mb-10 font-pixel">
                 BEGIN YOUR JOURNEY INTO THE VOID
@@ -928,16 +929,8 @@ export default function Home() {
 
       {/* Global styles for animations */}
       <style jsx global>{`
-        @font-face {
-          font-family: "PixelFont";
-          src: url("/pixel-font.woff2") format("woff2");
-          font-weight: normal;
-          font-style: normal;
-          font-display: swap;
-        }
-
         .font-pixel {
-          font-family: "PixelFont", monospace;
+          font-family: 'Press Start 2P', monospace;
           letter-spacing: 0.05em;
         }
 

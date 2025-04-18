@@ -6,8 +6,8 @@ import NexusRealm from "./realms/nexus/nexus-realm";
 import AbyssRealm from "./realms/abyss/abyss-realm";
 import PulseRealm from "./realms/pulse/pulse-realm";
 import CipherRealm from "./realms/cipher/cipher-realm";
-import CrypticRealm from "./realms/cryptic/cryptic-realm";
-import TetrisRealm from "./realms/cryptic/tetris-realm";
+import CrypticRealm from "./realms/cryptic/rubik-realm";
+import TetrisRealm from "./realms/cryptic/cryptic-realm";
 import RealmPlaceholder from "./realms/vortex/realm-placeholder";
 import {
   AudioProvider,
@@ -320,7 +320,7 @@ const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
           }
         }
         .font-pixel {
-          font-family: monospace;
+          font-family: 'Press Start 2P', monospace;
           letter-spacing: 0.05em;
         }
       `}</style>

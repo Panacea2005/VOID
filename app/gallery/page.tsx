@@ -71,7 +71,7 @@ const GalleryItem = ({
       exit={{ opacity: 0, scale: 0.8 }}
       transition={{ duration: 0.5 }}
       className={cn(
-        "relative aspect-square overflow-hidden group cursor-pointer perspective-1000",
+        "relative aspect-square overflow-hidden group cursor-pointer perspective-1000 font-pixel",
         activeImage === item.id ? "md:col-span-2 md:row-span-2" : "",
       )}
       onClick={() => setActiveImage(activeImage === item.id ? null : item.id)}
@@ -147,7 +147,7 @@ const GalleryItem = ({
       <div className="absolute inset-0 z-20 p-6 flex flex-col justify-between transform transition-transform duration-500">
         <div className="transform translate-y-full group-hover:translate-y-0 transition-transform duration-500">
           <motion.div 
-            className="inline-block px-3 py-1 mb-2 bg-black/90 backdrop-blur-sm text-xs uppercase tracking-wider text-gray-400 border-l-2"
+            className="inline-block px-3 py-1 mb-2 bg-black/90 backdrop-blur-sm text-xs uppercase tracking-wider text-gray-400 border-l-2 font-pixel"
             style={{
               borderColor: item.color === "purple" ? "#a855f7" : 
                 item.color === "pink" ? "#ec4899" : "#3b82f6"
@@ -175,7 +175,7 @@ const GalleryItem = ({
 
         <div className="transform translate-y-20 group-hover:translate-y-0 transition-transform duration-500 delay-100">
           <motion.p 
-            className="text-gray-300 mb-4 bg-black/80 p-3 backdrop-blur-sm border-r-2"
+            className="text-gray-300 mb-4 bg-black/80 p-3 backdrop-blur-sm border-r-2 font-pixel"
             style={{
               borderColor: item.color === "purple" ? "#a855f7" : 
                 item.color === "pink" ? "#ec4899" : "#3b82f6"
@@ -188,7 +188,7 @@ const GalleryItem = ({
           >
             {item.description}
           </motion.p>
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center font-pixel">
             <div className="text-xs uppercase tracking-wider text-gray-400">
               {activeImage === item.id ? "Click to minimize" : "Click to expand"}
             </div>
@@ -252,7 +252,7 @@ const Gallery3DBanner = () => {
   }, [])
 
   return (
-    <div className="relative h-screen w-full flex items-center justify-center overflow-hidden">
+    <div className="relative h-screen w-full flex items-center justify-center overflow-hidden font-pixel">
       {/* Background gradient and particles */}
       <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-black to-black z-0"></div>
       
@@ -361,7 +361,7 @@ const Gallery3DBanner = () => {
         >
           <PixelHeading
             text="GALLERY"
-            className="text-8xl sm:text-9xl md:text-[15rem] font-black tracking-tighter mb-6 leading-none text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
+            className="text-8xl sm:text-9xl font-black tracking-tighter mb-6 leading-none text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
             animate
           />
         </motion.div>
@@ -390,7 +390,7 @@ const Gallery3DBanner = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 1.2 }}
-          className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto mt-10 mb-12 font-light"
+          className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto mt-10 mb-12 font-light font-pixel"
         >
           A collection of abstract visuals from the void experience
         </motion.p>
@@ -617,7 +617,7 @@ const RealmCubeCard = ({
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
       viewport={{ once: true, margin: "-100px" }}
-      className="relative bg-black/30 border border-gray-800 rounded-lg overflow-hidden cursor-pointer transition-all group"
+      className="relative bg-black/30 border border-gray-800 rounded-lg overflow-hidden cursor-pointer transition-all group font-pixel"
       onClick={() => onSelect(cube.id)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -741,7 +741,7 @@ const RealmCubeCard = ({
         </div>
       </div>
       
-      <div className="p-4 flex justify-between items-center border-t border-gray-800 relative z-10 bg-black/50 backdrop-blur-sm">
+      <div className="p-4 flex justify-between items-center border-t border-gray-800 relative z-10 bg-black/50 backdrop-blur-sm font-pixel">
         <h3 className="font-bold text-white">{cube.name}</h3>
         <span
           className="text-xs px-2 py-1 rounded border text-center transition-colors"
@@ -979,7 +979,7 @@ export default function GalleryPage() {
       <Gallery3DBanner />
 
       {/* Gallery Section */}
-      <section ref={galleryRef} className="relative py-32">
+      <section ref={galleryRef} className="relative py-32 font-pixel">
         {/* Floating particles background */}
         <FloatingParticles />
         
@@ -996,7 +996,7 @@ export default function GalleryPage() {
           <motion.div style={{ x: smoothGalleryTitleX }} className="mb-20">
             <PixelHeading
               text="EXPLORE THE VOID"
-              className="text-7xl md:text-8xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600"
+              className="text-6xl md:text-7xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600"
             />
             
             {/* Animated separator line */}
@@ -1076,7 +1076,7 @@ export default function GalleryPage() {
       </section>
 
       {/* Interactive Realm Cube Showcase */}
-      <section className="relative py-32 overflow-hidden">
+      <section className="relative py-32 overflow-hidden font-pixel">
         {/* Parallax grid background */}
         <motion.div
           className="absolute inset-0 grid grid-cols-12 grid-rows-12 gap-px opacity-10 pointer-events-none"
@@ -1130,7 +1130,7 @@ export default function GalleryPage() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
               viewport={{ once: true }}
-              className="text-xl text-gray-300 mt-8 max-w-2xl mx-auto"
+              className="text-xl text-gray-300 mt-8 max-w-2xl mx-auto font-pixel"
             >
               Discover our collection of dimensional cubes, each representing a unique realm within the void. Click on any cube to add it to your collection.
             </motion.p>
@@ -1154,7 +1154,7 @@ export default function GalleryPage() {
           <AnimatePresence>
             {activeCube && (
               <motion.div
-                className="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-black/80 border border-purple-500 px-6 py-4 rounded-md z-50 backdrop-blur-md"
+                className="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-black/80 border border-purple-500 px-6 py-4 rounded-md z-50 backdrop-blur-md font-pixel"
                 initial={{ y: 50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 50, opacity: 0 }}
@@ -1178,7 +1178,7 @@ export default function GalleryPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="relative py-32">
+      <section className="relative py-32 font-pixel">
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-t from-purple-950/30 via-black to-black"></div>
         </div>
@@ -1269,7 +1269,7 @@ export default function GalleryPage() {
             >
               <PixelHeading
                 text="EXPERIENCE IT YOURSELF"
-                className="text-6xl md:text-7xl font-black tracking-tighter mb-8 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
+                className="text-3xl md:text-4xl font-black tracking-tighter mb-8 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
               />
               <p className="text-xl md:text-2xl text-gray-300 mb-10 font-pixel">BEYOND IMAGES LIES THE TRUE VOID</p>
 

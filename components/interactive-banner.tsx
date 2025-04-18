@@ -84,12 +84,20 @@ export default function InteractiveBanner() {
     .purple-cube .cube-face-front { box-shadow: 0 0 20px rgba(168, 85, 247, 0.6) !important; }
     .purple-pink-cube .cube-face-front { box-shadow: 0 0 20px rgba(192, 132, 252, 0.6) !important; }
     .pink-cube .cube-face-front { box-shadow: 0 0 20px rgba(236, 72, 153, 0.6) !important; }
+    
+    /* Add Press Start 2P font globally */
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+    
+    .font-pixel {
+      font-family: 'Press Start 2P', monospace !important;
+      letter-spacing: 0.05em;
+    }
   `;
   
   return (
     <section 
       ref={bannerRef}
-      className="relative w-full h-screen flex items-center justify-center overflow-hidden bg-[#07041A]"
+      className="relative w-full h-screen flex items-center justify-center overflow-hidden bg-[#07041A] font-pixel"
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
@@ -146,15 +154,15 @@ export default function InteractiveBanner() {
       {/* Full-width Content Container */}
       <div className="w-full flex justify-between px-12 lg:px-24 z-10">
         {/* Left text content */}
-        <div className="w-1/2 max-w-xl text-white">
+        <div className="w-1/2 max-w-xl text-white font-pixel">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <p className="text-sm text-purple-400 font-mono mb-2">001</p>
+            <p className="text-sm text-purple-400 font-mono mb-2 font-pixel">001</p>
             
-            <h1 className="text-5xl md:text-6xl font-extrabold mb-4">
+            <h1 className="text-5xl md:text-6xl font-extrabold mb-4 font-pixel">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">VOID</span>
               <br />
               <span className="text-white">BEYOND</span>
@@ -162,7 +170,7 @@ export default function InteractiveBanner() {
               <span className="text-white">IMAGINATION</span>
             </h1>
             
-            <p className="text-gray-300 text-lg mb-10">
+            <p className="text-gray-300 text-lg mb-10 font-pixel">
               An immersive experience that takes you on a journey through
               the cosmic void. Explore the unknown and discover the
               mysteries of the universe.
@@ -172,14 +180,14 @@ export default function InteractiveBanner() {
             <div className="flex flex-wrap gap-4">
               <Link 
                 href="/game" 
-                className="px-8 py-4 border border-[#a855f7] bg-[#a855f7]/20 hover:bg-gradient-to-r hover:from-[#a855f7]/30 hover:to-[#ec4899]/30 text-white font-medium uppercase tracking-wider transition-all"
+                className="px-8 py-4 border border-[#a855f7] bg-[#a855f7]/20 hover:bg-gradient-to-r hover:from-[#a855f7]/30 hover:to-[#ec4899]/30 text-white font-medium uppercase tracking-wider transition-all font-pixel"
               >
                 Enter the void
               </Link>
               
               <Link 
                 href="#about" 
-                className="px-8 py-4 border border-white text-white hover:bg-white/20 font-medium uppercase tracking-wider transition-all"
+                className="px-8 py-4 border border-white text-white hover:bg-white/20 font-medium uppercase tracking-wider transition-all font-pixel"
               >
                 Discover
               </Link>
@@ -309,14 +317,14 @@ export default function InteractiveBanner() {
       
       {/* Technology label on left side with enhanced color */}
       <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20">
-        <div className="text-[#a855f7]/70 transform -rotate-90 whitespace-nowrap text-xs tracking-widest font-mono">
+        <div className="text-[#a855f7]/70 transform -rotate-90 whitespace-nowrap text-xs tracking-widest font-mono font-pixel">
           TECHNOLOGY
         </div>
       </div>
       
       {/* 360° indicator on right side with enhanced color */}
       <div className="absolute right-6 top-1/2 transform -translate-y-1/2 z-20">
-        <div className="text-[#a855f7] font-bold">360°</div>
+        <div className="text-[#a855f7] font-bold font-pixel">360°</div>
       </div>
       
       {/* Fullscreen toggle in corner with enhanced hover effect */}

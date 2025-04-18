@@ -1336,19 +1336,6 @@ const PulseRealm: React.FC<PulseRealmProps> = ({
           </div>
         </div>
         
-        {/* Exit button - top right */}
-        <motion.button
-          onClick={onReturn}
-          className="absolute top-4 right-4 px-3 py-1.5 bg-black/70 backdrop-blur-sm border border-pink-500/30 text-pink-500 hover:text-pink-400 rounded z-30 transition-colors"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.98 }}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          EXIT
-        </motion.button>
-        
         {/* Audio controls - top right below exit */}
         <div className="absolute top-16 right-4 flex flex-col items-end z-30">
           <button 
@@ -2226,7 +2213,7 @@ const renderLevelCompleteScreen = () => (
         }
         
         .font-pixel {
-          font-family: monospace;
+          font-family: 'Press Start 2P', monospace;
           letter-spacing: 0.05em;
         }
         

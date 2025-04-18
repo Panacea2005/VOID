@@ -93,7 +93,8 @@ body {
   }
 }
 
+/* styles/globals.css */
 .font-pixel {
-  font-family: 'PixelFont', 'Courier New', monospace;
+  font-family: 'Press Start 2P', monospace;
   letter-spacing: 0.05em;
 }

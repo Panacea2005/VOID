@@ -1098,7 +1098,7 @@ const EchoRealm: React.FC<EchoRealmProps> = ({ onReturn, selectedCubeId = "pink-
           transform: rotateX(20deg);
         }
         .font-pixel {
-          font-family: monospace;
+          font-family: 'Press Start 2P', monospace;
           letter-spacing: 0.05em;
         }
       `}</style>
