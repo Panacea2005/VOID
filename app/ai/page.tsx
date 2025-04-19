@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, ChangeEvent, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import * as THREE from "three";
 import {
@@ -10,7 +10,6 @@ import {
   BloomEffect,
 } from "postprocessing";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
 import AbstractShape from "@/components/abstract-shape";
@@ -29,11 +28,6 @@ import { generateMusic, getMusicGenerationDetails } from "../ai/aiMusicService";
 import { Connection } from "@solana/web3.js";
 import { mockMintNFT, convertCubeToFile, mintRealNFT } from "@/lib/services/mockNftService";
 import { getMusicNFTMetadata, getCubeNFTMetadata, mintNFT } from "@/lib/services/nftService";
-import Image from "next/image";
-import { SiOpenai } from "react-icons/si";
-import { IoMdMusicalNote } from "react-icons/io";
-import { IoCube } from "react-icons/io5";
-import { AudioPlayer } from "@/components/AudioPlayer";
 
 interface MaterialParams {
   color?: string;
