@@ -318,7 +318,7 @@ export default function InteractiveBanner() {
       {/* Technology label on left side with enhanced color */}
       <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20">
         <div className="text-[#a855f7]/70 transform -rotate-90 whitespace-nowrap text-xs tracking-widest font-mono font-pixel">
-          TECHNOLOGY
+          GAMING
         </div>
       </div>
       

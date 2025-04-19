@@ -336,14 +336,13 @@ export default function Footer() {
           
           {/* Navigation links */}
           <motion.div variants={rowVariants}>
-            <PixelHeading text="EXPLORE" className="text-lg font-bold mb-6 text-white" />
+            <PixelHeading text="GAME" className="text-lg font-bold mb-6 text-white" />
             <div className="space-y-3 font-pixel">
               {[
                 { name: "HOME", path: "/" },
-                { name: "REALMS", path: "/realm" },
+                { name: "REALM", path: "/realm" },
                 { name: "GAME", path: "/game" },
                 { name: "ABOUT", path: "/about" },
-                { name: "GALLERY", path: "/gallery" },
               ].map((link, index) => (
                 <FooterLink key={link.path} href={link.path} index={index}>
                   {link.name}
@@ -354,13 +353,13 @@ export default function Footer() {
           
           {/* Support links */}
           <motion.div variants={rowVariants}>
-            <PixelHeading text="SUPPORT" className="text-lg font-bold mb-6 text-white" />
+            <PixelHeading text="NFT" className="text-lg font-bold mb-6 text-white" />
             <div className="space-y-3 font-pixel">
               {[
-                { name: "FAQ", path: "/faq" },
-                { name: "CONTACT", path: "/contact" },
-                { name: "PRIVACY", path: "/privacy" },
-                { name: "TERMS", path: "/terms" },
+                { name: "AI", path: "/ai" },
+                { name: "MARKET", path: "/market" },
+                { name: "GALLERY", path: "/gallery" },
+                { name: "GACHA", path: "/gacha" },
               ].map((link, index) => (
                 <FooterLink key={link.path} href={link.path} index={index}>
                   {link.name}
