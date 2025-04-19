@@ -6,8 +6,8 @@ import NexusRealm from "./realms/nexus/nexus-realm";
 import AbyssRealm from "./realms/abyss/abyss-realm";
 import PulseRealm from "./realms/pulse/pulse-realm";
 import CipherRealm from "./realms/cipher/cipher-realm";
-import CrypticRealm from "./realms/cryptic/rubik-realm";
-import TetrisRealm from "./realms/cryptic/cryptic-realm";
+import CrypticRealm from "./realms/cryptic/cryptic-realm";
+import VortexRealm from "./realms/vortex/vortex-realm";
 import RealmPlaceholder from "./realms/vortex/realm-placeholder";
 import {
   AudioProvider,
@@ -284,18 +284,16 @@ const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
               />
             )}
             {currentScreen === "cryptic" && (
-              <TetrisRealm
+              <CrypticRealm
                 onReturn={returnToHub}
                 selectedCubeId={selectedCubeId}
               />
             )}
             {currentScreen === "vortex" && (
-              <RealmPlaceholder
-                realmName="Vortex Realm"
-                realmColor="#10b981"
-                realmGradient="from-emerald-400 to-cyan-600"
-                onReturn={returnToHub}
-              />
+              <VortexRealm
+              onReturn={returnToHub}
+              selectedCubeId={selectedCubeId}
+            />
             )}
           </motion.div>
         )}

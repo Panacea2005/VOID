@@ -92,18 +92,18 @@ const realms = [
   {
     id: "cryptic",
     name: "CRYPTIC",
-    theme: "Spatial and Harmony",
-    description: "A realm of 3D puzzles where colors must be aligned in perfect harmony. Navigate spatial dimensions to restore color patterns to their original state.",
+    theme: "Spatial and Pattern",
+    description: "A realm of falling block puzzles where shapes must be arranged in perfect harmony. Navigate spatial dimensions to clear lines and restore order from chaos.",
     color: "from-green-400 to-blue-600",
     brightColor: "from-green-300 to-blue-400",
     darkColor: "from-green-900 to-blue-950",
     shapeType: "square" as "square", 
     particleCount: 140,
-    particleType: "cube",
-    ambientSound: "/audio/rubiks-theme.mp3",
-    modelType: "rubiks-cube",
-    gameplayElements: ["Pattern matching", "3D rotation", "Spatial reasoning"],
-    iconType: "cube",
+    particleType: "block",
+    ambientSound: "/audio/cryptic-theme.mp3",
+    modelType: "tetris-blocks",
+    gameplayElements: ["Pattern matching", "Spatial reasoning", "Block manipulation"],
+    iconType: "block",
   },
   {
     id: "vortex",
@@ -266,25 +266,43 @@ const RealmIcon = ({ realm, isSelected }: { realm: (typeof realms)[0]; isSelecte
     )
   }
 
-  if (realm.iconType === "cube") {
+  if (realm.iconType === "block") {
     return (
       <div className="relative w-6 h-6 flex items-center justify-center">
         <motion.div
-          className={`absolute w-4 h-4 rounded-sm bg-gradient-to-r ${realm.color}`}
+          className="relative w-4 h-4"
           animate={{
-            rotateX: isSelected ? [0, 180, 360] : 0,
-            rotateY: isSelected ? [0, 180, 360] : 0,
+            rotate: isSelected ? [0, 90, 180, 270, 360] : 0
           }}
           transition={{
-            duration: 5,
+            duration: 3,
             repeat: isSelected ? Infinity : 0,
             ease: "linear"
           }}
-          style={{
-            transformStyle: "preserve-3d",
-            boxShadow: isSelected ? `0 0 8px ${realm.brightColor.split(' ')[1]}` : "none",
-          }}
-        />
+        >
+          {/* Tetris-like L shape */}
+          <div className="absolute grid grid-cols-2 grid-rows-2 w-full h-full">
+            <div className={`w-full h-full bg-gradient-to-br ${realm.color}`}></div>
+            <div className="w-full h-full"></div>
+            <div className={`w-full h-full bg-gradient-to-br ${realm.color}`}></div>
+            <div className={`w-full h-full bg-gradient-to-br ${realm.color}`}></div>
+          </div>
+        </motion.div>
+        
+        {isSelected && (
+          <motion.div
+            className="absolute inset-0 rounded-sm border border-white/30"
+            animate={{
+              scale: [1, 1.2, 1],
+              opacity: [0.6, 0.3, 0.6]
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+        )}
       </div>
     )
   }
@@ -709,122 +727,314 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: (typeof realms)[0]; mous
     )
   }
 
-  if (realm.modelType === "rubiks-cube") {
+  if (realm.modelType === "tetris-blocks") {
     return (
       <motion.div
         className="w-full h-full relative"
         style={{ rotateX: springRotateX, rotateY: springRotateY, perspective: 1000 }}
       >
         <div className="transform-style-preserve-3d relative w-full h-full">
-          {/* Rubik's cube 3D model */}
+          {/* Tetris Game Board - Central Element */}
           <motion.div
-            className="absolute top-1/2 left-1/2 transform-gpu"
+            className="absolute top-1/2 left-1/2 w-60 h-80 border-2 border-green-500/30"
             style={{
-              width: '200px',
-              height: '200px',
-              marginLeft: '-100px', 
-              marginTop: '-100px',
-              transformStyle: 'preserve-3d',
+              transform: "translate(-50%, -50%)",
+              backgroundColor: "rgba(0, 0, 0, 0.7)",
+              boxShadow: "0 0 30px rgba(16, 185, 129, 0.3)",
+              zIndex: 1
             }}
             animate={{
-              rotateX: [0, 360],
-              rotateY: [0, 360],
+              borderColor: ["rgba(16, 185, 129, 0.3)", "rgba(37, 99, 235, 0.3)", "rgba(16, 185, 129, 0.3)"]
+            }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
+            {/* Game board grid lines */}
+            <div className="w-full h-full grid grid-cols-10 grid-rows-20">
+              {Array.from({ length: 200 }).map((_, i) => (
+                <div 
+                  key={`grid-cell-${i}`} 
+                  className="border border-green-500/10"
+                />
+              ))}
+            </div>
+          </motion.div>
+          
+          {/* Tetris blocks falling and rotating */}
+          {/* T-Block */}
+          <motion.div
+            className="absolute"
+            style={{
+              width: "60px",
+              height: "45px",
+              transformStyle: "preserve-3d",
+              zIndex: 5
+            }}
+            animate={{
+              x: [0, -60, -30, 0, 30, 60, 30, 0],
+              y: [-150, -50, 50, 150, 50, -50, -150],
+              rotateZ: [0, 90, 180, 270, 360],
+              z: [50, 0, -50, 0, 50]
+            }}
+            transition={{
+              duration: 12,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
+            <div className="grid grid-cols-3 grid-rows-2 gap-0">
+              <div className="w-full h-full"></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div className="w-full h-full"></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+            </div>
+          </motion.div>
+          
+          {/* L-Block */}
+          <motion.div
+            className="absolute"
+            style={{
+              width: "45px",
+              height: "60px",
+              transformStyle: "preserve-3d",
+              zIndex: 5
+            }}
+            animate={{
+              x: [80, 40, 0, -40, -80, -40, 0, 40, 80],
+              y: [100, 0, -100, 0, 100],
+              rotateZ: [90, 180, 270, 360, 450],
+              z: [-50, 0, 50, 0, -50]
+            }}
+            transition={{
+              duration: 15,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
+            <div className="grid grid-cols-2 grid-rows-3 gap-0">
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div className="w-full h-full"></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div className="w-full h-full"></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+            </div>
+          </motion.div>
+          
+          {/* Z-Block */}
+          <motion.div
+            className="absolute"
+            style={{
+              width: "60px",
+              height: "45px",
+              transformStyle: "preserve-3d",
+              zIndex: 5
+            }}
+            animate={{
+              x: [-90, -45, 0, 45, 90, 45, 0, -45, -90],
+              y: [-80, 0, 80, 0, -80],
+              rotateZ: [0, 90, 180, 270, 360],
+              z: [30, -30, 30]
+            }}
+            transition={{
+              duration: 18,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
+            <div className="grid grid-cols-3 grid-rows-2 gap-0">
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div className="w-full h-full"></div>
+              <div className="w-full h-full"></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+            </div>
+          </motion.div>
+          
+          {/* Square Block */}
+          <motion.div
+            className="absolute"
+            style={{
+              width: "45px",
+              height: "45px",
+              transformStyle: "preserve-3d",
+              zIndex: 5
+            }}
+            animate={{
+              x: [0, 100, 0, -100, 0],
+              y: [-120, -60, 60, -60, -120],
+              scale: [1, 1.2, 1, 0.8, 1],
+              z: [40, 0, -40, 0, 40]
+            }}
+            transition={{
+              duration: 10,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
+            <div className="grid grid-cols-2 grid-rows-2 gap-0">
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+            </div>
+          </motion.div>
+          
+          {/* I-Block */}
+          <motion.div
+            className="absolute"
+            style={{
+              width: "30px",
+              height: "120px",
+              transformStyle: "preserve-3d",
+              zIndex: 5
+            }}
+            animate={{
+              x: [110, 55, 0, -55, -110, -55, 0, 55, 110],
+              y: [0, 80, 0, -80, 0],
+              rotateZ: [0, 90, 180, 270, 360],
+              z: [-20, 30, -20]
             }}
             transition={{
               duration: 20,
               repeat: Infinity,
-              ease: "linear"
+              ease: "easeInOut"
             }}
           >
-            {/* Render cube faces */}
-            {[...Array(6)].map((_, index) => {
-              const transformValues = [
-                "rotateY(0deg) translateZ(100px)",    // Front
-                "rotateY(180deg) translateZ(100px)",  // Back
-                "rotateY(90deg) translateZ(100px)",   // Right
-                "rotateY(-90deg) translateZ(100px)",  // Left
-                "rotateX(90deg) translateZ(100px)",   // Top
-                "rotateX(-90deg) translateZ(100px)",  // Bottom
-              ];
-              
-              return (
-                <motion.div
-                  key={`cube-face-${index}`}
-                  className="absolute inset-0 border border-white/20"
-                  style={{
-                    transform: transformValues[index],
-                    background: `linear-gradient(135deg, ${realm.brightColor.split(' ')[1]}, ${realm.color.split(' ')[1]})`,
-                    backfaceVisibility: 'hidden',
-                  }}
-                >
-                  {/* Create 3x3 grid pattern */}
-                  <div className="w-full h-full grid grid-cols-3 grid-rows-3 p-1 gap-1">
-                    {[...Array(9)].map((_, i) => (
-                      <div key={`grid-${index}-${i}`} className="bg-white/10 rounded-sm" />
-                    ))}
-                  </div>
-                </motion.div>
-              );
-            })}
+            <div className="grid grid-cols-1 grid-rows-4 gap-0">
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+            </div>
           </motion.div>
           
-          {/* Add floating cubes around the main cube */}
-          {[...Array(12)].map((_, i) => {
-            const angle = (i / 12) * Math.PI * 2;
-            const radius = 120 + Math.sin(i * 0.8) * 20;
-            const x = Math.cos(angle) * radius;
-            const y = Math.sin(angle) * radius;
-            const z = Math.cos(i * 1.5) * 50;
+          {/* Floating tetris blocks in the background */}
+          {Array.from({ length: 20 }).map((_, i) => {
+            const size = 8 + Math.random() * 12;
+            const distance = 150 + Math.random() * 100;
+            const angle = (i / 20) * Math.PI * 2;
+            const xPos = Math.cos(angle) * distance;
+            const yPos = Math.sin(angle) * distance;
+            const zPos = -100 + Math.random() * 200;
             
             return (
               <motion.div
-                key={`floating-cube-${i}`}
-                className="absolute"
+                key={`bg-tetris-${i}`}
+                className={`absolute opacity-40 bg-gradient-to-br ${realm.color}`}
                 style={{
-                  width: '20px',
-                  height: '20px',
-                  left: "50%",
-                  top: "50%",
-                  marginLeft: `${x}px`,
-                  marginTop: `${y}px`,
-                  transformStyle: "preserve-3d",
-                  transform: `translateZ(${z}px)`,
+                  width: `${size}px`,
+                  height: `${size}px`,
+                  left: `calc(50% + ${xPos}px)`,
+                  top: `calc(50% + ${yPos}px)`,
+                  transform: `translateZ(${zPos}px)`,
+                  boxShadow: "0 0 15px rgba(16, 185, 129, 0.5)",
+                  zIndex: zPos > 0 ? 2 : 0
                 }}
                 animate={{
-                  rotateX: [0, 360],
-                  rotateY: [0, 360],
+                  rotate: [0, 90, 180, 270, 360],
+                  scale: [1, 1.2, 0.9, 1.1, 1],
+                  opacity: [0.3, 0.5, 0.3]
                 }}
                 transition={{
-                  duration: 10 + i % 5,
+                  duration: 15 + Math.random() * 10,
                   repeat: Infinity,
                   ease: "linear"
                 }}
+              />
+            );
+          })}
+          
+          {/* Glowing tetris lines */}
+          {Array.from({ length: 8 }).map((_, i) => {
+            const width = 80 + Math.random() * 100;
+            const height = 2;
+            const angle = (i / 8) * Math.PI * 2;
+            const distance = 120;
+            const xPos = Math.cos(angle) * distance;
+            const yPos = Math.sin(angle) * distance;
+            
+            return (
+              <motion.div
+                key={`tetris-line-${i}`}
+                className="absolute"
+                style={{
+                  width: `${width}px`,
+                  height: `${height}px`,
+                  left: `calc(50% + ${xPos}px)`,
+                  top: `calc(50% + ${yPos}px)`,
+                  backgroundImage: `linear-gradient(to right, transparent, ${realm.brightColor.split(' ')[1]}, transparent)`,
+                  transform: `rotate(${angle * (180 / Math.PI)}deg)`,
+                  transformOrigin: "center left",
+                  boxShadow: `0 0 10px ${realm.brightColor.split(' ')[1]}`,
+                  zIndex: 3
+                }}
+                animate={{
+                  opacity: [0.3, 0.7, 0.3],
+                  width: [width, width * 1.2, width]
+                }}
+                transition={{
+                  duration: 5 + i,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+            );
+          })}
+          
+          {/* Grid pattern overlay */}
+          <div
+            className="absolute top-0 left-0 w-full h-full"
+            style={{
+              background: "radial-gradient(circle, transparent 20%, rgba(0, 0, 0, 0.8) 70%)",
+              backgroundSize: "8px 8px",
+              pointerEvents: "none",
+              zIndex: 10
+            }}
+          />
+          
+          {/* Binary/code particles */}
+          {Array.from({ length: 30 }).map((_, i) => {
+            const symbols = ["0", "1", "#", "[]", "{}", "()"];
+            const symbol = symbols[Math.floor(Math.random() * symbols.length)];
+            const size = 10 + Math.random() * 14;
+            const distance = 50 + Math.random() * 200;
+            const angle = Math.random() * Math.PI * 2;
+            const xPos = Math.cos(angle) * distance;
+            const yPos = Math.sin(angle) * distance;
+            
+            return (
+              <motion.div
+                key={`code-particle-${i}`}
+                className="absolute flex items-center justify-center text-green-500 font-mono"
+                style={{
+                  width: `${size}px`,
+                  height: `${size}px`,
+                  fontSize: `${size * 0.7}px`,
+                  left: `calc(50% + ${xPos}px)`,
+                  top: `calc(50% + ${yPos}px)`,
+                  textShadow: "0 0 8px rgba(16, 185, 129, 0.8)",
+                  zIndex: 4
+                }}
+                animate={{
+                  opacity: [0, 0.8, 0],
+                  y: [yPos, yPos + (Math.random() > 0.5 ? 100 : -100)],
+                  scale: [1, 1.2, 0]
+                }}
+                transition={{
+                  duration: 4 + Math.random() * 6,
+                  repeat: Infinity,
+                  repeatDelay: Math.random() * 5,
+                  ease: "easeInOut"
+                }}
               >
-                {/* Render mini cube faces */}
-                {[...Array(6)].map((_, faceIndex) => {
-                  const miniTransforms = [
-                    "rotateY(0deg) translateZ(10px)",
-                    "rotateY(180deg) translateZ(10px)",
-                    "rotateY(90deg) translateZ(10px)",
-                    "rotateY(-90deg) translateZ(10px)",
-                    "rotateX(90deg) translateZ(10px)",
-                    "rotateX(-90deg) translateZ(10px)",
-                  ];
-                  
-                  return (
-                    <div
-                      key={`mini-face-${i}-${faceIndex}`}
-                      className="absolute inset-0"
-                      style={{
-                        transform: miniTransforms[faceIndex],
-                        background: faceIndex === i % 6 ? realm.brightColor.split(' ')[1] : realm.color.split(' ')[1],
-                        borderRadius: '2px',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        backfaceVisibility: 'hidden',
-                      }}
-                    />
-                  );
-                })}
+                {symbol}
               </motion.div>
             );
           })}

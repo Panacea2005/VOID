@@ -8,7 +8,7 @@ interface CrypticRealmProps {
   selectedCubeId?: string;
 }
 
-// Classic 2D Tetris Game with realm cube colors
+// 3D Tetris Game with actual 3D cubes from realm cube
 const CrypticRealm: React.FC<CrypticRealmProps> = ({
   onReturn,
   selectedCubeId = "pink-neon",
@@ -65,6 +65,15 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
   // Help overlay
   const [showControls, setShowControls] = useState(false);
 
+  // 3D View settings
+  const [viewSettings, setViewSettings] = useState({
+    perspective: 1200,
+    rotateX: 25, // Tilt angle for 3D effect
+    rotateY: 5,
+    translateZ: -80,
+    scale: 0.85,
+  });
+
   // Animation controls
   const gridControls = useAnimationControls();
 
@@ -90,6 +99,8 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
   const selectedCube =
     cubeCollection.find((cube) => cube.id === selectedCubeId) || defaultCube;
   const cubeColors = [...selectedCube.colors];
+  const cubeBorderColor = selectedCube.borderColor || "rgba(255, 255, 255, 0.3)";
+  const cubeGlow = selectedCube.glow || "0 0 20px rgba(236, 72, 153, 0.6)";
 
   // Background gradient based on cube colors
   const mainColor = cubeColors[0] || "#ec4899";
@@ -183,7 +194,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
     dropIntervalRef.current = dropInterval;
   }, [dropInterval]);
 
-  // Handle mouse movement for ambient lighting and parallax
+  // Handle mouse movement for ambient lighting and 3D perspective effect
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!containerRef.current) return;
@@ -192,7 +203,18 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
       const x = ((e.clientX - rect.left) / rect.width) * 100;
       const y = ((e.clientY - rect.top) / rect.height) * 100;
 
+      // Update ambient light position
       setAmbientLightPosition({ x, y });
+      
+      // Subtle adjustment to 3D perspective based on mouse position
+      const maxRotateX = 35; // Base tilt
+      const maxRotateY = 15; // Max rotation on y-axis
+      
+      setViewSettings(prev => ({
+        ...prev,
+        rotateX: maxRotateX - (((y / 100) - 0.5) * 10), // Adjust tilt based on mouse y
+        rotateY: (((x / 100) - 0.5) * maxRotateY), // Rotate slightly based on mouse x
+      }));
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -329,12 +351,12 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
       color: tetrominoes[nextIndex].color,
     });
 
-    // Set the new current piece
+    // Set the new current piece - FIXED: Position at the bottom of the grid
     const newPiece = {
       shape: newShape,
       position: {
         x: Math.floor(gridWidth / 2) - Math.floor(getWidth(newShape) / 2),
-        y: gridHeight - getHeight(newShape),
+        y: 0, // Start at the bottom (rows are 0-indexed, 0 = bottom)
       },
       color: newColor,
       rotation: 0,
@@ -388,7 +410,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
     return width;
   };
 
-  // Check if position is valid for the current piece
+  // Check if position is valid for the current piece - CORRECTED for bottom-up grid
   const isValidPosition = (piece = currentPiece) => {
     if (!piece) return false;
 
@@ -401,7 +423,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
         if (shape[y][x]) {
           // Calculate the position on the grid
           const gridX = position.x + x;
-          const gridY = position.y - y;
+          const gridY = position.y + y;
 
           // Check boundaries
           if (
@@ -414,7 +436,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
           }
 
           // Check collision with existing blocks
-          if (gridY >= 0 && grid[gridY][gridX] !== 0) {
+          if (grid[gridY][gridX] !== 0) {
             return false;
           }
         }
@@ -424,13 +446,13 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
     return true;
   };
 
-  // Move the current piece down
+  // Move the current piece down - CORRECTED for bottom-up grid
   const moveDown = () => {
     if (!currentPiece || isAnimating) return false;
 
     const newPosition = {
       ...currentPiece.position,
-      y: currentPiece.position.y - 1,
+      y: currentPiece.position.y + 1, // Move down (increase y)
     };
 
     const newPiece = {
@@ -537,9 +559,9 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
         { x: 1, y: 0 }, // move right
         { x: 2, y: 0 }, // move 2 right
         { x: -2, y: 0 }, // move 2 left
-        { x: 0, y: 1 }, // move up
-        { x: -1, y: 1 }, // move up and left
-        { x: 1, y: 1 }, // move up and right
+        { x: 0, y: -1 }, // move down
+        { x: -1, y: -1 }, // move down and left
+        { x: 1, y: -1 }, // move down and right
       ];
 
       for (const kick of kicks) {
@@ -587,7 +609,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
           x:
             Math.floor(gridWidth / 2) -
             Math.floor(getWidth(heldPiece.shape) / 2),
-          y: gridHeight - getHeight(heldPiece.shape),
+          y: 0,
         },
         color: heldPiece.color,
         rotation: 0,
@@ -607,7 +629,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
     setCanHold(false);
   };
 
-  // Hard drop - move piece all the way down
+  // Hard drop - move piece all the way down - CORRECTED for bottom-up grid
   const hardDrop = () => {
     if (!currentPiece || isAnimating) return;
 
@@ -621,7 +643,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
 
       // Move down until collision
       while (!foundBottom) {
-        newY -= 1;
+        newY += 1;
 
         const testPosition = {
           x: piece.position.x,
@@ -635,7 +657,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
 
         if (!isValidPosition(testPiece)) {
           // We found the bottom position, move back up one
-          newY += 1;
+          newY -= 1;
           foundBottom = true;
         }
       }
@@ -665,11 +687,11 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
         // Convert the color to a number representation (index + 1)
         const colorIndex = cubeColors.indexOf(color) + 1;
 
-        // Add the piece to the grid at final position
+        // Add the piece to the grid at final position - CORRECTED for bottom-up grid
         for (let y = 0; y < shape.length; y++) {
           for (let x = 0; x < shape[y].length; x++) {
             if (shape[y][x]) {
-              const gridY = finalPosition.y - y;
+              const gridY = finalPosition.y + y;
               const gridX = finalPosition.x + x;
 
               // Make sure we're within bounds
@@ -711,7 +733,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
     }
   };
 
-  // Lock the current piece in place
+  // Lock the current piece in place - CORRECTED for bottom-up grid
   const lockPiece = () => {
     if (!currentPiece) return;
 
@@ -722,11 +744,11 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
     // Convert the color to a number representation (index + 1)
     const colorIndex = cubeColors.indexOf(color) + 1;
 
-    // Add the piece to the grid
+    // Add the piece to the grid - CORRECTED for bottom-up grid
     for (let y = 0; y < shape.length; y++) {
       for (let x = 0; x < shape[y].length; x++) {
         if (shape[y][x]) {
-          const gridY = position.y - y;
+          const gridY = position.y + y;
           const gridX = position.x + x;
 
           // Make sure we're within bounds
@@ -806,21 +828,24 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
     }
   };
 
-  // Clear the completed lines and update score
+  // Clear the completed lines and update score - CORRECTED for bottom-up grid
   const clearLines = (completedLines: number[], currentGrid: number[][]) => {
     let newGrid = [...currentGrid.map((row) => [...row])];
 
-    // Sort lines from top to bottom
-    completedLines.sort((a, b) => b - a);
+    // Sort lines by index
+    completedLines.sort((a, b) => a - b);
 
     // Remove completed lines
-    completedLines.forEach((line) => {
+    for (let i = 0; i < completedLines.length; i++) {
+      // Adjust for already removed lines
+      const lineIndex = completedLines[i] - i;
+      
       // Remove this line
-      newGrid.splice(line, 1);
-
+      newGrid.splice(lineIndex, 1);
+      
       // Add a new empty line at the top
-      newGrid.push(Array(gridWidth).fill(0));
-    });
+      newGrid.unshift(Array(gridWidth).fill(0));
+    }
 
     setGrid(newGrid);
     setClearedLines([]);
@@ -896,7 +921,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
     }
   }, [gameState]);
 
-  // Calculate the position for the ghost piece
+  // Calculate the position for the ghost piece - CORRECTED for bottom-up grid
   const getGhostPosition = () => {
     if (!currentPiece) return null;
 
@@ -905,12 +930,12 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
 
     // Keep moving down until invalid
     while (isValidPosition(testPiece)) {
-      ghostPosition.y -= 1;
+      ghostPosition.y += 1;
       testPiece.position = { ...ghostPosition };
     }
 
     // Move back up one (to last valid position)
-    ghostPosition.y += 1;
+    ghostPosition.y -= 1;
 
     return ghostPosition;
   };
@@ -920,8 +945,139 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
-  // Render piece preview (next or held)
-  const renderPiecePreview = (
+  // Render 3D cube for tetris pieces
+  const render3DCube = (color: string, x: number, y: number, z: number, isGhost: boolean = false) => {
+    const cubeSize = 28;
+    const cellSize = 30;
+    const gapSize = 1;
+    
+    // Calculate position
+    const posX = x * (cellSize + gapSize);
+    const posY = y * (cellSize + gapSize);
+    
+    // Calculate half of the cubeSize for translateZ values
+    const halfSize = cubeSize / 2;
+    
+    // Ghost piece styling
+    const opacity = isGhost ? 0.3 : 1;
+    const ghostBorder = isGhost ? "1px dashed" : "1px solid";
+    const cubeElevation = isGhost ? 1 : z;
+    
+    return (
+      <div 
+        className="cube-scene absolute" 
+        style={{ 
+          width: cubeSize, 
+          height: cubeSize,
+          left: posX,
+          top: posY,
+          transformStyle: "preserve-3d",
+          transform: `translateZ(${cubeElevation}px)`,
+          transition: "transform 0.2s ease-out",
+          zIndex: isGhost ? 5 : 10
+        }}
+      >
+        <div
+          className="cube"
+          style={{
+            transform: `rotateX(0deg) rotateY(0deg) rotateZ(0deg)`,
+            width: cubeSize,
+            height: cubeSize,
+            transformStyle: "preserve-3d",
+            ["--cube-size" as string]: `${cubeSize}px`,
+          }}
+        >
+          {/* Top face */}
+          <div
+            className="cube-face absolute"
+            style={{
+              width: cubeSize,
+              height: cubeSize,
+              backgroundColor: color,
+              border: `${ghostBorder} ${cubeBorderColor}`,
+              opacity,
+              boxShadow: isGhost ? "none" : (clearedLines.includes(y) ? "0 0 15px white" : cubeGlow),
+              transform: `translateZ(${halfSize}px)`,
+              backfaceVisibility: "hidden",
+            }}
+          />
+
+          {/* Bottom face */}
+          <div
+            className="cube-face absolute"
+            style={{
+              width: cubeSize,
+              height: cubeSize,
+              backgroundColor: color,
+              border: `${ghostBorder} ${cubeBorderColor}`,
+              opacity: opacity * 0.7,
+              transform: `rotateX(180deg) translateZ(${halfSize}px)`,
+              backfaceVisibility: "hidden",
+            }}
+          />
+
+          {/* Front face */}
+          <div
+            className="cube-face absolute"
+            style={{
+              width: cubeSize,
+              height: cubeSize,
+              backgroundColor: color,
+              border: `${ghostBorder} ${cubeBorderColor}`,
+              opacity: opacity * 0.9,
+              transform: `rotateX(90deg) translateZ(${halfSize}px)`,
+              backfaceVisibility: "hidden",
+            }}
+          />
+
+          {/* Back face */}
+          <div
+            className="cube-face absolute"
+            style={{
+              width: cubeSize,
+              height: cubeSize,
+              backgroundColor: color,
+              border: `${ghostBorder} ${cubeBorderColor}`,
+              opacity: opacity * 0.7,
+              transform: `rotateX(-90deg) translateZ(${halfSize}px)`,
+              backfaceVisibility: "hidden",
+            }}
+          />
+
+          {/* Left face */}
+          <div
+            className="cube-face absolute"
+            style={{
+              width: cubeSize,
+              height: cubeSize,
+              backgroundColor: color,
+              border: `${ghostBorder} ${cubeBorderColor}`,
+              opacity: opacity * 0.8,
+              transform: `rotateY(-90deg) translateZ(${halfSize}px)`,
+              backfaceVisibility: "hidden",
+            }}
+          />
+
+          {/* Right face */}
+          <div
+            className="cube-face absolute"
+            style={{
+              width: cubeSize,
+              height: cubeSize,
+              backgroundColor: color,
+              border: `${ghostBorder} ${cubeBorderColor}`,
+              opacity: opacity * 0.8,
+              transform: `rotateY(90deg) translateZ(${halfSize}px)`,
+              backfaceVisibility: "hidden",
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  // Render piece preview (next or held) with 3D cubes
+  const render3DPiecePreview = (
     pieceData: { shape: number[][]; color: string } | null,
     label: string
   ) => {
@@ -929,7 +1085,14 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
       return (
         <div className="flex flex-col items-center">
           <h3 className="text-gray-300 mb-2">{label}</h3>
-          <div className="bg-black/30 border border-gray-700 w-24 h-24 flex items-center justify-center">
+          <div 
+            className="bg-black/30 p-2 flex items-center justify-center"
+            style={{
+              width: "80px",
+              height: "80px",
+              perspective: "600px",
+            }}
+          >
             <span className="text-gray-500">Empty</span>
           </div>
         </div>
@@ -938,40 +1101,107 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
     const { shape, color } = pieceData;
 
     // Calculate display dimensions
-    const cellSize = 18;
+    const previewCubeSize = 16;
     const maxDimension = Math.max(shape.length, shape[0]?.length || 0);
-    const previewSize = maxDimension * cellSize;
 
     return (
       <div className="flex flex-col items-center">
         <h3 className="text-gray-300 mb-2">{label}</h3>
         <div
-          className="bg-black/30 border border-gray-700 p-2 flex items-center justify-center"
-          style={{ width: "80px", height: "80px" }}
+          className="bg-black/30 p-2 flex items-center justify-center"
+          style={{ 
+            width: "80px", 
+            height: "80px",
+            perspective: "600px",
+          }}
         >
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${shape[0].length}, ${cellSize}px)`,
-              gridTemplateRows: `repeat(${shape.length}, ${cellSize}px)`,
-              gap: "1px",
+              position: "relative",
+              width: shape[0].length * previewCubeSize,
+              height: shape.length * previewCubeSize,
+              transformStyle: "preserve-3d",
+              transform: `rotateX(25deg) rotateY(15deg)`,
             }}
           >
             {shape.map((row, y) =>
-              row.map((cell, x) => (
-                <div
-                  key={`${label}-${y}-${x}`}
-                  style={{
-                    width: `${cellSize}px`,
-                    height: `${cellSize}px`,
-                    backgroundColor: cell ? color : "transparent",
-                    border: cell ? `1px solid rgba(255,255,255,0.5)` : "none",
-                    boxShadow: cell
-                      ? `inset 0 0 5px rgba(255,255,255,0.3)`
-                      : "none",
-                  }}
-                />
-              ))
+              row.map((cell, x) => {
+                if (!cell) return null;
+                return (
+                  <div 
+                    key={`${label}-${y}-${x}`} 
+                    className="absolute"
+                    style={{
+                      width: previewCubeSize,
+                      height: previewCubeSize,
+                      left: x * previewCubeSize,
+                      top: y * previewCubeSize,
+                      transformStyle: "preserve-3d",
+                    }}
+                  >
+                    <div
+                      className="w-full h-full relative"
+                      style={{
+                        transformStyle: "preserve-3d",
+                      }}
+                    >
+                      {/* Top face */}
+                      <div
+                        className="absolute w-full h-full"
+                        style={{
+                          backgroundColor: color,
+                          border: `1px solid ${cubeBorderColor}`,
+                          boxShadow: "inset 0 0 5px rgba(255,255,255,0.3)",
+                          transformStyle: "preserve-3d",
+                          transform: "translateZ(8px)",
+                        }}
+                      />
+                      
+                      {/* Front face */}
+                      <div
+                        className="absolute w-full"
+                        style={{
+                          height: "8px",
+                          backgroundColor: color,
+                          border: `1px solid ${cubeBorderColor}`,
+                          transformStyle: "preserve-3d",
+                          transform: "rotateX(-90deg) translateZ(0)",
+                          transformOrigin: "bottom",
+                          filter: "brightness(0.8)",
+                        }}
+                      />
+                      
+                      {/* Right face */}
+                      <div
+                        className="absolute h-full"
+                        style={{
+                          width: "8px",
+                          backgroundColor: color,
+                          border: `1px solid ${cubeBorderColor}`,
+                          transformStyle: "preserve-3d",
+                          transform: "rotateY(90deg) translateZ(0)",
+                          transformOrigin: "right",
+                          filter: "brightness(0.7)",
+                        }}
+                      />
+                      
+                      {/* Left face */}
+                      <div
+                        className="absolute h-full"
+                        style={{
+                          width: "8px",
+                          backgroundColor: color,
+                          border: `1px solid ${cubeBorderColor}`,
+                          transformStyle: "preserve-3d",
+                          transform: "rotateY(-90deg) translateZ(16px)",
+                          transformOrigin: "left",
+                          filter: "brightness(0.6)",
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
@@ -988,23 +1218,23 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
         animate={{
           x: [
             Math.random() * window.innerWidth,
-            Math.random() * window.innerWidth,
+            Math.random() * window.innerWidth
           ],
           y: [
             Math.random() * window.innerHeight,
-            Math.random() * window.innerHeight,
+            Math.random() * window.innerHeight
           ],
-          opacity: [0.1, 0.3, 0.1],
+          opacity: [0.1, 0.3, 0.1]
         }}
         transition={{
           duration: Math.random() * 20 + 10,
           repeat: Infinity,
-          ease: "linear",
+          ease: "linear"
         }}
         style={{
           width: `${Math.random() * 4 + 1}px`,
           height: `${Math.random() * 4 + 1}px`,
-          boxShadow: `0 0 ${Math.random() * 8 + 2}px ${mainColor}`,
+          boxShadow: `0 0 ${Math.random() * 8 + 2}px ${mainColor}`
         }}
       />
     ));
@@ -1087,105 +1317,158 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
     heldPiece,
   ]);
 
-  // Render the game grid with all pieces
-  const renderGrid = () => {
+  // Render the 3D game grid with all pieces
+  const render3DGrid = () => {
     // Ghost position calculation
     const ghostPosition = getGhostPosition();
+    
+    // Cell size
+    const cellSize = 30;
+    const gapSize = 1;
+    
+    // Calculate grid dimensions
+    const totalWidth = (cellSize + gapSize) * gridWidth;
+    const totalHeight = (cellSize + gapSize) * gridHeight;
 
     return (
       <motion.div
         ref={gridRef}
-        className="relative border-2 border-gray-800 bg-black/70 overflow-hidden"
+        className="relative overflow-hidden game-grid-3d"
         style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${gridWidth}, 30px)`,
-          gridTemplateRows: `repeat(${gridHeight}, 30px)`,
-          gap: "1px",
+          width: totalWidth,
+          height: totalHeight,
+          perspective: `${viewSettings.perspective}px`,
+          transformStyle: "preserve-3d", 
         }}
         animate={gridControls}
       >
-        {/* Background grid cells */}
-        {Array.from({ length: gridHeight }).map((_, y) =>
-          Array.from({ length: gridWidth }).map((_, x) => (
-            <div
-              key={`cell-${y}-${x}`}
-              className="bg-gray-900/50"
-              style={{ width: "30px", height: "30px" }}
-            />
-          ))
-        )}
+        {/* 3D Playfield with perspective */}
+        <div
+          className="absolute inset-0 transform-gpu"
+          style={{
+            transform: `rotateX(${viewSettings.rotateX}deg) rotateY(${viewSettings.rotateY}deg) translateZ(${viewSettings.translateZ}px) scale(${viewSettings.scale})`,
+            transformStyle: "preserve-3d",
+            transformOrigin: "center center",
+          }}
+        >
+          {/* Grid background */}
+          <div
+            className="absolute"
+            style={{
+              width: "100%",
+              height: "100%",
+              backgroundImage: "linear-gradient(rgba(30, 30, 50, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(30, 30, 50, 0.15) 1px, transparent 1px)",
+              backgroundSize: `${cellSize}px ${cellSize}px`,
+              transformStyle: "preserve-3d",
+              transform: "translateZ(-5px)",
+              backfaceVisibility: "hidden",
+            }}
+          />
+          
+          {/* Grid back wall */}
+          <div
+            className="absolute"
+            style={{
+              width: "100%",
+              height: "100%",
+              backgroundColor: "rgba(10, 10, 20, 0.3)",
+              transformStyle: "preserve-3d",
+              transform: "translateZ(-10px)",
+              boxShadow: "inset 0 0 30px rgba(0, 0, 0, 0.4)",
+              backfaceVisibility: "hidden",
+            }}
+          />
+          
+          {/* Grid left wall */}
+          <div
+            className="absolute"
+            style={{
+              width: "10px",
+              height: "100%",
+              backgroundColor: "rgba(30, 30, 50, 0.4)",
+              transformStyle: "preserve-3d",
+              transform: "rotateY(90deg) translateZ(-5px)",
+              transformOrigin: "left",
+              backfaceVisibility: "hidden",
+            }}
+          />
+          
+          {/* Grid right wall */}
+          <div
+            className="absolute"
+            style={{
+              width: "10px",
+              height: "100%",
+              backgroundColor: "rgba(30, 30, 50, 0.4)",
+              transformStyle: "preserve-3d",
+              transform: `rotateY(-90deg) translateZ(${totalWidth - 5}px)`,
+              transformOrigin: "right",
+              backfaceVisibility: "hidden",
+            }}
+          />
+          
+          {/* Grid floor */}
+          <div
+            className="absolute"
+            style={{
+              width: "100%",
+              height: "10px",
+              backgroundColor: "rgba(30, 30, 50, 0.4)",
+              transformStyle: "preserve-3d",
+              transform: `rotateX(90deg) translateZ(${totalHeight - 5}px)`,
+              transformOrigin: "bottom",
+              backfaceVisibility: "hidden",
+            }}
+          />
 
-        {/* Ghost piece */}
-        {currentPiece &&
-          ghostPosition &&
-          currentPiece.shape.map((row, y) =>
+          {/* Ghost piece */}
+          {currentPiece &&
+            ghostPosition &&
+            currentPiece.shape.map((row, y) =>
+              row.map((cell, x) =>
+                cell ? (
+                  render3DCube(
+                    currentPiece.color,
+                    ghostPosition.x + x,
+                    ghostPosition.y + y,
+                    1,
+                    true // Is ghost piece
+                  )
+                ) : null
+              )
+            )}
+
+          {/* Placed blocks */}
+          {grid.map((row, y) =>
             row.map((cell, x) =>
               cell ? (
-                <div
-                  key={`ghost-${y}-${x}`}
-                  className="absolute border border-white/30"
-                  style={{
-                    width: "28px",
-                    height: "28px",
-                    backgroundColor: `${currentPiece.color}30`,
-                    border: `1px dashed ${currentPiece.color}`,
-                    left: `${(ghostPosition.x + x) * 31}px`,
-                    bottom: `${(ghostPosition.y - y) * 31}px`,
-                    zIndex: 1,
-                  }}
-                />
+                render3DCube(
+                  cubeColors[cell - 1],
+                  x,
+                  y,
+                  4, // Default elevation
+                  false
+                )
               ) : null
             )
           )}
 
-        {/* Placed blocks */}
-        {grid.map((row, y) =>
-          row.map((cell, x) =>
-            cell ? (
-              <div
-                key={`block-${y}-${x}`}
-                className={`absolute ${
-                  clearedLines.includes(y) ? "animate-pulse" : ""
-                }`}
-                style={{
-                  width: "28px",
-                  height: "28px",
-                  backgroundColor: cubeColors[cell - 1],
-                  border: `1px solid ${cubeColors[cell - 1]}99`,
-                  boxShadow: `inset 0 0 8px rgba(255,255,255,0.5)${
-                    clearedLines.includes(y) ? ", 0 0 10px white" : ""
-                  }`,
-                  left: `${x * 31}px`,
-                  bottom: `${y * 31}px`,
-                  zIndex: 2,
-                }}
-              />
-            ) : null
-          )
-        )}
-
-        {/* Current piece */}
-        {currentPiece &&
-          currentPiece.shape.map((row, y) =>
-            row.map((cell, x) =>
-              cell ? (
-                <div
-                  key={`current-${y}-${x}`}
-                  className="absolute"
-                  style={{
-                    width: "28px",
-                    height: "28px",
-                    backgroundColor: currentPiece.color,
-                    border: `1px solid ${currentPiece.color}99`,
-                    boxShadow: "inset 0 0 8px rgba(255,255,255,0.5)",
-                    left: `${(currentPiece.position.x + x) * 31}px`,
-                    bottom: `${(currentPiece.position.y - y) * 31}px`,
-                    zIndex: 3,
-                  }}
-                />
-              ) : null
-            )
-          )}
+          {/* Current piece */}
+          {currentPiece &&
+            currentPiece.shape.map((row, y) =>
+              row.map((cell, x) =>
+                cell ? (
+                  render3DCube(
+                    currentPiece.color,
+                    currentPiece.position.x + x,
+                    currentPiece.position.y + y,
+                    8, // Slightly elevated
+                    false
+                  )
+                ) : null
+              )
+            )}
+        </div>
       </motion.div>
     );
   };
@@ -1272,7 +1555,7 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
 
         <div className="flex items-center justify-center gap-4">
           <div className="h-px w-16 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
-          <p className="text-xl text-blue-300 font-light">Tetris Evolution</p>
+          <p className="text-xl text-blue-300 font-light">3D Tetris Evolution</p>
           <div className="h-px w-16 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
         </div>
       </motion.div>
@@ -1284,17 +1567,17 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, delay: 0.7 }}
-          className="bg-black/50 backdrop-blur-md rounded-lg p-4 max-w-xs self-start border border-purple-500/20"
+          className="bg-black/50 backdrop-blur-md rounded-lg p-4 max-w-xs self-start"
         >
           <h3 className="text-purple-400 font-bold mb-2 text-lg">
-            {gameState === "playing" ? "Game Status" : "Tetris Evolution"}
+            {gameState === "playing" ? "Game Status" : "3D Tetris Evolution"}
           </h3>
 
           {gameState === "waiting" && (
             <ul className="text-gray-300 text-sm space-y-2">
               <li className="flex items-start gap-2">
                 <span className="text-purple-400 mt-1">•</span>
-                <span>Arrange falling blocks to create complete lines</span>
+                <span>Experience tetris in a 3D perspective view</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-purple-400 mt-1">•</span>
@@ -1309,6 +1592,10 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
               <li className="flex items-start gap-2">
                 <span className="text-purple-400 mt-1">•</span>
                 <span>Hold pieces with C key for strategic gameplay</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-purple-400 mt-1">•</span>
+                <span>Move your mouse to adjust the 3D perspective</span>
               </li>
             </ul>
           )}
@@ -1343,12 +1630,12 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
 
           {/* Held piece and next piece previews */}
           <div className="flex flex-col gap-4 mt-4">
-            <div className="flex flex-col items-center p-3 bg-black/40 border border-gray-800 rounded-lg backdrop-blur-sm">
-              {renderPiecePreview(heldPiece, "HOLD (C)")}
+            <div className="flex flex-col items-center p-3 bg-black/40 backdrop-blur-sm">
+              {render3DPiecePreview(heldPiece, "HOLD (C)")}
             </div>
 
-            <div className="flex flex-col items-center p-3 bg-black/40 border border-gray-800 rounded-lg backdrop-blur-sm">
-              {renderPiecePreview(nextPiece, "NEXT")}
+            <div className="flex flex-col items-center p-3 bg-black/40 backdrop-blur-sm">
+              {render3DPiecePreview(nextPiece, "NEXT")}
             </div>
           </div>
 
@@ -1406,14 +1693,14 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
           </div>
         </motion.div>
 
-        {/* Center - Game Grid */}
+        {/* Center - 3D Game Grid */}
         <div className="flex flex-col">
           {/* Game status indicator */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.5 }}
-            className="mb-2 text-center backdrop-blur-sm bg-black/20 px-6 py-2 rounded-lg border border-purple-500/20"
+            className="mb-2 text-center backdrop-blur-sm bg-black/20 px-6 py-2 rounded-lg"
           >
             <div className="flex items-center justify-center gap-4 mb-1">
               <div className="text-lg text-gray-300">Status</div>
@@ -1442,15 +1729,30 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
             </div>
           </motion.div>
 
-          {/* Game grid */}
-          <div className="relative flex justify-center">{renderGrid()}</div>
+          {/* Floating 3D Game grid - removed border box */}
+          <div className="relative flex justify-center">
+            <div 
+              className="glow-effect"
+              style={{
+                position: "absolute",
+                width: "100%",
+                height: "110%",
+                top: "-5%",
+                left: "0",
+                background: `radial-gradient(70% 50% at center, ${mainColor}10, transparent)`,
+                pointerEvents: "none",
+                zIndex: 1
+              }}
+            />
+            {render3DGrid()}
+          </div>
 
           {/* Controls hint below the grid */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="mt-4 text-center text-gray-300 text-sm bg-black/30 py-2 px-4 rounded-md border border-purple-500/20"
+            className="mt-4 text-center text-gray-300 text-sm bg-black/30 py-2 px-4 rounded-md"
           >
             <span className="flex items-center justify-center gap-2">
               Move: Arrow Keys &nbsp;|&nbsp; Rotate: Z &nbsp;|&nbsp; Hard Drop:
@@ -1516,6 +1818,39 @@ const CrypticRealm: React.FC<CrypticRealmProps> = ({
         .font-pixel {
           font-family: "Press Start 2P", monospace;
           letter-spacing: 0.05em;
+        }
+        
+        .cube-scene {
+          perspective: 800px;
+          perspective-origin: center center;
+        }
+        
+        .cube {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          transform-style: preserve-3d;
+        }
+        
+        .cube-face {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          backface-visibility: hidden;
+        }
+        
+        .game-grid-3d {
+          transform-style: preserve-3d;
+          box-shadow: 0 20px 80px rgba(0, 0, 0, 0.5);
+        }
+
+        .glow-effect {
+          animation: pulse 4s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 1; }
         }
       `}</style>
     </div>
