@@ -8,6 +8,8 @@ import {
   useTransform,
   useSpring,
   AnimatePresence,
+  useMotionValue,
+  animate,
 } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/navigation";
@@ -121,7 +123,9 @@ const FeatureCard = ({
           className={`text-2xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r ${feature.color}`}
         />
 
-        <p className="text-gray-400 leading-relaxed font-pixel">{feature.description}</p>
+        <p className="text-gray-400 leading-relaxed font-pixel">
+          {feature.description}
+        </p>
 
         {/* Interactive elements that appear on hover */}
         <div className="absolute bottom-8 right-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -150,6 +154,170 @@ const FeatureCard = ({
       <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" />
       <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" />
     </motion.div>
+  );
+};
+
+const PixelVoidCube = ({ className }: { className?: string }) => {
+  return (
+    <div className={`relative ${className}`}>
+      {/* SVG Void Cube - Enhanced with animation capabilities */}
+      <svg width="100%" height="100%" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Animated outer dark ring - darkest purple */}
+        <motion.g
+          animate={{ 
+            scale: [1, 1.02, 1],
+            opacity: [0.9, 1, 0.9]
+          }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+            repeatType: "reverse"
+          }}
+        >
+          <rect x="6" y="0" width="8" height="1" fill="#4A1442" />
+          <rect x="4" y="1" width="2" height="1" fill="#4A1442" />
+          <rect x="14" y="1" width="2" height="1" fill="#4A1442" />
+          <rect x="3" y="2" width="1" height="1" fill="#4A1442" />
+          <rect x="16" y="2" width="1" height="1" fill="#4A1442" />
+          <rect x="2" y="3" width="1" height="1" fill="#4A1442" />
+          <rect x="17" y="3" width="1" height="1" fill="#4A1442" />
+          <rect x="1" y="4" width="1" height="2" fill="#4A1442" />
+          <rect x="18" y="4" width="1" height="2" fill="#4A1442" />
+          <rect x="0" y="6" width="1" height="8" fill="#4A1442" />
+          <rect x="19" y="6" width="1" height="8" fill="#4A1442" />
+          <rect x="1" y="14" width="1" height="2" fill="#4A1442" />
+          <rect x="18" y="14" width="1" height="2" fill="#4A1442" />
+          <rect x="2" y="16" width="1" height="1" fill="#4A1442" />
+          <rect x="17" y="16" width="1" height="1" fill="#4A1442" />
+          <rect x="3" y="17" width="1" height="1" fill="#4A1442" />
+          <rect x="16" y="17" width="1" height="1" fill="#4A1442" />
+          <rect x="4" y="18" width="2" height="1" fill="#4A1442" />
+          <rect x="14" y="18" width="2" height="1" fill="#4A1442" />
+          <rect x="6" y="19" width="8" height="1" fill="#4A1442" />
+        </motion.g>
+
+        {/* Main circle - purple */}
+        <motion.g
+          animate={{ 
+            scale: [1, 1.01, 1]
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            repeatType: "reverse"
+          }}
+        >
+          <rect x="4" y="2" width="12" height="2" fill="#9C27B0" />
+          <rect x="2" y="4" width="2" height="2" fill="#9C27B0" />
+          <rect x="16" y="4" width="2" height="2" fill="#9C27B0" />
+          <rect x="1" y="6" width="1" height="8" fill="#9C27B0" />
+          <rect x="18" y="6" width="1" height="8" fill="#9C27B0" />
+          <rect x="2" y="14" width="2" height="2" fill="#9C27B0" />
+          <rect x="16" y="14" width="2" height="2" fill="#9C27B0" />
+          <rect x="4" y="16" width="12" height="2" fill="#9C27B0" />
+        </motion.g>
+        
+        {/* Inner circle - lighter purple */}
+        <rect x="4" y="4" width="12" height="12" fill="#AB47BC" />
+        
+        {/* Inner shape - bright magenta - with pulse animation */}
+        <motion.g
+          animate={{ 
+            opacity: [0.9, 1, 0.9],
+            scale: [1, 1.03, 1]
+          }}
+          transition={{
+            duration: 2.5,
+            repeat: Infinity,
+            repeatType: "reverse"
+          }}
+        >
+          <rect x="6" y="3" width="8" height="1" fill="#E040FB" />
+          <rect x="5" y="4" width="1" height="1" fill="#E040FB" />
+          <rect x="14" y="4" width="1" height="1" fill="#E040FB" />
+          <rect x="4" y="5" width="1" height="1" fill="#E040FB" />
+          <rect x="15" y="5" width="1" height="1" fill="#E040FB" />
+          <rect x="3" y="6" width="1" height="2" fill="#E040FB" />
+          <rect x="16" y="6" width="1" height="2" fill="#E040FB" />
+          <rect x="4" y="8" width="1" height="1" fill="#E040FB" />
+          <rect x="15" y="8" width="1" height="1" fill="#E040FB" />
+          <rect x="5" y="9" width="1" height="1" fill="#E040FB" />
+          <rect x="14" y="9" width="1" height="1" fill="#E040FB" />
+          <rect x="6" y="10" width="1" height="1" fill="#E040FB" />
+          <rect x="13" y="10" width="1" height="1" fill="#E040FB" />
+          <rect x="7" y="11" width="1" height="1" fill="#E040FB" />
+          <rect x="12" y="11" width="1" height="1" fill="#E040FB" />
+          <rect x="8" y="12" width="1" height="1" fill="#E040FB" />
+          <rect x="11" y="12" width="1" height="1" fill="#E040FB" />
+          <rect x="9" y="13" width="2" height="1" fill="#E040FB" />
+          <rect x="9" y="14" width="2" height="1" fill="#E040FB" />
+          <rect x="9" y="15" width="2" height="1" fill="#E040FB" />
+          <rect x="9" y="16" width="2" height="1" fill="#E040FB" />
+        </motion.g>
+        
+        {/* Center void - black - with subtle animation */}
+        <motion.g
+          animate={{ 
+            scale: [1, 1.1, 1],
+            opacity: [0.9, 1, 0.9]
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            repeatType: "reverse"
+          }}
+        >
+          <rect x="6" y="6" width="8" height="4" fill="#000000" />
+          <rect x="7" y="10" width="6" height="1" fill="#000000" />
+        </motion.g>
+      </svg>
+
+      {/* Animated particles around the cube */}
+      <div className="absolute inset-0 pointer-events-none">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <motion.div
+            key={`particle-${i}`}
+            className="absolute rounded-full bg-purple-300"
+            style={{
+              width: `${1 + Math.random() * 2}px`,
+              height: `${1 + Math.random() * 2}px`,
+              top: `${20 + Math.random() * 60}%`,
+              left: `${20 + Math.random() * 60}%`,
+              opacity: 0.5 + Math.random() * 0.5,
+              boxShadow: '0 0 4px rgba(168, 85, 247, 0.8)'
+            }}
+            animate={{
+              y: [-(Math.random() * 20), Math.random() * 20],
+              x: [-(Math.random() * 20), Math.random() * 20],
+              opacity: [0.5, 1, 0.5]
+            }}
+            transition={{
+              duration: 2 + Math.random() * 3,
+              repeat: Infinity,
+              repeatType: "reverse",
+              ease: "easeInOut"
+            }}
+          />
+        ))}
+      </div>
+      
+      {/* Enhanced glow effect */}
+      <motion.div 
+        className="absolute inset-0 rounded-full pointer-events-none"
+        animate={{ 
+          boxShadow: [
+            '0 0 0px rgba(168, 85, 247, 0)', 
+            '0 0 20px rgba(168, 85, 247, 0.3)', 
+            '0 0 0px rgba(168, 85, 247, 0)'
+          ]
+        }}
+        transition={{ 
+          duration: 3,
+          repeat: Infinity,
+          repeatType: "reverse"
+        }}
+      />
+    </div>
   );
 };
 
@@ -349,6 +517,831 @@ const FloatingParticles = () => {
   );
 };
 
+// Enhanced Scrolling Text Section for "NEXT EVOLUTION"
+const ScrollingTextSection = () => {
+  const { scrollYProgress } = useScroll();
+
+  // Scroll-based animations for the text lines with more extreme movement
+  const textLine1X = useTransform(scrollYProgress, [0.05, 0.2], [0, -500]);
+  const textLine2X = useTransform(scrollYProgress, [0.05, 0.2], [0, 500]);
+  const textLine3X = useTransform(scrollYProgress, [0.05, 0.2], [0, -700]);
+  const textLine4X = useTransform(scrollYProgress, [0.05, 0.2], [0, 600]);
+  const textLine5X = useTransform(scrollYProgress, [0.05, 0.2], [0, -550]);
+
+  // Smoother movement with spring physics
+  const smoothLine1X = useSpring(textLine1X, { stiffness: 100, damping: 30 });
+  const smoothLine2X = useSpring(textLine2X, { stiffness: 100, damping: 30 });
+  const smoothLine3X = useSpring(textLine3X, { stiffness: 100, damping: 30 });
+  const smoothLine4X = useSpring(textLine4X, { stiffness: 100, damping: 30 });
+  const smoothLine5X = useSpring(textLine5X, { stiffness: 100, damping: 30 });
+
+  // Animation for content reveal
+  const contentOpacity = useTransform(scrollYProgress, [0.05, 0.15], [0, 1]);
+  const contentY = useTransform(scrollYProgress, [0.05, 0.15], [100, 0]);
+
+  return (
+    <section className="relative py-32 bg-black overflow-hidden">
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        {/* Text rows that move horizontally as user scrolls */}
+        <motion.div
+          className="whitespace-nowrap text-[150px] leading-none font-bold text-gray-900 opacity-80 py-4 font-pixel"
+          style={{ x: smoothLine1X }}
+        >
+          NEW AGE OF GAMING. NEW AGE OF GAMING. NEW AGE
+        </motion.div>
+
+        <motion.div
+          className="whitespace-nowrap text-[150px] leading-none font-bold text-gray-900 opacity-80 py-4 font-pixel"
+          style={{ x: smoothLine2X }}
+        >
+          BORDERLESS EXPERIENCE. BORDERLESS EXPERIENCE.
+        </motion.div>
+
+        <motion.div
+          className="whitespace-nowrap text-[150px] leading-none font-bold text-gray-900 opacity-80 py-4 font-pixel"
+          style={{ x: smoothLine3X }}
+        >
+          VOID UNIVERSE. VOID UNIVERSE. VOID UNIVERSE.
+        </motion.div>
+
+        <motion.div
+          className="whitespace-nowrap text-[150px] leading-none font-bold text-gray-900 opacity-80 py-4 font-pixel"
+          style={{ x: smoothLine4X }}
+        >
+          GAMING REDEFINED. GAMING REDEFINED. GAMING
+        </motion.div>
+
+        <motion.div
+          className="whitespace-nowrap text-[150px] leading-none font-bold text-gray-900 opacity-80 py-4 font-pixel"
+          style={{ x: smoothLine5X }}
+        >
+          BEYOND REALITY. BEYOND REALITY. BEYOND REALITY.
+        </motion.div>
+      </div>
+
+      {/* Enhanced visual elements */}
+      <div className="absolute inset-0 z-5">
+        {/* Animated grid overlay */}
+        <div className="absolute inset-0 grid grid-cols-[repeat(40,1fr)] grid-rows-[repeat(40,1fr)] opacity-20">
+          {Array.from({ length: 1600 }).map((_, i) => (
+            <motion.div
+              key={`grid-${i}`}
+              className="border border-purple-500/10"
+              animate={{
+                borderColor:
+                  i % 20 === 0
+                    ? [
+                        "rgba(168, 85, 247, 0.1)",
+                        "rgba(168, 85, 247, 0.3)",
+                        "rgba(168, 85, 247, 0.1)",
+                      ]
+                    : undefined,
+              }}
+              transition={{
+                duration: 3 + (i % 5),
+                repeat: Infinity,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Animated particles */}
+        {Array.from({ length: 20 }).map((_, i) => (
+          <motion.div
+            key={`particle-${i}`}
+            className="absolute rounded-none bg-purple-500"
+            style={{
+              width: `${4 + Math.random() * 8}px`,
+              height: `${4 + Math.random() * 8}px`,
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              opacity: 0.3 + Math.random() * 0.4,
+            }}
+            animate={{
+              x: [0, Math.random() * 100 - 50],
+              y: [0, Math.random() * 100 - 50],
+              opacity: [0.3, 0.7, 0.3],
+            }}
+            transition={{
+              duration: 5 + Math.random() * 5,
+              repeat: Infinity,
+              repeatType: "reverse",
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="flex justify-center items-center min-h-[80vh]">
+          <motion.div
+            className="max-w-4xl text-center"
+            style={{
+              opacity: contentOpacity,
+              y: contentY,
+            }}
+          >
+            <PixelHeading
+              text="THE NEXT STAGE"
+              className="text-7xl md:text-8xl font-black tracking-tighter mb-10 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600"
+            />
+
+            {/* Animated underline */}
+            <motion.div
+              className="h-2 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto mb-10"
+              initial={{ width: "0%" }}
+              whileInView={{ width: "80%" }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              viewport={{ once: true }}
+            />
+
+            <p className="text-2xl text-white/90 mb-12 font-pixel leading-relaxed">
+              VOID redefines the boundaries between art, technology, and gaming,
+              creating a universe where your choices shape the very fabric of
+              reality.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+              {[
+                {
+                  icon: "✧",
+                  title: "IMMERSIVE",
+                  desc: "Experience like never before",
+                },
+                {
+                  icon: "⬡",
+                  title: "INNOVATIVE",
+                  desc: "Cutting-edge technology",
+                },
+                {
+                  icon: "⟐",
+                  title: "INTERACTIVE",
+                  desc: "Shape your own journey",
+                },
+              ].map((item, i) => (
+                <motion.div
+                  key={i}
+                  className="bg-black/50 border border-purple-500/30 p-6 backdrop-blur-sm"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.2 }}
+                >
+                  <div className="text-3xl mb-4 text-purple-400">
+                    {item.icon}
+                  </div>
+                  <h3 className="text-xl mb-2 font-pixel text-white">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm text-gray-400 font-pixel">
+                    {item.desc}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// Redesigned Roadmap Section with dark theme and proper scroll behavior
+const RoadmapSection = () => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const sectionRef = useRef(null);
+  const { scrollYProgress } = useScroll();
+
+  // Define roadmap items
+  const roadmapItems = [
+    {
+      phase: "01",
+      title: "LAUNCH OFFICIAL WEBSITE",
+      items: ["START SOCIAL MEDIA", "START MARKETING"],
+    },
+    {
+      phase: "02",
+      title: "CONNECT WALLET",
+      items: ["SOLANA INTEGRATION", "PROFILE CREATION", "SECURE ACCESS SYSTEM"],
+    },
+    {
+      phase: "03",
+      title: "3D CUBE CREATION",
+      items: [
+        "UNIQUE CUBE DESIGNS",
+        "CUSTOMIZATION OPTIONS",
+        "SPECIAL ABILITIES",
+      ],
+    },
+    {
+      phase: "04",
+      title: "MUSIC NFTs",
+      items: [
+        "DYNAMIC SOUNDSCAPES",
+        "INTERACTIVE AUDIO",
+        "COMPOSER COLLABORATIONS",
+      ],
+    },
+    {
+      phase: "05",
+      title: "NFT MINTING",
+      items: [
+        "LIMITED COLLECTIONS",
+        "SPECIAL EDITIONS",
+        "REALM-SPECIFIC ITEMS",
+      ],
+    },
+    {
+      phase: "06",
+      title: "MARKETPLACE",
+      items: ["NFT TRADING", "CUBE ENHANCEMENT", "COLLECTIBLE SHOWCASE"],
+    },
+    {
+      phase: "07",
+      title: "GAMEPLAY EXPANSION",
+      items: [
+        "MULTI-REALM ADVENTURES",
+        "COMPETITIVE MODES",
+        "COMMUNITY EVENTS",
+      ],
+    },
+  ];
+
+  // Set up scroll-based phase change with waypoints using useState and useEffect
+  useEffect(() => {
+    // Get the section element height to calculate waypoints
+    if (!sectionRef.current) return;
+
+    const unsubscribe = scrollYProgress.onChange((value) => {
+      // If roadmap is in viewport (approx between 0.3-0.7 of scroll progress)
+      if (value > 0.3 && value < 0.7) {
+        // Map overall scroll to phases
+        const scrollRange = 0.4; // 0.7 - 0.3
+        const relativeProgress = (value - 0.3) / scrollRange;
+        const newIndex = Math.min(
+          Math.floor(relativeProgress * roadmapItems.length),
+          roadmapItems.length - 1
+        );
+
+        // Only update if changed
+        if (newIndex !== activeIndex) {
+          setActiveIndex(newIndex);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [scrollYProgress, activeIndex]);
+
+  return (
+    <section
+      ref={sectionRef}
+      className="relative py-32 bg-black overflow-hidden"
+      id="roadmap"
+    >
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-16 text-center">
+            <PixelHeading
+              text="ROADMAP"
+              className="text-6xl md:text-7xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600"
+            />
+            <div className="w-40 h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto"></div>
+            <div className="mt-4 text-lg font-pixel text-purple-400 uppercase">
+              PHASE__
+              {activeIndex + 1 < 10 ? "0" + (activeIndex + 1) : activeIndex + 1}
+            </div>
+          </div>
+
+          <div className="relative min-h-[50vh] flex items-center justify-center">
+            {/* Left side phase numbers */}
+            <div className="absolute left-0 top-1/2 transform -translate-y-1/2 flex flex-col items-start space-y-6">
+              {roadmapItems.map((_, index) => (
+                <motion.div
+                  key={`left-num-${index}`}
+                  className={`flex items-center ${
+                    index === activeIndex ? "opacity-100" : "opacity-30"
+                  }`}
+                >
+                  <motion.div
+                    animate={{
+                      scale: index === activeIndex ? [1, 1.2, 1] : 1,
+                      opacity: index === activeIndex ? 1 : 0.3,
+                    }}
+                    transition={{
+                      duration: 1,
+                      repeat: index === activeIndex ? Infinity : 0,
+                    }}
+                    className="w-6 h-6 flex items-center justify-center"
+                  >
+                    {index === activeIndex ? (
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M5 12H19"
+                          stroke="#a855f7"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                        <path
+                          d="M12 5L19 12L12 19"
+                          stroke="#a855f7"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ) : (
+                      <div className="w-2 h-2 bg-purple-500/50"></div>
+                    )}
+                  </motion.div>
+                  <div
+                    className={`ml-2 font-mono text-sm text-purple-500 ${
+                      index === activeIndex ? "font-bold" : ""
+                    }`}
+                  >
+                    {(index + 1).toString().padStart(2, "0")}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Right side phase numbers */}
+            <div className="absolute right-0 top-1/2 transform -translate-y-1/2 flex flex-col items-end space-y-6">
+              {roadmapItems.map((_, index) => (
+                <motion.div
+                  key={`right-num-${index}`}
+                  className={`flex items-center ${
+                    index === activeIndex ? "opacity-100" : "opacity-30"
+                  }`}
+                >
+                  <div
+                    className={`mr-2 font-mono text-sm text-purple-500 ${
+                      index === activeIndex ? "font-bold" : ""
+                    }`}
+                  >
+                    {(index + 1).toString().padStart(2, "0")}
+                  </div>
+                  <motion.div
+                    animate={{
+                      scale: index === activeIndex ? [1, 1.2, 1] : 1,
+                      opacity: index === activeIndex ? 1 : 0.3,
+                    }}
+                    transition={{
+                      duration: 1,
+                      repeat: index === activeIndex ? Infinity : 0,
+                    }}
+                    className="w-6 h-6 flex items-center justify-center"
+                  >
+                    {index === activeIndex ? (
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M19 12H5"
+                          stroke="#a855f7"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                        <path
+                          d="M12 5L5 12L12 19"
+                          stroke="#a855f7"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ) : (
+                      <div className="w-2 h-2 bg-purple-500/50"></div>
+                    )}
+                  </motion.div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Main content with animations */}
+            <div className="w-full max-w-5xl mx-auto">
+              <AnimatePresence mode="wait">
+                {roadmapItems.map(
+                  (item, index) =>
+                    index === activeIndex && (
+                      <motion.div
+                        key={`roadmap-${index}`}
+                        className="w-full"
+                        initial={{ opacity: 0, y: 100 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -100 }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <div className="text-center mb-8">
+                          <motion.div
+                            className="text-6xl md:text-7xl font-black mb-16 text-white font-pixel"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.2, duration: 0.5 }}
+                          >
+                            {item.title}
+                          </motion.div>
+
+                          <div className="mt-8 flex flex-col space-y-6">
+                            {item.items.map((subItem, idx) => (
+                              <motion.div
+                                key={idx}
+                                className="text-center"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: idx === 0 ? 1 : 0.6, y: 0 }}
+                                transition={{
+                                  delay: 0.4 + idx * 0.2,
+                                  duration: 0.5,
+                                }}
+                              >
+                                <p className="text-2xl md:text-3xl font-pixel text-gray-400">
+                                  {subItem}
+                                </p>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Progress indicators */}
+          <div className="flex justify-center space-x-3 mt-14">
+            {roadmapItems.map((_, idx) => (
+              <motion.div
+                key={`dot-${idx}`}
+                className="group cursor-pointer"
+                whileHover={{ scale: 1.2 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setActiveIndex(idx)}
+              >
+                <div
+                  className={`w-4 h-4 border-2 ${
+                    idx === activeIndex
+                      ? "bg-purple-600 border-purple-400"
+                      : "bg-transparent border-purple-600"
+                  }`}
+                />
+                <motion.div
+                  className={`w-4 h-4 absolute -mt-4 bg-purple-500/30 scale-0 group-hover:scale-100 transition-transform duration-200`}
+                />
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Background elements */}
+          <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+            <div className="absolute inset-0 grid grid-cols-[repeat(40,1fr)] grid-rows-[repeat(20,1fr)] opacity-10">
+              {Array.from({ length: 20 }).map((_, i) => (
+                <motion.div
+                  key={`grid-${i}`}
+                  className="border border-purple-500/10"
+                  animate={{
+                    borderColor:
+                      i % 10 === 0
+                        ? [
+                            "rgba(168, 85, 247, 0.1)",
+                            "rgba(168, 85, 247, 0.3)",
+                            "rgba(168, 85, 247, 0.1)",
+                          ]
+                        : undefined,
+                  }}
+                  transition={{
+                    duration: 3 + (i % 5),
+                    repeat: Infinity,
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Animated particles */}
+            {Array.from({ length: 20 }).map((_, i) => (
+              <motion.div
+                key={`particle-${i}`}
+                className="absolute rounded-none bg-purple-500"
+                style={{
+                  width: `${4 + Math.random() * 4}px`,
+                  height: `${4 + Math.random() * 4}px`,
+                  top: `${Math.random() * 100}%`,
+                  left: `${Math.random() * 100}%`,
+                  opacity: 0.2 + Math.random() * 0.2,
+                }}
+                animate={{
+                  x: [0, Math.random() * 50 - 25],
+                  y: [0, Math.random() * 50 - 25],
+                  opacity: [0.2, 0.3, 0.2],
+                }}
+                transition={{
+                  duration: 5 + Math.random() * 5,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// Enhanced Fullscreen Ticket Section
+const TicketSection = () => {
+  return (
+    <section className="relative min-h-screen flex items-center justify-center py-16 bg-black overflow-hidden">
+      {/* Enhanced background particles - more of them */}
+      <div className="absolute inset-0 z-0">
+        {/* Large glowing circles in background */}
+        <div className="absolute top-1/4 left-1/4 w-[40vw] h-[40vw] rounded-full bg-purple-900/10 blur-3xl"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-[30vw] h-[30vw] rounded-full bg-pink-900/10 blur-3xl"></div>
+
+        {/* Animated particles */}
+        {Array.from({ length: 80 }).map((_, i) => (
+          <motion.div
+            key={`particle-${i}`}
+            className="absolute rounded-none bg-purple-500"
+            style={{
+              width: `${1 + Math.random() * 4}px`,
+              height: `${1 + Math.random() * 4}px`,
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              opacity: 0.2 + Math.random() * 0.4,
+            }}
+            animate={{
+              x: [0, Math.random() * 80 - 40],
+              y: [0, Math.random() * 80 - 40],
+              opacity: [0.2, 0.5, 0.2],
+            }}
+            transition={{
+              duration: 5 + Math.random() * 10,
+              repeat: Infinity,
+              repeatType: "reverse",
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Grid overlay for background */}
+      <div className="absolute inset-0 grid grid-cols-[repeat(40,1fr)] grid-rows-[repeat(40,1fr)] opacity-10 pointer-events-none">
+        {Array.from({ length: 1600 }).map((_, i) => (
+          <div key={`grid-${i}`} className="border border-purple-500/5" />
+        ))}
+      </div>
+
+      <div className="container mx-auto px-4 relative z-10 max-w-6xl">
+        {/* Section heading */}
+        <div className="text-center mb-12">
+          <PixelHeading
+            text="JOIN THE VOID"
+            className="text-5xl md:text-6xl font-black tracking-tighter mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600"
+          />
+
+          <motion.div
+            className="h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto w-40 relative overflow-hidden"
+            initial={{ width: "0%" }}
+            animate={{ width: "200px" }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+          >
+            <motion.div
+              className="absolute top-0 left-0 h-full w-20 bg-white/50"
+              animate={{ x: [0, 200, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+          </motion.div>
+        </div>
+
+        {/* Enhanced ticket container - much bigger */}
+        <motion.div
+          className="relative overflow-hidden mx-auto"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+        >
+          {/* Main ticket content */}
+          <div className="bg-black/80 backdrop-blur-sm border-2 border-purple-600 rounded-lg overflow-hidden shadow-[0_0_50px_rgba(168,85,247,0.15)]">
+            <div className="relative p-8 md:p-12">
+              {/* Ticket header - enhanced with more elements */}
+              <div className="flex flex-col md:flex-row justify-between items-center mb-12 border-b border-purple-600/50 pb-8">
+                <div className="flex items-center mb-6 md:mb-0">
+                  <div>
+                    <PixelHeading
+                      text="JOIN US"
+                      className="text-4xl md:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
+                    />
+                    <div className="text-purple-400 text-sm mt-1 font-pixel">
+                      BECOME PART OF THE VOID UNIVERSE
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end">
+                  <div className="uppercase font-bold text-purple-400 text-lg">
+                    ETERNAL PASS
+                  </div>
+                  <div className="text-gray-400 font-pixel text-sm">
+                    (for void_collector)
+                  </div>
+
+                  {/* Serial number */}
+                  <div className="mt-3 font-mono text-xs text-gray-500">
+                    #VOID-
+                    {Math.floor(Math.random() * 10000)
+                      .toString()
+                      .padStart(4, "0")}
+                  </div>
+                </div>
+              </div>
+
+              {/* Ticket content - restructured for more space */}
+              <div className="flex flex-col md:flex-row">
+                {/* Left section - expanded with more details */}
+                <div className="flex-1 border-r border-purple-600/30 pr-6 md:pr-16">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-10">
+                    <div className="space-y-2">
+                      <div className="text-sm text-purple-400 uppercase font-pixel">
+                        DATE
+                      </div>
+                      <div className="text-2xl font-bold text-white">
+                        RIGHT NOW
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="text-sm text-purple-400 uppercase font-pixel">
+                        PROJECT
+                      </div>
+                      <div className="text-2xl font-bold text-white">
+                        VOID UNIVERSE
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="text-sm text-purple-400 uppercase font-pixel">
+                        PLACE
+                      </div>
+                      <div className="text-2xl font-bold text-white">
+                        OUR X ACCOUNT
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="text-sm text-purple-400 uppercase font-pixel">
+                        SEAT
+                      </div>
+                      <div className="text-2xl font-bold text-white">
+                        FIRST CLASS
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Benefits list - new section */}
+                  <div className="mt-12">
+                    <div className="text-sm text-purple-400 uppercase font-pixel mb-4">
+                      BENEFITS
+                    </div>
+                    <div className="space-y-4">
+                      {[
+                        "EXCLUSIVE ACCESS TO FUTURE DROPS",
+                        "EARLY NOTIFICATIONS FOR NEW RELEASES",
+                        "COMMUNITY PRIVILEGES & SPECIAL EVENTS",
+                      ].map((benefit, idx) => (
+                        <div key={idx} className="flex items-start">
+                          <div className="w-4 h-4 mr-3 bg-purple-600 mt-1 flex-shrink-0"></div>
+                          <div className="text-gray-300 font-pixel text-sm">
+                            {benefit}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right section - enhanced for more impact */}
+                <div className="mt-12 md:mt-0 md:w-2/5 md:pl-16 flex flex-col items-center justify-center">
+                  {/* QR Code placeholder with enhanced glowing effect */}
+                  <div className="relative">
+                    <motion.div
+                      className="absolute -inset-4 bg-purple-500/20 blur-xl rounded-full"
+                      animate={{
+                        opacity: [0.2, 0.5, 0.2],
+                        scale: [0.95, 1.05, 0.95],
+                      }}
+                      transition={{
+                        duration: 4,
+                        repeat: Infinity,
+                      }}
+                    />
+                    <div className="relative w-48 h-48 border-2 border-purple-500 p-2 mb-6">
+                      <div className="w-full h-full grid grid-cols-10 grid-rows-10 gap-px bg-black">
+                        {Array.from({ length: 100 }).map((_, i) => (
+                          <div
+                            key={`qr-${i}`}
+                            className={`${
+                              Math.random() > 0.5 ? "bg-purple-500" : "bg-black"
+                            }`}
+                          ></div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-center text-lg font-bold text-purple-400 font-pixel mb-8">
+                    @VOID_UNIVERSE
+                  </div>
+
+                  {/* Enhanced button */}
+                  <motion.button
+                    className="bg-transparent border-2 border-purple-500 text-white py-4 px-10 flex items-center justify-center font-pixel relative overflow-hidden group"
+                    whileHover={{
+                      backgroundColor: "rgba(168, 85, 247, 0.2)",
+                      boxShadow: "0 0 20px rgba(168, 85, 247, 0.5)",
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {/* Button glow effect */}
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-purple-600/0 via-purple-600/20 to-purple-600/0 -translate-x-full"
+                      animate={{
+                        x: ["0%", "200%"],
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        ease: "easeInOut",
+                        repeat: Infinity,
+                        repeatDelay: 1,
+                      }}
+                    />
+                    <span className="mr-3 text-lg">X</span> FOLLOW US
+                  </motion.button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Corner decorative elements - larger and more pronounced */}
+          <div className="absolute top-3 left-3 w-8 h-8 border-t-2 border-l-2 border-purple-500"></div>
+          <div className="absolute top-3 right-3 w-8 h-8 border-t-2 border-r-2 border-purple-500"></div>
+          <div className="absolute bottom-3 left-3 w-8 h-8 border-b-2 border-l-2 border-purple-500"></div>
+          <div className="absolute bottom-3 right-3 w-8 h-8 border-b-2 border-r-2 border-purple-500"></div>
+
+          {/* Dashed perforation line */}
+          <div className="absolute top-0 bottom-0 md:left-[60%] w-0 border-l-2 border-dashed border-purple-600/50"></div>
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
+// Improved VOID Logo Section with pixel style background
+const VoidLogoSection = () => {
+  return (
+    <section className="relative h-screen flex items-center justify-center overflow-hidden bg-black">
+      {/* Thin static lines */}
+      <div className="absolute inset-0 z-5 opacity-20">
+        <div className="absolute h-full w-px bg-purple-500 left-[10%]"></div>
+        <div className="absolute h-full w-px bg-purple-500 right-[10%]"></div>
+        <div className="absolute w-full h-px bg-purple-500 top-[10%]"></div>
+        <div className="absolute w-full h-px bg-purple-500 bottom-[10%]"></div>
+      </div>
+
+      {/* Fullscreen VOID text with neon effect */}
+      <div className="relative z-10 flex items-center justify-center w-full h-full">
+        {/* Main glowing text */}
+        <motion.div
+          className="text-[30vh] md:text-[40vh] font-pixel text-transparent font-black leading-none"
+          style={{
+            WebkitTextStroke: "2px rgba(216, 180, 254, 0.9)",
+            filter:
+              "drop-shadow(0 0 15px rgba(168, 85, 247, 0.8)) drop-shadow(0 0 40px rgba(139, 92, 246, 0.6))",
+          }}
+          animate={{
+            filter: [
+              "drop-shadow(0 0 15px rgba(168, 85, 247, 0.8)) drop-shadow(0 0 40px rgba(139, 92, 246, 0.6))",
+              "drop-shadow(0 0 20px rgba(168, 85, 247, 1)) drop-shadow(0 0 60px rgba(139, 92, 246, 0.8))",
+              "drop-shadow(0 0 15px rgba(168, 85, 247, 0.8)) drop-shadow(0 0 40px rgba(139, 92, 246, 0.6))",
+            ],
+          }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          VOID
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
 // Main Home component
 export default function Home() {
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
@@ -462,6 +1455,9 @@ export default function Home() {
         <Banner3D />
       </section>
 
+      {/* New Enhanced Scrolling Text Section */}
+      <ScrollingTextSection />
+
       {/* About Section with parallax effects */}
       <section
         id="about"
@@ -520,11 +1516,7 @@ export default function Home() {
                   >
                     <div className="absolute -inset-4 bg-gradient-to-r from-purple-500 to-pink-500 opacity-30 blur-lg"></div>
                     <div className="relative aspect-square overflow-hidden">
-                      <AbstractShape
-                        className="w-full h-full text-purple-500"
-                        type="complex"
-                        animate
-                      />
+                      <PixelVoidCube className="w-full h-full" />
 
                       {/* Interactive particles */}
                       {Array.from({ length: 15 }).map((_, i) => (
@@ -621,7 +1613,9 @@ export default function Home() {
                         <h4 className="text-xl font-bold text-white mb-1 font-pixel group-hover:text-purple-400 transition-colors">
                           {item.title}
                         </h4>
-                        <p className="text-gray-400 font-pixel">{item.description}</p>
+                        <p className="text-gray-400 font-pixel">
+                          {item.description}
+                        </p>
                       </div>
                     </motion.div>
                   ))}
@@ -633,7 +1627,10 @@ export default function Home() {
       </section>
 
       {/* Features Section with enhanced cards */}
-      <section ref={featuresRef} className="relative py-32 overflow-hidden font-pixel">
+      <section
+        ref={featuresRef}
+        className="relative py-32 overflow-hidden font-pixel"
+      >
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-black via-purple-950/20 to-black"></div>
 
@@ -717,6 +1714,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Updated Roadmap Section */}
+      <RoadmapSection />
 
       {/* Gallery Section with enhanced cards */}
       <section ref={galleryRef} className="relative py-32 font-pixel">
@@ -924,13 +1924,18 @@ export default function Home() {
         </div>
       </section>
 
+      <TicketSection />
+
+      {/* Full Screen VOID Logo Section */}
+      <VoidLogoSection />
+
       {/* Footer */}
       <Footer />
 
       {/* Global styles for animations */}
       <style jsx global>{`
         .font-pixel {
-          font-family: 'Press Start 2P', monospace;
+          font-family: "Press Start 2P", monospace;
           letter-spacing: 0.05em;
         }
 
