@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, ChangeEvent, useCallback } from "react";
 import { motion } from "framer-motion";
 import * as THREE from "three";
 import {
@@ -10,6 +10,7 @@ import {
   BloomEffect,
 } from "postprocessing";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
 import AbstractShape from "@/components/abstract-shape";
@@ -21,13 +22,18 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
   generateCubeSkin,
-  extractColor,
   adjustColorBrightness,
   generateProceduralTexture,
 } from "../ai/aiService";
 import { generateMusic, getMusicGenerationDetails } from "../ai/aiMusicService";
 import { Connection } from "@solana/web3.js";
 import { mockMintNFT, convertCubeToFile, mintRealNFT } from "@/lib/services/mockNftService";
+import { getMusicNFTMetadata, getCubeNFTMetadata, mintNFT } from "@/lib/services/nftService";
+import Image from "next/image";
+import { SiOpenai } from "react-icons/si";
+import { IoMdMusicalNote } from "react-icons/io";
+import { IoCube } from "react-icons/io5";
+import { AudioPlayer } from "@/components/AudioPlayer";
 
 interface MaterialParams {
   color?: string;
@@ -1282,7 +1288,7 @@ export default function AIPage() {
     try {
       // Generate cube based on prompt
       const response = await generateCubeSkin({ prompt: cubePrompt });
-      
+
       // Create preview for main material
       const previewCanvas = document.createElement('canvas');
       previewCanvas.width = 200;
@@ -1327,14 +1333,14 @@ export default function AIPage() {
       (!isInstrumental && !musicPrompt.trim())
     )
       return;
-  
+
     setIsGeneratingMusic(true);
     setMusicGeneration(null); // Reset music generation state
-  
+
     try {
       // First, clear any previous error state
-      setMusicGeneration(prev => prev ? {...prev, error: null} : null);
-      
+      setMusicGeneration(prev => prev ? { ...prev, error: null } : null);
+
       console.log("isInstrumental value:", isInstrumental);
       const params = {
         prompt: musicPrompt,
@@ -1347,17 +1353,17 @@ export default function AIPage() {
         customMode: true,
       };
       console.log("Calling generateMusic with params:", params);
-  
+
       const response = await generateMusic(params);
-  
+
       if (!response.id) {
         throw new Error(
           "Failed to retrieve task ID from music generation response"
         );
       }
-  
+
       setMusicGeneration({ ...response, style: musicStyle });
-  
+
       // Improved polling mechanism with better fallbacks
       const pollStatus = async () => {
         try {
@@ -1367,14 +1373,14 @@ export default function AIPage() {
               'Accept': 'application/json'
             }
           });
-      
+
           // Check if response is ok before proceeding
           if (!callbackRes.ok) {
             const errorText = await callbackRes.text();
             console.error(`Callback endpoint returned ${callbackRes.status}:`, errorText);
             throw new Error(`Callback endpoint returned status ${callbackRes.status}`);
           }
-      
+
           // Check content type to ensure we're getting JSON
           const contentType = callbackRes.headers.get('content-type');
           if (!contentType || !contentType.includes('application/json')) {
@@ -1382,69 +1388,69 @@ export default function AIPage() {
             console.error('Callback endpoint returned non-JSON response:', responseText);
             throw new Error('Callback endpoint returned non-JSON response');
           }
-      
+
           // Parse JSON response
           const callbackData = await callbackRes.json();
           console.log("Fetched callback data:", callbackData);
-      
+
           // Check if we have audio URL from callback
           if (callbackData.audio_url) {
             // If the callback has the audio_url, use it and stop polling
-            setMusicGeneration((prev) => prev ? { 
-              ...prev, 
-              ...callbackData, 
-              style: musicStyle 
+            setMusicGeneration((prev) => prev ? {
+              ...prev,
+              ...callbackData,
+              style: musicStyle
             } : null);
             clearInterval(pollingInterval);
             return;
           }
-      
+
           // Fallback to getMusicGenerationDetails if the callback doesn't have the audio_url yet
           try {
             const details = await getMusicGenerationDetails(response.id);
             console.log("Polled music generation details:", details);
-            
+
             // Extract audio URL from response using a more comprehensive approach
             let audioUrl = details.audio_url;
-            
+
             // If status is success but no audio URL, search deeper
             if ((details.status === "SUCCESS" || details.status === "completed") && !audioUrl) {
               console.log("SUCCESS status but no audio_url, searching for URL in raw response...");
-              
+
               // Attempt to fetch raw details again to do deep inspection
               try {
                 const rawResponse = await fetch(`/api/music/callback?taskId=${response.id}&full=true`, {
                   headers: { 'Accept': 'application/json' }
                 });
-                
+
                 if (rawResponse.ok) {
                   const rawData = await rawResponse.json();
                   console.log("Raw callback data for deep inspection:", rawData);
-                  
+
                   // Look for audio URLs in common places
                   const possibleUrlFields = [
-                    'audio_url', 'audioUrl', 'url', 'fileUrl', 'mp3_url', 
+                    'audio_url', 'audioUrl', 'url', 'fileUrl', 'mp3_url',
                     'audio', 'music_url', 'result_url', 'output_url'
                   ];
-                  
+
                   // Check all top-level fields
                   for (const field of possibleUrlFields) {
-                    if (rawData[field] && typeof rawData[field] === 'string' && 
-                        rawData[field].includes('http')) {
+                    if (rawData[field] && typeof rawData[field] === 'string' &&
+                      rawData[field].includes('http')) {
                       audioUrl = rawData[field];
                       console.log(`Found audio URL in field: ${field}`, audioUrl);
                       break;
                     }
                   }
-                  
+
                   // Check nested fields - data, payload, result
                   const nestedObjects = ['data', 'payload', 'result', 'output'];
                   for (const nestedField of nestedObjects) {
                     if (!audioUrl && rawData[nestedField] && typeof rawData[nestedField] === 'object') {
                       for (const field of possibleUrlFields) {
-                        if (rawData[nestedField][field] && 
-                            typeof rawData[nestedField][field] === 'string' &&
-                            rawData[nestedField][field].includes('http')) {
+                        if (rawData[nestedField][field] &&
+                          typeof rawData[nestedField][field] === 'string' &&
+                          rawData[nestedField][field].includes('http')) {
                           audioUrl = rawData[nestedField][field];
                           console.log(`Found audio URL in ${nestedField}.${field}`, audioUrl);
                           break;
@@ -1457,7 +1463,7 @@ export default function AIPage() {
                 console.warn("Failed deep inspection for audio URL:", err);
               }
             }
-            
+
             // Update state with the results
             setMusicGeneration(prev => ({
               ...(prev || {}),
@@ -1465,46 +1471,46 @@ export default function AIPage() {
               audio_url: audioUrl, // Use our extracted URL
               style: musicStyle
             }));
-      
+
             // Map API-specific status codes to user-friendly statuses
             if (details.status === "SUCCESS" || details.status === "completed") {
               clearInterval(pollingInterval);
               if (!audioUrl) {
                 console.error("No audio URL found despite SUCCESS status. Falling back to error state.");
-                setMusicGeneration((prev) => (prev ? { 
-                  ...prev, 
-                  status: "failed", 
-                  error: "Audio URL missing after successful generation", 
-                  style: musicStyle 
+                setMusicGeneration((prev) => (prev ? {
+                  ...prev,
+                  status: "failed",
+                  error: "Audio URL missing after successful generation",
+                  style: musicStyle
                 } : null));
               }
-            } else if (details.status === "failed" || details.status === "GENERATE_AUDIO_FAILED" || 
-                      details.status?.includes("FAILED")) {
+            } else if (details.status === "failed" || details.status === "GENERATE_AUDIO_FAILED" ||
+              details.status?.includes("FAILED")) {
               clearInterval(pollingInterval);
-              
+
               // Extract error message from various possible locations
-              let errorMessage = details.error || details.errorMessage || 
-                                (details.response?.errorMessage) || 
-                                "Music generation failed";
-              
+              let errorMessage = details.error || details.errorMessage ||
+                (details.response?.errorMessage) ||
+                "Music generation failed";
+
               // Handle specific error codes with user-friendly messages
               if (details.errorCode === 500) {
                 errorMessage = "The music service is experiencing technical difficulties. Please try again later or try a different style/prompt.";
               }
-              
+
               console.error(`Music generation failed: ${errorMessage}`, details);
-              
-              setMusicGeneration((prev) => (prev ? { 
-                ...prev, 
-                status: "failed", 
-                error: errorMessage, 
-                style: musicStyle 
+
+              setMusicGeneration((prev) => (prev ? {
+                ...prev,
+                status: "failed",
+                error: errorMessage,
+                style: musicStyle
               } : null));
             }
-            
+
           } catch (detailsError) {
             console.error("Error fetching music generation details:", detailsError);
-            
+
             // If we already have some data from the callback, use that instead of failing completely
             if (callbackData && callbackData.status) {
               setMusicGeneration((prev) => prev ? {
@@ -1521,21 +1527,21 @@ export default function AIPage() {
           console.error("Error polling music generation status:", error);
           clearInterval(pollingInterval);
           const errorMessage = error instanceof Error ? error.message : String(error);
-          setMusicGeneration((prev) => (prev ? { 
-            ...prev, 
-            status: "failed", 
-            error: errorMessage || "Failed to fetch music generation details", 
-            style: musicStyle 
+          setMusicGeneration((prev) => (prev ? {
+            ...prev,
+            status: "failed",
+            error: errorMessage || "Failed to fetch music generation details",
+            style: musicStyle
           } : null));
         }
       };
-  
+
       // Poll more frequently at the beginning
       const pollingInterval = setInterval(pollStatus, 5000);
-      
+
       // Start polling immediately
       pollStatus();
-  
+
       return () => clearInterval(pollingInterval);
     } catch (error) {
       console.error("Error generating music:", error);
@@ -1564,7 +1570,8 @@ export default function AIPage() {
         }
 
         // Get name and description for NFT
-        const nftName = `VOID Cube ${new Date().getTime().toString().slice(-6)}`;
+        const cubeId = Math.floor(Math.random() * 900000 + 100000).toString();
+        const nftName = `VOID Cube ${cubeId}`;
         const nftDescription = materialParams.description ||
           `A unique cube with ${materialParams.color || "custom"} color and ${materialParams.texturePattern || "special"} texture pattern.`;
 
@@ -1574,6 +1581,7 @@ export default function AIPage() {
 
         // 2. Prepare attributes for NFT
         const attributes = [
+          { trait_type: "Type", value: "Cube" },
           { trait_type: "Color", value: materialParams.color || "Custom" },
           { trait_type: "Texture", value: materialParams.texturePattern || "None" },
           { trait_type: "Animation", value: materialParams.animationType || "None" }
@@ -1594,79 +1602,263 @@ export default function AIPage() {
         // 3. Get color information to create 3D model
         const colors = materialParams.gradientColors || [materialParams.color || "#FFFFFF"];
 
-        // 4. Mint real NFT using Solana if wallet is connected
+        // 4. Mint NFT
         const wallet = window.solana;
 
-        if (wallet && wallet.isConnected) {
-          // Create Solana connection
-          const connection = new Connection(
-            process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com'
-          );
+        try {
+          if (wallet && wallet.isConnected) {
+            // Create Solana connection for direct mint to wallet
+            const connection = new Connection(
+              process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
+              'confirmed' // Thêm commitment level 'confirmed' để cải thiện độ tin cậy
+            );
 
-          console.log("Starting real NFT minting on Solana");
-          await mintRealNFT(
-            connection,
-            wallet,
-            {
+            // Prepare cube NFT metadata
+            const cubeMetadata = await getCubeNFTMetadata(
+              nftName,
+              nftDescription,
+              imageFile,
+              null, // model sẽ được tạo tự động trong mintRealNFT
+              attributes
+            );
+
+            // Mint trực tiếp sử dụng hàm mintNFT thay vì mintRealNFT
+            console.log("Starting real NFT minting on Solana");
+
+            try {
+              // Mint thông qua Metaplex API
+              const mintedAddress = await mintNFT(connection, wallet, cubeMetadata);
+              console.log("NFT minted successfully with address:", mintedAddress);
+              alert(`NFT đã được mint thành công! Địa chỉ: ${mintedAddress}. Kiểm tra Profile hoặc ví Phantom của bạn.`);
+            } catch (mintError) {
+              console.error("Error during Metaplex minting:", mintError);
+
+              // Thử phương pháp thay thế (mintRealNFT) nếu mintNFT thất bại
+              console.log("Falling back to alternative minting method");
+              const alternativeAddress = await mintRealNFT(
+                connection,
+                wallet,
+                {
+                  name: nftName,
+                  description: nftDescription,
+                  attributes,
+                  colors
+                },
+                imageFile
+              );
+
+              console.log("NFT minted with alternative method:", alternativeAddress);
+              alert(`NFT đã được mint! Kiểm tra trong Profile và ví Phantom của bạn.`);
+            }
+          } else {
+            // Use mock minting method if no wallet is connected
+            console.log("No wallet connected, using mock minting");
+            await mockMintNFT({
               name: nftName,
               description: nftDescription,
-              attributes,
-              colors
-            },
-            imageFile
-          );
+              image: imageFile,
+              attributes
+            });
 
-          alert("NFT has been successfully minted on Solana! Check your Profile and Phantom wallet.");
-        } else {
-          // Use mock minting method if no wallet is connected
-          console.log("No wallet connected, using mock minting");
-          await mockMintNFT({
-            name: nftName,
-            description: nftDescription,
-            image: imageFile,
-            attributes
-          });
+            alert("NFT đã được tạo! Xem trong trang Profile của bạn.");
+          }
+        } catch (mintingError) {
+          console.error("All minting methods failed:", mintingError);
 
-          alert("NFT has been created! View it in your Profile page.");
+          // Fallback - Lưu NFT vào localStorage ngay cả khi mint thất bại
+          try {
+            // Tạo data URL cho hình ảnh
+            const reader = new FileReader();
+            reader.readAsDataURL(imageFile);
+            reader.onload = () => {
+              const userNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
+              const mockId = `local-${Date.now()}`;
+
+              userNfts.push({
+                id: mockId,
+                name: nftName,
+                description: nftDescription,
+                image: reader.result,
+                attributes,
+                mintedAt: new Date().toISOString(),
+                type: "cube",
+                local: true // Đánh dấu đây là NFT lưu cục bộ
+              });
+
+              localStorage.setItem('userNfts', JSON.stringify(userNfts));
+              alert("Không thể mint NFT thật, nhưng đã lưu cục bộ. Xem trong trang Profile của bạn.");
+            };
+          } catch (localError) {
+            // Nếu cả phương pháp lưu cục bộ cũng thất bại, hiển thị lỗi
+            throw mintingError;
+          }
         }
 
-        console.log("NFT minting successful");
+        console.log("NFT processing complete");
       } catch (error: any) {
         console.error("Error minting NFT:", error);
-        alert(`Error minting NFT: ${error.message}`);
+        alert(`Lỗi khi mint NFT: ${error.message}`);
       } finally {
         setIsGeneratingCube(false);
       }
     } else if (activeTab === "music" && musicGeneration?.audio_url) {
       try {
-        // Show minting status
+        // Hiển thị trạng thái mint
         setIsGeneratingMusic(true);
-        
-        // Create NFT metadata for music
+
+        // Tạo metadata cho NFT âm nhạc
         const nftName = `VOID Music: ${musicTitle || "Untitled"}`;
         const nftDescription = `${musicStyle} music track${musicPrompt ? `: ${musicPrompt.substring(0, 100)}${musicPrompt.length > 100 ? '...' : ''}` : ''}`;
-        
-        // Prepare attributes
+
+        // Chuẩn bị thuộc tính
         const attributes = [
           { trait_type: "Style", value: musicStyle || "Custom" },
           { trait_type: "Instrumental", value: isInstrumental ? "Yes" : "No" }
         ];
-        
-        // Mock the minting process for music (this would need to be replaced with actual music NFT minting)
-        await mockMintNFT({
-          name: nftName,
-          description: nftDescription,
-          // For music, we'd need to handle the audio file differently - this is a placeholder
-          audioUrl: musicGeneration.audio_url,
-          attributes,
-          image: new File([""], "placeholder.png", { type: "image/png" })
+
+        // Tạo hình ảnh hiển thị mặc định (banner mẫu) cho nhạc
+        const audioName = nftName.replace(/\s+/g, '-').toLowerCase();
+
+        // Tạo hình ảnh hiển thị từ canvas trống với mẫu nhạc
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = 800;
+        tempCanvas.height = 800;
+        const ctx = tempCanvas.getContext('2d');
+
+        if (ctx) {
+          // Tạo nền gradient đẹp
+          const gradient = ctx.createLinearGradient(0, 0, 800, 800);
+          gradient.addColorStop(0, '#5d4fff');
+          gradient.addColorStop(0.5, '#c42bb4');
+          gradient.addColorStop(1, '#1e58af');
+
+          // Vẽ nền
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, 800, 800);
+
+          // Vẽ hình sóng âm nhạc
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.lineWidth = 3;
+
+          const waveHeight = 200;
+          const waveCount = 20;
+          const centerY = 400;
+
+          ctx.beginPath();
+          for (let i = 0; i < 800; i += 10) {
+            const amplitude = Math.random() * waveHeight;
+            const y = centerY + Math.sin(i * 0.02) * amplitude;
+            if (i === 0) {
+              ctx.moveTo(i, y);
+            } else {
+              ctx.lineTo(i, y);
+            }
+          }
+          ctx.stroke();
+
+          // Vẽ tên và thông tin
+          ctx.fillStyle = 'white';
+          ctx.font = 'bold 48px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(musicTitle || "VOID Music", 400, 300);
+
+          ctx.font = '32px Arial';
+          ctx.fillText(musicStyle, 400, 350);
+
+          // Vẽ logo VOID
+          ctx.font = 'bold 24px Arial';
+          ctx.fillText('VOID RESONANCE', 400, 720);
+        }
+
+        // Chuyển đổi canvas thành file hình ảnh
+        const imageBlob = await new Promise<Blob>((resolve) => {
+          tempCanvas.toBlob((blob) => {
+            if (blob) resolve(blob);
+            else resolve(new Blob([]));
+          }, 'image/png');
         });
-        
-        alert("Music NFT has been created! View it in your Profile page.");
-        console.log("Music NFT minting successful");
+
+        const imageFile = new File([imageBlob], `${audioName}-cover.png`, { type: 'image/png' });
+
+        // Lấy URL âm thanh từ thư viện Vercel Blob
+        const audioUrl = musicGeneration.audio_url;
+        console.log("Audio URL để mint:", audioUrl);
+
+        // Kiểm tra xem ví có được kết nối không để mint NFT thật
+        const wallet = window.solana;
+
+        try {
+          if (wallet && wallet.isConnected) {
+            // Tạo kết nối Solana
+            console.log("Kết nối ví cho mint NFT âm nhạc");
+            const connection = new Connection(
+              process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com'
+            );
+
+            // Lấy metadata từ hàm helper
+            const musicMetadata = await getMusicNFTMetadata(
+              nftName,
+              nftDescription,
+              imageFile,
+              audioUrl,
+              attributes
+            );
+
+            // Mint NFT thật trên Solana
+            console.log("Bắt đầu mint NFT âm nhạc thật trên Solana");
+            const mintedAddress = await mintNFT(connection, wallet, musicMetadata);
+
+            console.log("NFT âm nhạc đã được mint, địa chỉ:", mintedAddress);
+            alert(`NFT âm nhạc đã được mint thành công trên Solana! Kiểm tra trong Profile và ví Phantom của bạn.`);
+          } else {
+            // Sử dụng phương thức mint giả lập nếu ví không được kết nối
+            console.log("Không có ví kết nối, sử dụng mint giả lập");
+            await mockMintNFT({
+              name: nftName,
+              description: nftDescription,
+              audioUrl: musicGeneration.audio_url,
+              attributes,
+              image: imageFile
+            });
+
+            alert("NFT âm nhạc đã được tạo! Xem nó trong trang Profile của bạn.");
+          }
+        } catch (mintingError) {
+          console.error("Music NFT minting methods failed:", mintingError);
+
+          // Fallback - Lưu NFT âm nhạc vào localStorage
+          try {
+            // Tạo data URL cho hình ảnh
+            const reader = new FileReader();
+            reader.readAsDataURL(imageFile);
+            reader.onload = () => {
+              const userNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
+              const mockId = `local-music-${Date.now()}`;
+
+              userNfts.push({
+                id: mockId,
+                name: nftName,
+                description: nftDescription,
+                image: reader.result,
+                audioUrl: audioUrl,
+                attributes,
+                mintedAt: new Date().toISOString(),
+                type: "music",
+                local: true // Đánh dấu đây là NFT lưu cục bộ
+              });
+
+              localStorage.setItem('userNfts', JSON.stringify(userNfts));
+              alert("Không thể mint NFT âm nhạc thật, nhưng đã lưu cục bộ. Xem trong trang Profile của bạn.");
+            };
+          } catch (localError) {
+            throw mintingError;
+          }
+        }
+
+        console.log("Quá trình xử lý NFT âm nhạc hoàn tất");
       } catch (error: any) {
-        console.error("Error minting music NFT:", error);
-        alert(`Error minting music NFT: ${error.message}`);
+        console.error("Lỗi khi mint NFT âm nhạc:", error);
+        alert(`Lỗi khi mint NFT âm nhạc: ${error.message}`);
       } finally {
         setIsGeneratingMusic(false);
       }
@@ -2155,7 +2347,7 @@ export default function AIPage() {
                         ) : musicGeneration ? (
                           (musicGeneration.status === "SUCCESS" ||
                             musicGeneration.status === "completed") &&
-                          musicGeneration.audio_url ? (
+                            musicGeneration.audio_url ? (
                             <motion.div
                               className="text-center space-y-6 w-full max-w-md px-4"
                               initial={{ opacity: 0, scale: 0.9 }}
@@ -2216,12 +2408,12 @@ export default function AIPage() {
                                   Duration:{" "}
                                   {audioRef.current?.duration
                                     ? `${Math.floor(
-                                        audioRef.current.duration / 60
-                                      )}:${Math.floor(
-                                        audioRef.current.duration % 60
-                                      )
-                                        .toString()
-                                        .padStart(2, "0")}`
+                                      audioRef.current.duration / 60
+                                    )}:${Math.floor(
+                                      audioRef.current.duration % 60
+                                    )
+                                      .toString()
+                                      .padStart(2, "0")}`
                                     : "Loading..."}
                                 </p>
                               </div>

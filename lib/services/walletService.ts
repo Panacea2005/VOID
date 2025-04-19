@@ -134,12 +134,16 @@ export async function getTransactionHistory(publicKey: PublicKey) {
             });
 
             if (tx) {
+                // Lưu trữ chữ ký đầy đủ để sử dụng trong Solscan
+                const fullSignature = signature.signature;
+
                 transactions.push({
                     signature: signature.signature,
                     blockTime: signature.blockTime ? new Date(signature.blockTime * 1000).toISOString().split('T')[0] : 'Unknown',
                     type: tx.meta?.logMessages?.some(msg => msg.includes("Initialize mint")) ? "Mint" : "Transfer",
                     amount: tx.meta?.postBalances && tx.meta?.preBalances ?
                         Math.abs(tx.meta.postBalances[0] - tx.meta.preBalances[0]) / LAMPORTS_PER_SOL : 0,
+                    fullSignature: fullSignature
                 });
             }
         }

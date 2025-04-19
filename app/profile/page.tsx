@@ -15,6 +15,9 @@ import { useWallet } from "@solana/wallet-adapter-react"
 import { getWalletInfo, getNFTs, getTransactionHistory, shortenAddress, WalletData, NFTData } from "@/lib/services/walletService"
 import { getUserNFTs, refreshNFTImageURLS, isValidBlobURL, preloadImages, validateAndFixModelURL } from "@/lib/services/mockNftService"
 import { getModelViewerUrl, getDirectModelUrl, getGoogleModelViewerUrl } from "@/lib/services/pinataService"
+import IPFSViewer from '@/components/ipfs-viewer'
+import SolscanViewer from '@/components/solscan-viewer'
+import NFTCard from "@/components/nft-card"
 
 export default function ProfilePage() {
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 })
@@ -73,7 +76,8 @@ export default function ProfilePage() {
           event: tx.type,
           item: `Transaction ${shortenAddress(tx.signature, 6)}`,
           price: tx.amount,
-          date: tx.blockTime
+          date: tx.blockTime,
+          fullSignature: tx.fullSignature
         })));
       } catch (error) {
         console.error('Error loading wallet data:', error);
@@ -131,7 +135,7 @@ export default function ProfilePage() {
     imgElement.src = primaryUrl;
 
     imgElement.onerror = () => {
-      console.log(`Không thể tải hình ảnh từ: ${primaryUrl}`);
+      console.log(`Cannot load image from: ${primaryUrl}`);
       if (fallbackUrls && fallbackUrls.length > 0) {
         // Thử từng URL dự phòng lần lượt
         let fallbackIndex = 0;
@@ -140,12 +144,12 @@ export default function ProfilePage() {
             const imgElement = document.createElement('img');
             imgElement.src = fallbackUrls[fallbackIndex];
             imgElement.onerror = () => {
-              console.log(`Không thể tải hình ảnh từ fallback: ${fallbackUrls[fallbackIndex]}`);
+              console.log(`Cannot load image from fallback: ${fallbackUrls[fallbackIndex]}`);
               fallbackIndex++;
               tryNextFallback();
             };
             imgElement.onload = () => {
-              console.log(`Đã tải hình ảnh thành công từ: ${fallbackUrls[fallbackIndex]}`);
+              console.log(`Successfully loaded image from: ${fallbackUrls[fallbackIndex]}`);
               // Cập nhật src trong DOM cho tất cả hình ảnh có URL chính
               const imageElements = document.querySelectorAll(`img[src="${primaryUrl}"]`);
               imageElements.forEach(img => {
@@ -201,12 +205,12 @@ export default function ProfilePage() {
     fetch(primaryUrl, { method: 'HEAD' })
       .then(response => {
         if (!response.ok) {
-          throw new Error('Model URL không hợp lệ');
+          throw new Error('Invalid model URL');
         }
-        console.log('Model URL hợp lệ:', primaryUrl);
+        console.log('Valid model URL:', primaryUrl);
       })
       .catch(error => {
-        console.log(`Không thể tải model từ: ${primaryUrl}`, error);
+        console.log(`Cannot load model from: ${primaryUrl}`, error);
         if (fallbackUrls && fallbackUrls.length > 0) {
           // Thử từng URL dự phòng lần lượt
           tryNextModelFallback(fallbackUrls, 0);
@@ -220,13 +224,13 @@ export default function ProfilePage() {
     fetch(fallbackUrls[index], { method: 'HEAD' })
       .then(response => {
         if (!response.ok) {
-          throw new Error('Fallback model URL không hợp lệ');
+          throw new Error('Fallback model URL is not valid');
         }
-        console.log('Tìm thấy model URL hợp lệ:', fallbackUrls[index]);
+        console.log('Found valid model URL:', fallbackUrls[index]);
         // Cập nhật trong DOM nếu cần
       })
       .catch(error => {
-        console.log(`Không thể tải model từ fallback: ${fallbackUrls[index]}`, error);
+        console.log(`Cannot load model from fallback: ${fallbackUrls[index]}`, error);
         tryNextModelFallback(fallbackUrls, index + 1);
       });
   };
@@ -263,6 +267,8 @@ export default function ProfilePage() {
 
   // Xử lý hiển thị chi tiết giao dịch
   const handleShowTxDetails = (tx: any) => {
+    console.log("Transaction details:", tx);
+    console.log("Full signature:", tx.fullSignature);
     setSelectedTx(tx);
     setShowTxDetails(true);
   }
@@ -289,13 +295,13 @@ export default function ProfilePage() {
     setModelLoadError(false);
     setIsLoadingModel(true);
     try {
-      console.log("Mở 3D model viewer với NFT:", nft.name);
+      console.log("Open 3D model viewer with NFT:", nft.name);
 
       let modelViewerUrl = null;
 
       // Kiểm tra model trực tiếp từ modelViewerUrl nếu có
       if (nft.modelViewerUrl) {
-        console.log("Sử dụng modelViewerUrl có sẵn:", nft.modelViewerUrl);
+        console.log("Use available modelViewerUrl:", nft.modelViewerUrl);
         modelViewerUrl = nft.modelViewerUrl;
       }
       // Kiểm tra model3d URL
@@ -311,7 +317,7 @@ export default function ProfilePage() {
       }
       // Kiểm tra model3dHash
       else if (nft.model3dHash) {
-        console.log("Sử dụng model3dHash:", nft.model3dHash);
+        console.log("Use model3dHash:", nft.model3dHash);
         // Dùng hàm utility để tạo URL cho model viewer
         modelViewerUrl = getModelViewerUrl(nft.model3dHash);
 
@@ -328,7 +334,7 @@ export default function ProfilePage() {
         );
 
         if (modelFile && modelFile.uri) {
-          console.log("Tìm thấy model trong properties.files:", modelFile.uri);
+          console.log("Found model in properties.files:", modelFile.uri);
 
           if (modelFile.uri.startsWith('ipfs://')) {
             // Nếu là URI IPFS, tạo model viewer URL từ hash IPFS
@@ -343,18 +349,18 @@ export default function ProfilePage() {
 
       // Nếu không tìm thấy model 3D nào, sử dụng mẫu
       if (!modelViewerUrl) {
-        console.warn("Không tìm thấy model 3D cho NFT, sử dụng mẫu.");
+        console.warn("Cannot found model 3D for NFT, using available model.");
         modelViewerUrl = 'https://modelviewer.dev/shared-assets/models/Astronaut.glb';
       }
 
       // Đặt URL và hiển thị viewer
-      console.log("URL model viewer cuối cùng:", modelViewerUrl);
+      console.log("URL model viewer final:", modelViewerUrl);
       setCurrentModelUrl(modelViewerUrl);
       setShowModelViewer(true);
 
     } catch (error) {
-      console.error("Lỗi khi hiển thị model 3D:", error);
-      alert('Có lỗi xảy ra khi tải 3D Model. Vui lòng thử lại sau.');
+      console.error("Error displaying the 3D model.:", error);
+      alert(' An error occurred while loading the 3D model.Please try again later.');
       setModelLoadError(true);
       // Thử tải model mẫu
       setCurrentModelUrl('https://modelviewer.dev/shared-assets/models/Astronaut.glb');
@@ -366,7 +372,7 @@ export default function ProfilePage() {
 
   // Thêm hàm xử lý lỗi khi iframe không tải được
   const handleModelViewerError = () => {
-    console.error("Lỗi khi tải model viewer");
+    console.error("Error loading the model viewer.");
     // Thử lại với model mẫu
     setCurrentModelUrl('https://modelviewer.dev/shared-assets/models/Astronaut.glb');
   };
@@ -575,124 +581,13 @@ export default function ProfilePage() {
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {userNFTs.map((nft, index) => (
-                          <motion.div
+                          <NFTCard
                             key={nft.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: index * 0.1 }}
-                            className="bg-black border border-purple-900/50 overflow-hidden group hover:border-purple-500 transition-colors duration-300"
+                            nft={nft}
                             onMouseEnter={() => setCursorHover(true)}
                             onMouseLeave={() => setCursorHover(false)}
-                          >
-                            <div className="aspect-square overflow-hidden relative">
-                              <img
-                                src={nft.image}
-                                alt={nft.name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  // Nếu hình ảnh không tải được, thử sử dụng fallbackImages
-                                  const target = e.target as HTMLImageElement;
-                                  console.log(`Không thể tải hình ảnh từ ${target.src} cho NFT ${nft.name}`);
-
-                                  if (nft.fallbackImages && nft.fallbackImages.length > 0) {
-                                    console.log(`Thử tải từ fallbackImages: ${nft.fallbackImages[0]}`);
-                                    target.src = nft.fallbackImages[0];
-
-                                    // Xóa fallback đã sử dụng và thiết lập fallback mới
-                                    const newFallbacks = [...nft.fallbackImages.slice(1)];
-
-                                    // Gắn sự kiện lỗi mới nếu còn fallback
-                                    if (newFallbacks.length > 0) {
-                                      target.onerror = () => {
-                                        console.log(`Tiếp tục thử fallback tiếp theo: ${newFallbacks[0]}`);
-                                        target.src = newFallbacks[0];
-                                        nft.fallbackImages = newFallbacks.slice(1);
-                                      };
-                                    } else {
-                                      // Nếu hết fallback, thử với ipfsHash hoặc ipfsUrl
-                                      target.onerror = () => {
-                                        console.log("Đã dùng hết fallback, thử dùng ipfsHash hoặc ipfsUrl");
-                                        if (nft.ipfsHash) {
-                                          target.src = `https://ipfs.io/ipfs/${nft.ipfsHash}`;
-                                        } else if (nft.ipfsUrl && nft.ipfsUrl.startsWith('ipfs://')) {
-                                          target.src = `https://ipfs.io/ipfs/${nft.ipfsUrl.replace('ipfs://', '')}`;
-                                        } else {
-                                          // Fallback cuối cùng: sử dụng placeholder
-                                          target.src = '/placeholder.jpg';
-                                        }
-                                      };
-                                    }
-                                  } else if (nft.ipfsHash) {
-                                    target.src = `https://ipfs.io/ipfs/${nft.ipfsHash}`;
-                                  } else if (nft.ipfsUrl && nft.ipfsUrl.startsWith('ipfs://')) {
-                                    target.src = `https://ipfs.io/ipfs/${nft.ipfsUrl.replace('ipfs://', '')}`;
-                                  } else {
-                                    // Fallback to placeholder
-                                    target.src = '/placeholder.jpg';
-                                  }
-                                }}
-                              />
-                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent h-1/3"></div>
-                            </div>
-
-                            <div className="p-4">
-                              <h3 className="text-xl font-bold text-white mb-1">{nft.name}</h3>
-                              <p className="text-sm text-gray-400 mb-3 line-clamp-2">{nft.description}</p>
-
-                              <div className="flex flex-col space-y-2">
-                                <div className="flex justify-between items-center">
-                                  <Link
-                                    href={nft.ipfsHash
-                                      ? `https://ipfs.io/ipfs/${nft.ipfsHash}`
-                                      : nft.ipfsUrl && nft.ipfsUrl.startsWith('ipfs://')
-                                        ? `https://ipfs.io/ipfs/${nft.ipfsUrl.replace('ipfs://', '')}`
-                                        : nft.ipfsUrl || '#'}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-sm text-purple-400 hover:text-purple-300"
-                                    onClick={(e) => {
-                                      if (!nft.ipfsUrl && !nft.ipfsHash) {
-                                        e.preventDefault();
-                                        alert('IPFS link not available for this NFT');
-                                      }
-                                    }}
-                                  >
-                                    Watch on IPFS
-                                  </Link>
-                                  <span className="text-xs text-gray-500">
-                                    {new Date(nft.mintedAt).toLocaleDateString()}
-                                  </span>
-                                </div>
-
-                                {(nft.model3d || nft.model3dHash) && (
-                                  <button
-                                    className="text-xs text-purple-400 hover:text-purple-300 flex items-center"
-                                    onClick={() => handleViewModel(nft)}
-                                    onMouseEnter={() => setCursorHover(true)}
-                                    onMouseLeave={() => setCursorHover(false)}
-                                  >
-                                    Watch Model 3D
-                                  </button>
-                                )}
-
-                                {nft.mintAddress && (
-                                  <Link
-                                    href={`https://solscan.io/token/${nft.mintAddress}${process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet' ? '?cluster=devnet' : ''}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-sm text-blue-400 hover:text-blue-300 flex items-center"
-                                  >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                      className="mr-1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <path d="M20 11.08V8l-6-6H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2v-4.28a2 2 0 0 0 0-3.88z" />
-                                      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-                                    </svg>
-                                    Watch on Solscan
-                                  </Link>
-                                )}
-                              </div>
-                            </div>
-                          </motion.div>
+                            onViewModelClick={handleViewModel}
+                          />
                         ))}
                       </div>
                     )}
@@ -847,6 +742,7 @@ export default function ProfilePage() {
                         onClick={() => handleShowTxDetails(item)}
                         onMouseEnter={() => setCursorHover(true)}
                         onMouseLeave={() => setCursorHover(false)}
+                        title={item.fullSignature || ''}
                       >
                         <p className="text-white font-pixel">{item.event}</p>
                         <p className="text-purple-400 font-pixel">{item.item}</p>
@@ -1008,12 +904,26 @@ export default function ProfilePage() {
                     <div className="grid grid-cols-3 gap-2">
                       <p className="text-gray-400 font-pixel">Transaction:</p>
                       <div className="col-span-2 flex items-center">
-                        <p className="text-purple-400 font-pixel mr-2">{selectedTx.item}</p>
+                        <p className="text-purple-400 font-pixel mr-2" title={selectedTx.fullSignature || ''}>
+                          {selectedTx.fullSignature ?
+                            `${selectedTx.fullSignature.substring(0, 6)}...${selectedTx.fullSignature.substring(selectedTx.fullSignature.length - 6)}` :
+                            selectedTx.item}
+                        </p>
                         <button
                           className="text-gray-400 hover:text-white transition-colors"
-                          onClick={() => {
-                            const signature = selectedTx.item.replace('Transaction ', '');
-                            navigator.clipboard.writeText(signature);
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Sử dụng fullSignature nếu có, không thì xử lý từ item
+                            let signatureToCopy;
+                            if (selectedTx.fullSignature) {
+                              signatureToCopy = selectedTx.fullSignature;
+                            } else {
+                              // Trích xuất chữ ký từ item nếu nó có định dạng "Transaction xyz..."
+                              const match = selectedTx.item.match(/Transaction (.*)/);
+                              signatureToCopy = match && match[1] ? match[1] : selectedTx.item;
+                            }
+
+                            navigator.clipboard.writeText(signatureToCopy);
                             alert("Transaction signature copied to clipboard!");
                           }}
                           onMouseEnter={() => setCursorHover(true)}
@@ -1060,8 +970,23 @@ export default function ProfilePage() {
                 <div className="flex justify-center">
                   <Button
                     onClick={() => {
-                      const signature = selectedTx.item.replace('Transaction ', '');
-                      window.open(`https://solscan.io/tx/${signature}${process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet' ? '?cluster=devnet' : ''}`, '_blank');
+                      // Sử dụng fullSignature nếu có, không thì xử lý từ item
+                      let signature;
+                      if (selectedTx.fullSignature) {
+                        signature = selectedTx.fullSignature;
+                      } else {
+                        // Trích xuất chữ ký từ item nếu nó có định dạng "Transaction xyz..."
+                        const match = selectedTx.item.match(/Transaction (.*)/);
+                        signature = match && match[1] ? match[1] : selectedTx.item;
+                      }
+
+                      console.log("Opening Solscan with signature:", signature);
+
+                      // Đảm bảo đường dẫn đúng đến Solscan với giao dịch đầy đủ
+                      const solscanUrl = `https://solscan.io/tx/${signature}${process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet' ? '?cluster=devnet' : ''}`;
+                      console.log("Solscan URL:", solscanUrl);
+
+                      window.open(solscanUrl, '_blank');
                     }}
                     className="bg-transparent border-2 border-purple-500 hover:bg-purple-950/30 text-white rounded-none px-6 py-3 font-pixel tracking-wide"
                     onMouseEnter={() => setCursorHover(true)}
@@ -1099,17 +1024,17 @@ export default function ProfilePage() {
                   {isLoadingModel ? (
                     <div className="flex flex-col items-center justify-center h-full w-full">
                       <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                      <p className="text-gray-400">Đang tải 3D Model...</p>
+                      <p className="text-gray-400">Uploading 3D Model...</p>
                     </div>
                   ) : modelLoadError ? (
                     <div className="text-center p-8">
-                      <p className="text-gray-400 mb-4">Không thể tải model 3D. Vui lòng thử lại sau.</p>
+                      <p className="text-gray-400 mb-4">Unable to upload model 3D. Please try again later.</p>
                       <p className="text-xs text-gray-500">URL: {currentModelUrl}</p>
                       <button
                         onClick={() => setCurrentModelUrl('https://modelviewer.dev/shared-assets/models/Astronaut.glb')}
                         className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded"
                       >
-                        Thử với model mẫu
+                        Try with a sample model
                       </button>
                     </div>
                   ) : currentModelUrl ? (
@@ -1122,9 +1047,9 @@ export default function ProfilePage() {
                         sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                         loading="eager"
                         referrerPolicy="no-referrer"
-                        onLoad={() => console.log("iframe đã tải xong!")}
+                        onLoad={() => console.log("iframe has loaded successfully!")}
                         onError={() => {
-                          console.error("Lỗi khi tải iframe");
+                          console.error("Error loading iframe");
                           setModelLoadError(true);
                         }}
                       ></iframe>
@@ -1133,24 +1058,24 @@ export default function ProfilePage() {
                           onClick={() => window.open(currentModelUrl, '_blank')}
                           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded"
                         >
-                          Mở trong cửa sổ mới
+                          Open in a new window
                         </button>
                         <button
                           onClick={() => setCurrentModelUrl('https://modelviewer.dev/shared-assets/models/Astronaut.glb')}
                           className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded"
                         >
-                          Thử với model mẫu
+                          Try with a sample model
                         </button>
                       </div>
                     </>
                   ) : (
                     <div className="text-center p-8">
-                      <p className="text-gray-400 mb-4">Không thể tải model 3D. Vui lòng thử lại sau.</p>
+                      <p className="text-gray-400 mb-4">Unable to load the 3D model. Please try again later.</p>
                       <button
                         onClick={() => setCurrentModelUrl('https://modelviewer.dev/shared-assets/models/Astronaut.glb')}
                         className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded"
                       >
-                        Thử với model mẫu
+                        Try with a sample model
                       </button>
                     </div>
                   )}

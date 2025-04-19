@@ -1,7 +1,7 @@
 import { uploadToPinata, getIpfsUrl, getModelViewerUrl, getDirectModelUrl } from './pinataService';
 import { convertGLBToFile } from './modelExportService';
-import { Connection } from '@solana/web3.js';
-import { mintNFT, getCubeNFTMetadata } from './nftService';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { mintNFT, getCubeNFTMetadata, getMusicNFTMetadata } from './nftService';
 
 export interface MockNFTMetadata {
     name: string;
@@ -18,7 +18,7 @@ export interface MockNFTMetadata {
 export async function mockMintNFT(metadata: MockNFTMetadata): Promise<string> {
     try {
         // Upload lên Pinata (phần này thực tế, không giả lập)
-        console.log('Đang upload hình ảnh NFT lên Pinata...', metadata.name);
+        console.log('Uploading image to Pinata...', metadata.name);
         const ipfsHash = await uploadToPinata(metadata.image, {
             name: metadata.name,
             description: metadata.description,
@@ -34,87 +34,141 @@ export async function mockMintNFT(metadata: MockNFTMetadata): Promise<string> {
             `https://ipfs.filebase.io/ipfs/${ipfsHash}`
         ];
 
-        // Tạo file 3D model từ hình ảnh (giả lập, đơn giản chỉ là cube)
-        console.log('Đang tạo model 3D cho NFT...');
-        // Giả định sử dụng màu chính từ thuộc tính nếu có
-        const colorAttr = metadata.attributes.find(attr => attr.trait_type === 'Color');
-        const colors = colorAttr ? [colorAttr.value] : ['#5d4fff'];
+        // Xác định loại NFT (music hoặc cube)
+        const isMusic = !!metadata.audioUrl;
 
-        // Tạo model 3D
-        const glbFile = await convertGLBToFile(colors, metadata.name);
-        console.log('Đã tạo model 3D:', glbFile.name, 'type:', glbFile.type, 'size:', glbFile.size);
+        let audioUrl = metadata.audioUrl || '';
+        let audioType = 'audio/mpeg';
+        let model3dIpfsHash = '';
+        let modelIpfsUri = '';
+        let directModelUrl = '';
+        let modelViewerUrl = '';
+        let fallbackModel3d: string[] = [];
 
-        // Đảm bảo đúng MIME type cho file GLB
-        const modelMimeType = 'model/gltf-binary';
+        if (!isMusic) {
+            // Tạo file 3D model từ hình ảnh (giả lập, đơn giản chỉ là cube)
+            console.log('Creating 3D model for NFT...');
+            // Giả định sử dụng màu chính từ thuộc tính nếu có
+            const colorAttr = metadata.attributes.find(attr => attr.trait_type === 'Color');
+            const colors = colorAttr ? [colorAttr.value] : ['#5d4fff'];
 
-        // Upload model 3D lên Pinata với MIME type chính xác
-        const model3dIpfsHash = await uploadToPinata(glbFile, {
-            name: metadata.name + " 3D Model",
-            description: "3D Model for " + metadata.name,
-            type: modelMimeType
-        });
+            // Tạo model 3D
+            const glbFile = await convertGLBToFile(colors, metadata.name);
+            console.log('Created 3D model:', glbFile.name, 'type:', glbFile.type, 'size:', glbFile.size);
 
-        // Tạo URI IPFS chuẩn
-        const modelIpfsUri = `ipfs://${model3dIpfsHash}`;
+            // Đảm bảo đúng MIME type cho file GLB
+            const modelMimeType = 'model/gltf-binary';
 
-        // Tạo URL cho model 3D với nhiều gateway backup
-        const directModelUrl = getDirectModelUrl(model3dIpfsHash);
-        const modelViewerUrl = getModelViewerUrl(model3dIpfsHash);
-        const fallbackModel3d = [
-            `https://gateway.pinata.cloud/ipfs/${model3dIpfsHash}`,
-            `https://cloudflare-ipfs.com/ipfs/${model3dIpfsHash}`,
-            `https://dweb.link/ipfs/${model3dIpfsHash}`
-        ];
+            // Upload model 3D lên Pinata với MIME type chính xác
+            model3dIpfsHash = await uploadToPinata(glbFile, {
+                name: metadata.name + " 3D Model",
+                description: "3D Model for " + metadata.name,
+                type: modelMimeType
+            });
+
+            // Tạo URI IPFS chuẩn
+            modelIpfsUri = `ipfs://${model3dIpfsHash}`;
+
+            // Tạo URL cho model 3D với nhiều gateway backup
+            directModelUrl = getDirectModelUrl(model3dIpfsHash);
+            modelViewerUrl = getModelViewerUrl(model3dIpfsHash);
+            fallbackModel3d = [
+                `https://gateway.pinata.cloud/ipfs/${model3dIpfsHash}`,
+                `https://cloudflare-ipfs.com/ipfs/${model3dIpfsHash}`,
+                `https://dweb.link/ipfs/${model3dIpfsHash}`
+            ];
+        }
 
         // Tạo NFT giả lập với ID ngẫu nhiên
-        const nftId = `void-cube-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const nftId = isMusic
+            ? `void-music-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+            : `void-cube-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-        // Tạo NFT data với đầy đủ thông tin 
-        const nftData = {
+        // Tạo một signature để theo dõi trên Solscan
+        const txSignature = `mockTx${Date.now()}${Math.random().toString(36).substring(2, 15)}`;
+
+        // Chuẩn bị các thuộc tính chung của NFT
+        const baseNftProps = {
             id: nftId,
             name: metadata.name,
             description: metadata.description,
             image: imageUrl,
-            fallbackImages, // Thêm các URL dự phòng
+            fallbackImages,
             ipfsUrl: getIpfsUrl(ipfsHash),
             ipfsHash,
-            model3d: directModelUrl,
-            modelIpfsUri, // Thêm URI IPFS tiêu chuẩn
-            modelViewerUrl, // URL trực tiếp cho model viewer
-            model3dHash: model3dIpfsHash,
-            fallbackModel3d, // Thêm các URL dự phòng cho model 3D
-            model3dType: modelMimeType,
+            mintAddress: nftId,
+            txSignature: txSignature,
             properties: {
                 files: [
                     {
                         uri: imageUrl,
                         type: metadata.image.type || 'image/png',
                         cdn: imageUrl
-                    },
-                    {
-                        uri: modelIpfsUri,
-                        type: modelMimeType,
-                        cdn: directModelUrl
                     }
                 ],
-                category: 'image',
-                model_viewer_url: modelViewerUrl,
-                model_type: "glb"
+                category: isMusic ? 'audio' : 'image'
             },
             attributes: metadata.attributes,
-            mintedAt: new Date().toISOString(),
-            // Thêm các thuộc tính hiển thị
-            type: "cube",
-            shapeType: "complex",
-            color: "#5d4fff"
+            mintedAt: new Date().toISOString()
         };
+
+        // Tạo NFT data với đầy đủ thông tin tùy theo loại
+        let nftData: any;
+
+        if (isMusic) {
+            // NFT âm nhạc
+            nftData = {
+                ...baseNftProps,
+                type: "music",
+                audioUrl: audioUrl,
+                audioType: audioType,
+                properties: {
+                    ...baseNftProps.properties,
+                    files: [
+                        ...baseNftProps.properties.files,
+                        {
+                            uri: audioUrl,
+                            type: audioType,
+                            cdn: audioUrl
+                        }
+                    ]
+                }
+            };
+        } else {
+            // NFT cube
+            nftData = {
+                ...baseNftProps,
+                model3d: directModelUrl,
+                modelIpfsUri,
+                modelViewerUrl,
+                model3dHash: model3dIpfsHash,
+                fallbackModel3d,
+                model3dType: 'model/gltf-binary',
+                properties: {
+                    ...baseNftProps.properties,
+                    files: [
+                        ...baseNftProps.properties.files,
+                        {
+                            uri: modelIpfsUri,
+                            type: 'model/gltf-binary',
+                            cdn: directModelUrl
+                        }
+                    ],
+                    model_viewer_url: modelViewerUrl,
+                    model_type: "glb"
+                },
+                type: "cube",
+                shapeType: "complex",
+                color: "#5d4fff"
+            };
+        }
 
         // Lưu vào localStorage
         const userNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
         userNfts.push(nftData);
 
         localStorage.setItem('userNfts', JSON.stringify(userNfts));
-        console.log('Đã lưu NFT mới vào localStorage', nftId);
+        console.log('Saved new NFT to localStorage', nftId);
 
         // Cập nhật URLs để đảm bảo tất cả URLs đều hoạt động
         refreshNFTImageURLS();
@@ -131,16 +185,42 @@ export function getUserNFTs() {
     if (typeof window === 'undefined') return [];
     try {
         const nfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
-        console.log("Đã tải NFTs từ localStorage:", nfts.length);
+        console.log("Loaded NFTs from localStorage:", nfts.length);
+
+        // Chuẩn hóa các trường dữ liệu trước khi trả về
+        const normalizedNfts = nfts.map((nft: any) => {
+            // Đảm bảo mỗi NFT đều có trường type
+            if (!nft.type) {
+                nft.type = nft.audioUrl ? "music" : "cube";
+            }
+
+            // Đảm bảo có txSignature và mintAddress
+            if (!nft.txSignature && nft.id) {
+                nft.txSignature = `mock_tx_${nft.id.substring(0, 8)}${Date.now()}`;
+            }
+
+            if (!nft.mintAddress && nft.id) {
+                nft.mintAddress = nft.id;
+            }
+
+            // Đảm bảo rằng NFT có đủ các thuộc tính cơ bản
+            return {
+                ...nft,
+                type: nft.type || "cube",
+                shapeType: nft.shapeType || "complex",
+                price: nft.price || 1.0,
+                mintedAt: nft.mintedAt || new Date().toISOString()
+            };
+        });
 
         // Trả về các NFT được sắp xếp theo thời gian mint mới nhất
-        return nfts.sort((a: any, b: any) => {
+        return normalizedNfts.sort((a: any, b: any) => {
             const dateA = new Date(a.mintedAt).getTime();
             const dateB = new Date(b.mintedAt).getTime();
             return dateB - dateA; // Sắp xếp giảm dần (mới nhất lên đầu)
         });
     } catch (error) {
-        console.error("Lỗi khi đọc NFTs từ localStorage:", error);
+        console.error("Error reading NFTs from localStorage:", error);
         return [];
     }
 }
@@ -156,28 +236,43 @@ export function refreshNFTImageURLS() {
         // Kiểm tra và cập nhật URL cho các NFT
         for (const nft of nfts) {
             // Đảm bảo mỗi NFT đều có URL hình ảnh hợp lệ
-            if (!nft.image || (nft.image.startsWith('blob:') && !isValidBlobURL(nft.image))) {
+            if (!nft.image || (nft.image.startsWith('blob:') && !isValidBlobURL(nft.image)) || nft.image.includes('undefined')) {
                 // Ưu tiên sử dụng ipfsHash với gateway URL
                 if (nft.ipfsHash) {
                     // Sử dụng nhiều gateway khác nhau để đảm bảo khả năng truy cập
-                    nft.image = `https://ipfs.io/ipfs/${nft.ipfsHash}`;
-                    // Thêm URL dự phòng bằng các gateway khác
+                    nft.image = `https://ipfs.filebase.io/ipfs/${nft.ipfsHash}`;
+                    // Thêm URL dự phòng bằng các gateway khác, thêm nhiều gateway hơn
                     nft.fallbackImages = [
+                        `https://nftstorage.link/ipfs/${nft.ipfsHash}`,
                         `https://gateway.pinata.cloud/ipfs/${nft.ipfsHash}`,
                         `https://cloudflare-ipfs.com/ipfs/${nft.ipfsHash}`,
-                        `https://ipfs.filebase.io/ipfs/${nft.ipfsHash}`
+                        `https://dweb.link/ipfs/${nft.ipfsHash}`,
+                        `https://ipfs.io/ipfs/${nft.ipfsHash}`,
+                        `https://ipfs.4everland.io/ipfs/${nft.ipfsHash}`,
+                        `https://w3s.link/ipfs/${nft.ipfsHash}`,
+                        `https://ipfs.eth.aragon.network/ipfs/${nft.ipfsHash}`,
+                        `https://hardbin.com/ipfs/${nft.ipfsHash}`,
+                        // Thêm đường dẫn trực tiếp cho những environment sử dụng localhost hoặc vercel
+                        `/api/ipfs/${nft.ipfsHash}`
                     ];
                     hasChanges = true;
                 } else if (nft.ipfsUrl) {
                     // Chuyển đổi URL IPFS sang gateway URL nếu cần
                     if (nft.ipfsUrl.startsWith('ipfs://')) {
                         const cid = nft.ipfsUrl.replace('ipfs://', '');
-                        nft.image = `https://ipfs.io/ipfs/${cid}`;
-                        // Thêm URL dự phòng
+                        nft.image = `https://ipfs.filebase.io/ipfs/${cid}`;
+                        // Thêm URL dự phòng với nhiều gateway hơn
                         nft.fallbackImages = [
+                            `https://nftstorage.link/ipfs/${cid}`,
                             `https://gateway.pinata.cloud/ipfs/${cid}`,
                             `https://cloudflare-ipfs.com/ipfs/${cid}`,
-                            `https://ipfs.filebase.io/ipfs/${cid}`
+                            `https://dweb.link/ipfs/${cid}`,
+                            `https://ipfs.io/ipfs/${cid}`,
+                            `https://ipfs.4everland.io/ipfs/${cid}`,
+                            `https://w3s.link/ipfs/${cid}`,
+                            `https://ipfs.eth.aragon.network/ipfs/${cid}`,
+                            `https://hardbin.com/ipfs/${cid}`,
+                            `/api/ipfs/${cid}`
                         ];
                     } else {
                         nft.image = nft.ipfsUrl;
@@ -190,16 +285,43 @@ export function refreshNFTImageURLS() {
                 }
             }
 
+            // Thêm đường dẫn cục bộ nếu không tồn tại
+            if (!nft.fallbackImages || nft.fallbackImages.length === 0) {
+                if (nft.ipfsHash) {
+                    nft.fallbackImages = [
+                        `https://ipfs.filebase.io/ipfs/${nft.ipfsHash}`,
+                        `https://nftstorage.link/ipfs/${nft.ipfsHash}`,
+                        `https://gateway.pinata.cloud/ipfs/${nft.ipfsHash}`,
+                        `https://cloudflare-ipfs.com/ipfs/${nft.ipfsHash}`,
+                        `https://dweb.link/ipfs/${nft.ipfsHash}`,
+                        `https://ipfs.io/ipfs/${nft.ipfsHash}`,
+                        `https://ipfs.4everland.io/ipfs/${nft.ipfsHash}`,
+                        `https://w3s.link/ipfs/${nft.ipfsHash}`,
+                        `https://ipfs.eth.aragon.network/ipfs/${nft.ipfsHash}`,
+                        `https://hardbin.com/ipfs/${nft.ipfsHash}`,
+                        `/api/ipfs/${nft.ipfsHash}`
+                    ];
+                    hasChanges = true;
+                }
+            }
+
             // Kiểm tra và cập nhật model3d URL 
             if (nft.model3dHash && (!nft.model3d || (nft.model3d.startsWith('blob:') && !isValidBlobURL(nft.model3d)))) {
                 // Sử dụng các hàm utility để tạo URL đúng
                 const directModelUrl = getDirectModelUrl(nft.model3dHash);
                 nft.model3d = directModelUrl;
-                // Thêm URL dự phòng cho model3d
+                // Thêm URL dự phòng cho model3d với nhiều gateway hơn
                 nft.fallbackModel3d = [
+                    `https://ipfs.filebase.io/ipfs/${nft.model3dHash}`,
+                    `https://nftstorage.link/ipfs/${nft.model3dHash}`,
                     `https://gateway.pinata.cloud/ipfs/${nft.model3dHash}`,
                     `https://cloudflare-ipfs.com/ipfs/${nft.model3dHash}`,
-                    `https://dweb.link/ipfs/${nft.model3dHash}`
+                    `https://dweb.link/ipfs/${nft.model3dHash}`,
+                    `https://ipfs.io/ipfs/${nft.model3dHash}`,
+                    `https://ipfs.4everland.io/ipfs/${nft.model3dHash}`,
+                    `https://w3s.link/ipfs/${nft.model3dHash}`,
+                    `https://ipfs.eth.aragon.network/ipfs/${nft.model3dHash}`,
+                    `/api/ipfs/${nft.model3dHash}`
                 ];
 
                 // Thêm URI IPFS tiêu chuẩn nếu chưa có
@@ -241,6 +363,18 @@ export function refreshNFTImageURLS() {
                 hasChanges = true;
             }
 
+            // Đảm bảo các trường type cần thiết 
+            if (!nft.type) {
+                nft.type = nft.audioUrl ? "music" : "cube";
+                hasChanges = true;
+            }
+
+            // Đảm bảo txSignature tồn tại
+            if (!nft.txSignature && nft.mintAddress) {
+                nft.txSignature = `mock_tx_${nft.mintAddress.substring(0, 8)}${Date.now()}`;
+                hasChanges = true;
+            }
+
             // Đảm bảo NFT có đủ thông tin properties cần thiết cho model 3D
             if (nft.model3d && !nft.properties) {
                 nft.properties = {
@@ -273,7 +407,7 @@ export function refreshNFTImageURLS() {
 
         if (hasChanges) {
             localStorage.setItem('userNfts', JSON.stringify(nfts));
-            console.log("Đã cập nhật URLs cho NFTs");
+            console.log("Updated URLs for NFTs");
 
             // Tải trước các hình ảnh để cải thiện trải nghiệm
             preloadImages(nfts);
@@ -295,60 +429,228 @@ export function isValidBlobURL(url: string): boolean {
 // Thêm hàm tải trước hình ảnh để tối ưu hiển thị
 export function preloadImages(nfts: any[]): void {
     if (typeof window === 'undefined') return;
-    console.log("Bắt đầu tải trước hình ảnh NFTs");
+    console.log("Starting to preload NFT images");
 
     nfts.forEach(nft => {
-        if (nft.image) {
+        if (!nft || !nft.name) {
+            console.log("Skipping invalid NFT");
+            return;
+        }
+
+        // Tạo hàm tải hình ảnh với fallback
+        const tryLoadImage = (url: string, fallbackUrls: string[] = [], index = 0, maxAttempts = 5) => {
+            if (!url || index >= maxAttempts) {
+                console.log(`Failed to load image for NFT ${nft.name} after ${maxAttempts} attempts`);
+
+                // Nếu còn fallback URLs, thử URL tiếp theo
+                if (fallbackUrls && fallbackUrls.length > 0) {
+                    console.log(`Trying fallback URL for NFT ${nft.name}: ${fallbackUrls[0]}`);
+                    tryLoadImage(fallbackUrls[0], fallbackUrls.slice(1), 0, maxAttempts);
+                } else if (nft.ipfsHash) {
+                    // Thử tạo URL mới từ ipfsHash nếu có
+                    const newUrl = `https://nftstorage.link/ipfs/${nft.ipfsHash}`;
+                    console.log(`Generating new URL from ipfsHash for NFT ${nft.name}: ${newUrl}`);
+                    tryLoadImage(newUrl, [], 0, 2);
+                }
+                return;
+            }
+
             const img = new Image();
-            img.src = nft.image;
 
-            img.onerror = () => {
-                console.log(`Không thể tải trước hình ảnh từ ${nft.image} cho NFT ${nft.name}`);
-
-                // Thử với fallbackImages
-                if (nft.fallbackImages && nft.fallbackImages.length > 0) {
-                    nft.fallbackImages.forEach((fallbackUrl: string) => {
-                        const fallbackImg = new Image();
-                        fallbackImg.src = fallbackUrl;
-                        console.log(`Tải trước hình ảnh dự phòng: ${fallbackUrl}`);
-                    });
+            img.onload = () => {
+                console.log(`Successfully preloaded image for NFT ${nft.name}: ${url}`);
+                // Cập nhật URL hình ảnh nếu thành công và khác với URL ban đầu
+                if (url !== nft.image) {
+                    nft.image = url;
+                    // Lưu URL thành công vào localStorage
+                    try {
+                        const storedNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
+                        const nftToUpdate = storedNfts.find((n: any) => n.id === nft.id);
+                        if (nftToUpdate) {
+                            nftToUpdate.image = url;
+                            localStorage.setItem('userNfts', JSON.stringify(storedNfts));
+                            console.log(`Updated image URL in localStorage for NFT ${nft.name}`);
+                        }
+                    } catch (e) {
+                        console.error(`Error updating localStorage:`, e);
+                    }
                 }
             };
 
-            img.onload = () => {
-                console.log(`Đã tải trước thành công hình ảnh: ${nft.image}`);
+            img.onerror = () => {
+                console.log(`Failed to preload image from ${url} for NFT ${nft.name} (attempt ${index + 1}/${maxAttempts})`);
+
+                // Thử lại URL hiện tại với timeout ngắn 
+                if (index < maxAttempts - 1) {
+                    setTimeout(() => {
+                        tryLoadImage(url, fallbackUrls, index + 1, maxAttempts);
+                    }, 500 + index * 500); // Đợi thời gian tăng dần theo số lần thử
+                } else if (fallbackUrls && fallbackUrls.length > 0) {
+                    // Thử URL fallback tiếp theo
+                    console.log(`Trying fallback URL for NFT ${nft.name}: ${fallbackUrls[0]}`);
+                    tryLoadImage(fallbackUrls[0], fallbackUrls.slice(1), 0, maxAttempts);
+                } else if (nft.ipfsHash) {
+                    // Thử tạo các URL mới từ ipfsHash nếu đã thử hết fallback
+                    const apiEndpoint = `/api/ipfs/${nft.ipfsHash}`;
+                    console.log(`Last resort: trying local API endpoint for NFT ${nft.name}: ${apiEndpoint}`);
+                    tryLoadImage(apiEndpoint, [], 0, 3);
+                }
             };
+
+            // Thêm cơ chế timeout cho quá trình tải
+            const timeoutId = setTimeout(() => {
+                // Nếu sau 10 giây mà ảnh vẫn chưa tải xong, hủy và thử URL khác
+                if (!img.complete) {
+                    console.log(`Timeout loading image from ${url} for NFT ${nft.name}`);
+                    img.src = ''; // Hủy tải hiện tại
+
+                    if (fallbackUrls && fallbackUrls.length > 0) {
+                        tryLoadImage(fallbackUrls[0], fallbackUrls.slice(1), 0, maxAttempts);
+                    } else if (nft.ipfsHash) {
+                        const apiEndpoint = `/api/ipfs/${nft.ipfsHash}`;
+                        tryLoadImage(apiEndpoint, [], 0, 3);
+                    }
+                }
+            }, 10000); // 10 giây timeout
+
+            img.onload = () => {
+                clearTimeout(timeoutId);
+                console.log(`Successfully preloaded image for NFT ${nft.name}: ${url}`);
+                // Rest of the existing onload function...
+                if (url !== nft.image) {
+                    nft.image = url;
+                    try {
+                        const storedNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
+                        const nftToUpdate = storedNfts.find((n: any) => n.id === nft.id);
+                        if (nftToUpdate) {
+                            nftToUpdate.image = url;
+                            localStorage.setItem('userNfts', JSON.stringify(storedNfts));
+                            console.log(`Updated image URL in localStorage for NFT ${nft.name}`);
+                        }
+                    } catch (e) {
+                        console.error(`Error updating localStorage:`, e);
+                    }
+                }
+            };
+
+            img.onerror = () => {
+                clearTimeout(timeoutId);
+                console.log(`Failed to preload image from ${url} for NFT ${nft.name} (attempt ${index + 1}/${maxAttempts})`);
+
+                // Existing error handling...
+                if (index < maxAttempts - 1) {
+                    setTimeout(() => {
+                        tryLoadImage(url, fallbackUrls, index + 1, maxAttempts);
+                    }, 500 + index * 500);
+                } else if (fallbackUrls && fallbackUrls.length > 0) {
+                    console.log(`Trying fallback URL for NFT ${nft.name}: ${fallbackUrls[0]}`);
+                    tryLoadImage(fallbackUrls[0], fallbackUrls.slice(1), 0, maxAttempts);
+                } else if (nft.ipfsHash) {
+                    const apiEndpoint = `/api/ipfs/${nft.ipfsHash}`;
+                    console.log(`Last resort: trying local API endpoint for NFT ${nft.name}: ${apiEndpoint}`);
+                    tryLoadImage(apiEndpoint, [], 0, 3);
+                }
+            };
+
+            img.src = url;
+        };
+
+        // Đảm bảo NFT có mảng fallbackImages đầy đủ
+        if (!nft.fallbackImages || nft.fallbackImages.length === 0) {
+            if (nft.ipfsHash) {
+                nft.fallbackImages = [
+                    `https://ipfs.filebase.io/ipfs/${nft.ipfsHash}`,
+                    `https://nftstorage.link/ipfs/${nft.ipfsHash}`,
+                    `https://gateway.pinata.cloud/ipfs/${nft.ipfsHash}`,
+                    `https://cloudflare-ipfs.com/ipfs/${nft.ipfsHash}`,
+                    `https://dweb.link/ipfs/${nft.ipfsHash}`,
+                    `https://ipfs.io/ipfs/${nft.ipfsHash}`,
+                    `https://ipfs.4everland.io/ipfs/${nft.ipfsHash}`,
+                    `https://w3s.link/ipfs/${nft.ipfsHash}`,
+                    `https://ipfs.eth.aragon.network/ipfs/${nft.ipfsHash}`,
+                    `https://hardbin.com/ipfs/${nft.ipfsHash}`,
+                    `/api/ipfs/${nft.ipfsHash}`
+                ];
+            }
+        }
+
+        // Bắt đầu tải hình ảnh chính
+        if (nft.image) {
+            console.log(`Preloading primary image for NFT ${nft.name}: ${nft.image}`);
+            tryLoadImage(nft.image, nft.fallbackImages || []);
+        } else if (nft.fallbackImages && nft.fallbackImages.length > 0) {
+            // Nếu không có hình ảnh chính, thử fallback đầu tiên
+            console.log(`No primary image, using first fallback for NFT ${nft.name}: ${nft.fallbackImages[0]}`);
+            tryLoadImage(nft.fallbackImages[0], nft.fallbackImages.slice(1));
+        } else if (nft.ipfsHash) {
+            // Nếu không có URL nào, thử tạo từ ipfsHash
+            const ipfsUrl = `https://ipfs.filebase.io/ipfs/${nft.ipfsHash}`;
+            console.log(`No image URLs, generating from ipfsHash for NFT ${nft.name}: ${ipfsUrl}`);
+            tryLoadImage(ipfsUrl, [
+                `https://nftstorage.link/ipfs/${nft.ipfsHash}`,
+                `https://gateway.pinata.cloud/ipfs/${nft.ipfsHash}`,
+                `https://cloudflare-ipfs.com/ipfs/${nft.ipfsHash}`,
+                `/api/ipfs/${nft.ipfsHash}`
+            ]);
         }
 
         // Tải trước model 3D bằng cách gửi HEAD request - cải thiện xử lý lỗi
         if (nft.model3d && !nft.model3d.includes('modelviewer.dev')) {
-            try {
-                // Sử dụng try-catch bao quanh toàn bộ đoạn fetch
-                // Chỉ kiểm tra mà không chặn luồng chính
-                (async () => {
-                    try {
-                        const response = await fetch(nft.model3d, {
-                            method: 'HEAD',
-                            // Sử dụng no-cors mode để tránh lỗi CORS
-                            mode: 'no-cors',
-                            // Thêm timeout ngắn để tránh chờ quá lâu
-                            signal: AbortSignal.timeout(3000)
-                        });
-                        console.log(`Đã kiểm tra model3d URL: ${nft.model3d}`);
-                    } catch (innerError: any) {
-                        // Lỗi network hoặc timeout là bình thường, chỉ ghi log và bỏ qua
-                        console.log(`Không thể kiểm tra model3d URL: ${nft.model3d} - ${innerError.message}`);
-                    }
-                })().catch(e => {
-                    // Bắt mọi lỗi không mong muốn trong promise
-                    console.log(`Lỗi bất ngờ khi kiểm tra model: ${e.message}`);
-                });
-            } catch (error) {
-                // Bắt các lỗi cú pháp hoặc lỗi không phải network
-                console.log(`Lỗi khi kiểm tra model3d URL: ${error}`);
-            }
+            // Sử dụng hàm kiểm tra model riêng biệt
+            checkModel3d(nft);
         }
     });
+}
+
+// Hàm kiểm tra model 3D riêng
+function checkModel3d(nft: any): void {
+    try {
+        // Sử dụng try-catch bao quanh toàn bộ đoạn fetch
+        // Chỉ kiểm tra mà không chặn luồng chính
+        (async () => {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+                const response = await fetch(nft.model3d, {
+                    method: 'HEAD',
+                    // Sử dụng no-cors mode để tránh lỗi CORS
+                    mode: 'no-cors',
+                    // Thêm signal từ controller để hỗ trợ timeout
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+                console.log(`Checked model3d URL for NFT ${nft.name}: ${nft.model3d}`);
+            } catch (innerError: any) {
+                // Thử URLs fallback nếu URL chính không khả dụng
+                if (nft.fallbackModel3d && nft.fallbackModel3d.length > 0) {
+                    console.log(`Trying fallback model URL for NFT ${nft.name}: ${nft.fallbackModel3d[0]}`);
+                    // Cập nhật model3d với URL fallback đầu tiên
+                    nft.model3d = nft.fallbackModel3d[0];
+
+                    // Cập nhật trong localStorage
+                    try {
+                        const storedNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
+                        const nftToUpdate = storedNfts.find((n: any) => n.id === nft.id);
+                        if (nftToUpdate) {
+                            nftToUpdate.model3d = nft.fallbackModel3d[0];
+                            localStorage.setItem('userNfts', JSON.stringify(storedNfts));
+                            console.log(`Updated model3d URL in localStorage for NFT ${nft.name}`);
+                        }
+                    } catch (e) {
+                        console.error(`Error updating localStorage:`, e);
+                    }
+                }
+            }
+        })().catch(e => {
+            // Bắt mọi lỗi không mong muốn trong promise
+            console.log(`Unexpected error checking model for NFT ${nft.name}: ${e.message}`);
+        });
+    } catch (error) {
+        // Bắt các lỗi cú pháp hoặc lỗi không phải network
+        console.log(`Error checking model3d URL: ${error}`);
+    }
 }
 
 // Chuyển cube thành file PNG để lưu trữ
@@ -386,18 +688,18 @@ export async function mintRealNFT(
     imageFile: File
 ): Promise<string> {
     try {
-        console.log('Bắt đầu tiến trình mint NFT thật...');
+        console.log('Starting real NFT minting process...');
 
         // Tạo file 3D model GLB
-        console.log('Đang tạo file GLB...');
+        console.log('Creating GLB file...');
         const glbFile = await convertGLBToFile(cubeData.colors, cubeData.name);
-        console.log('Đã tạo xong file GLB:', glbFile.name, 'type:', glbFile.type, 'size:', glbFile.size, 'bytes');
+        console.log('GLB file created:', glbFile.name, 'type:', glbFile.type, 'size:', glbFile.size, 'bytes');
 
         // Đảm bảo đúng MIME type cho file GLB
         const modelMimeType = 'model/gltf-binary';
 
         // Upload hình ảnh lên IPFS trước
-        console.log('Đang upload hình ảnh lên IPFS...');
+        console.log('Uploading image to IPFS...');
         const imageIpfsHash = await uploadToPinata(imageFile, {
             name: cubeData.name + " Image",
             description: "Image for " + cubeData.name,
@@ -412,7 +714,7 @@ export async function mintRealNFT(
         ];
 
         // Upload model 3D lên IPFS với loại nội dung đúng
-        console.log('Đang upload model 3D lên IPFS...');
+        console.log('Uploading 3D model to IPFS...');
         const model3dIpfsHash = await uploadToPinata(glbFile, {
             name: cubeData.name + " 3D Model",
             description: "3D Model for " + cubeData.name,
@@ -461,8 +763,8 @@ export async function mintRealNFT(
             }
         };
 
-        // Thực hiện mint NFT thật với metadata đã tạo
-        console.log('Đang mint NFT với metadata:', nftMetadata);
+        // Thực hiện mint NFT thật
+        console.log('Minting NFT with metadata:', nftMetadata);
 
         // Chuyển đổi metadata thành định dạng phù hợp cho NFT service
         const solanaMetadata = {
@@ -477,7 +779,26 @@ export async function mintRealNFT(
 
         // Gọi hàm mint NFT thật
         const mintedNftAddress = await mintNFT(connection, wallet, solanaMetadata);
-        console.log('Đã mint NFT thành công, địa chỉ:', mintedNftAddress);
+        console.log('Successfully minted NFT, address:', mintedNftAddress);
+
+        // Lấy thông tin giao dịch mới nhất
+        let txSignature;
+        try {
+            const signatures = await connection.getSignaturesForAddress(new PublicKey(mintedNftAddress));
+            if (signatures && signatures.length > 0) {
+                txSignature = signatures[0].signature;
+                console.log('Got transaction signature:', txSignature);
+            } else {
+                // Tạo giả một signature để đảm bảo có giá trị
+                txSignature = `tx${Date.now()}${Math.random().toString(36).substring(2, 10)}`;
+                console.log('Using mock transaction signature:', txSignature);
+            }
+        } catch (error) {
+            // Nếu không lấy được, tạo một signature giả
+            console.error('Error getting transaction signature:', error);
+            txSignature = `tx${Date.now()}${Math.random().toString(36).substring(2, 10)}`;
+            console.log('Using mock transaction signature after error:', txSignature);
+        }
 
         // Lưu thông tin vào localStorage để hiển thị trong UI ngay cả khi blockchain chưa xác nhận
         const nftData = {
@@ -498,6 +819,8 @@ export async function mintRealNFT(
             attributes: cubeData.attributes,
             mintedAt: new Date().toISOString(),
             solanaAddress: mintedNftAddress,
+            mintAddress: mintedNftAddress,
+            txSignature: txSignature,
             type: "cube",
             shapeType: "complex",
             price: 1.0 + Math.random() * 2,
@@ -511,7 +834,7 @@ export async function mintRealNFT(
 
         return mintedNftAddress;
     } catch (error) {
-        console.error('Lỗi khi mint NFT thật:', error);
+        console.error('Error minting real NFT:', error);
         throw error;
     }
 }
@@ -520,25 +843,25 @@ export async function mintRealNFT(
 export async function validateAndFixModelURL(url: string): Promise<string> {
     if (typeof window === 'undefined') return url;
 
-    console.log("Kiểm tra URL model 3D:", url);
+    console.log("Checking model URL:", url);
 
     try {
         // Nếu URL đã có modelviewer.dev, đây có thể là URL viewer đã được cấu hình
         if (url.includes('modelviewer.dev')) {
-            console.log("URL chứa modelviewer.dev, có thể là URL viewer hợp lệ");
+            console.log("URL contains modelviewer.dev, possibly a valid viewer URL");
             return url;
         }
 
         // Kiểm tra URL trực tiếp - nếu là URL IPFS
         if (url.includes('ipfs.io') || url.includes('gateway.pinata.cloud') ||
             url.includes('cloudflare-ipfs.com') || url.includes('dweb.link')) {
-            console.log("URL là IPFS URL, tạo URL model viewer");
+            console.log("URL is IPFS, creating model viewer URL");
             return `https://modelviewer.dev/viewer.html#src=${encodeURIComponent(url)}`;
         }
 
         // Nếu là ipfs:// protocol trực tiếp
         if (url.startsWith('ipfs://')) {
-            console.log("URL là ipfs:// protocol, chuyển đổi sang gateway URL");
+            console.log("URL is ipfs:// protocol, converting to gateway URL");
             const cid = url.replace('ipfs://', '');
             const gatewayUrl = `https://ipfs.io/ipfs/${cid}`;
             return `https://modelviewer.dev/viewer.html#src=${encodeURIComponent(gatewayUrl)}`;
@@ -547,15 +870,15 @@ export async function validateAndFixModelURL(url: string): Promise<string> {
         // Kiểm tra xem URL có thể truy cập không
         const isValid = await checkURLValidity(url);
         if (isValid) {
-            console.log("URL hợp lệ, tạo URL model viewer");
+            console.log("URL is valid, creating model viewer URL");
             return `https://modelviewer.dev/viewer.html#src=${encodeURIComponent(url)}`;
         }
 
         // Nếu không hợp lệ, trả về URL dự phòng
-        console.log("URL không hợp lệ, sử dụng URL dự phòng");
+        console.log("URL is invalid, using fallback URL");
         return `https://modelviewer.dev/shared-assets/models/Astronaut.glb`;
     } catch (error) {
-        console.error("Lỗi khi kiểm tra URL:", error);
+        console.error("Error checking URL:", error);
         return `https://modelviewer.dev/shared-assets/models/Astronaut.glb`;
     }
 }
@@ -573,7 +896,7 @@ async function checkURLValidity(url: string): Promise<boolean> {
         // Với no-cors, không thể kiểm tra status, nhưng nếu không có lỗi thì coi như có thể truy cập
         return true;
     } catch (error) {
-        console.error("URL không thể truy cập:", url, error);
+        console.error("URL is not accessible:", url, error);
         return false;
     }
 } 
