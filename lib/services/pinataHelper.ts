@@ -31,14 +31,14 @@ export async function testPinataConnection(): Promise<{
         if (response.status === 200) {
             return {
                 success: true,
-                message: 'Kết nối thành công đến Pinata API',
+                message: 'Successfully connected to Pinata API',
                 hasApiKey: true,
                 hasSecretKey: true
             };
         } else {
             return {
                 success: false,
-                message: `Kết nối thất bại: Status ${response.status}`,
+                message: `Connection failed: Status ${response.status}`,
                 hasApiKey: true,
                 hasSecretKey: true
             };
@@ -46,7 +46,7 @@ export async function testPinataConnection(): Promise<{
     } catch (error: any) {
         return {
             success: false,
-            message: `Lỗi kết nối: ${error.message || 'Không xác định'}`,
+            message: `Connection error: ${error.message || 'Unknown'}`,
             hasApiKey: !!process.env.NEXT_PUBLIC_PINATA_API_KEY,
             hasSecretKey: !!process.env.NEXT_PUBLIC_PINATA_SECRET_KEY
         };
@@ -59,7 +59,7 @@ export async function getStoredPinList(): Promise<any[]> {
         const secretKey = process.env.NEXT_PUBLIC_PINATA_SECRET_KEY;
 
         if (!apiKey || !secretKey) {
-            console.error('Thiếu Pinata API key hoặc Secret key');
+            console.error('Missing Pinata API key or Secret key');
             return [];
         }
 
@@ -73,11 +73,11 @@ export async function getStoredPinList(): Promise<any[]> {
         if (response.status === 200) {
             return response.data.rows || [];
         } else {
-            console.error('Không thể lấy danh sách pin:', response.status);
+            console.error('Cannot get pin list:', response.status);
             return [];
         }
     } catch (error: any) {
-        console.error('Lỗi khi lấy danh sách pin:', error.message);
+        console.error('Error getting pin list:', error.message);
         return [];
     }
 } 

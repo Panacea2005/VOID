@@ -68,7 +68,7 @@ export async function convertGLBToFile(colors: string[], name: string): Promise<
         console.log(`Kích thước dữ liệu GLB: ${glbData.byteLength} bytes`);
 
         if (glbData.byteLength <= 0) {
-            throw new Error("Dữ liệu GLB không hợp lệ hoặc rỗng");
+            throw new Error("Invalid or empty GLB data");
         }
 
         // Chuyển đổi ArrayBuffer thành Blob với MIME type đúng
@@ -89,10 +89,10 @@ export async function convertGLBToFile(colors: string[], name: string): Promise<
             lastModified: Date.now()
         });
 
-        console.log("Đã tạo file GLB thành công:", file.name, "kích thước:", file.size, "bytes");
+        console.log("Successfully created GLB file:", file.name, "size:", file.size, "bytes");
         return file;
     } catch (error) {
-        console.error("Lỗi khi tạo file GLB:", error);
+        console.error("Error creating GLB file:", error);
         // Tạo 1 cube đơn giản trong trường hợp lỗi
         const simpleGLB = await createSimpleCube();
         const blob = new Blob([simpleGLB], { type: 'model/gltf-binary' });
@@ -165,7 +165,7 @@ export async function validateGLBFile(file: File): Promise<{ valid: boolean, rea
             if (!isNameGLB && !isMimeTypeGLB) {
                 return resolve({
                     valid: false,
-                    reason: `File không phải là GLB: tên=${file.name}, loại=${file.type}`
+                    reason: `File is not a GLB: name=${file.name}, type=${file.type}`
                 });
             }
 
@@ -173,7 +173,7 @@ export async function validateGLBFile(file: File): Promise<{ valid: boolean, rea
             if (file.size < 100) {
                 return resolve({
                     valid: false,
-                    reason: `Kích thước file GLB quá nhỏ: ${file.size} bytes`
+                    reason: `GLB file size is too small: ${file.size} bytes`
                 });
             }
 
@@ -193,7 +193,7 @@ export async function validateGLBFile(file: File): Promise<{ valid: boolean, rea
                     if (magic !== 'glTF') {
                         return resolve({
                             valid: false,
-                            reason: `File không phải là GLB: header=${magic}`
+                            reason: `File is not a GLB: header=${magic}`
                         });
                     }
 
@@ -202,7 +202,7 @@ export async function validateGLBFile(file: File): Promise<{ valid: boolean, rea
                     if (version !== 2) {
                         return resolve({
                             valid: false,
-                            reason: `Phiên bản GLB không hỗ trợ: ${version}`
+                            reason: `Unsupported GLB version: ${version}`
                         });
                     }
 
@@ -211,7 +211,7 @@ export async function validateGLBFile(file: File): Promise<{ valid: boolean, rea
                 } catch (error) {
                     resolve({
                         valid: false,
-                        reason: `Lỗi khi kiểm tra file: ${error}`
+                        reason: `Error checking file: ${error}`
                     });
                 }
             };
@@ -219,7 +219,7 @@ export async function validateGLBFile(file: File): Promise<{ valid: boolean, rea
             reader.onerror = () => {
                 resolve({
                     valid: false,
-                    reason: 'Không thể đọc file để kiểm tra'
+                    reason: 'Cannot read file to check'
                 });
             };
 
@@ -229,7 +229,7 @@ export async function validateGLBFile(file: File): Promise<{ valid: boolean, rea
         } catch (error) {
             resolve({
                 valid: false,
-                reason: `Lỗi khi kiểm tra: ${error}`
+                reason: `Error checking: ${error}`
             });
         }
     });
@@ -247,7 +247,7 @@ export async function convertToGLB(file: File, name?: string): Promise<File> {
     // Nếu là file GLTF, cần chuyển đổi nó thành GLB
     // Hiện tại chỉ hỗ trợ một số loại file cơ bản
     if (file.name.toLowerCase().endsWith('.gltf') || file.type === 'model/gltf+json') {
-        console.warn("Chuyển đổi GLTF sang GLB không được hỗ trợ tự động. Vui lòng tải lên file GLB trực tiếp.");
+        console.warn("Conversion of GLTF to GLB is not supported. Please upload a GLB file directly.");
 
         // Trả về cube mặc định với màu ngẫu nhiên
         const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
@@ -255,7 +255,7 @@ export async function convertToGLB(file: File, name?: string): Promise<File> {
     }
 
     // Với các định dạng không hỗ trợ, tạo cube mẫu
-    console.warn(`Không hỗ trợ chuyển đổi file loại ${file.type} sang GLB. Đang tạo cube mẫu.`);
+    console.warn(`Unsupported file type ${file.type} conversion to GLB. Creating a default cube.`);
     const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
     return convertGLBToFile([randomColor], name || 'Converted Model');
 } 

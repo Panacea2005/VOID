@@ -1,0 +1,61 @@
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
+mockNftService.ts:485 Last resort: trying local API endpoint for NFT VOID Cube 379076: /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc
+mockNftService.ts:471 Failed to preload image from /api/ipfs/QmWhVCFuEvhaA3iSefbXtgYsgz3ttDkczfSeUMNaB1DApc for NFT VOID Cube 379076 (attempt 1/1)
