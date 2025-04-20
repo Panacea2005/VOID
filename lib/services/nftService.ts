@@ -1,6 +1,17 @@
 import { Connection, Keypair, PublicKey, Transaction } from '@solana/web3.js';
-import { Metaplex, walletAdapterIdentity } from '@metaplex-foundation/js';
+import { Metaplex, walletAdapterIdentity, NftWithToken, CreateNftInput } from '@metaplex-foundation/js';
 import { uploadToPinata, getIpfsUrl, getDirectModelUrl, getModelViewerUrl } from './pinataService';
+
+// Các thuộc tính metadata mở rộng để bao gồm cả thông tin collection
+export interface ExtendedProperties {
+    files: Array<{
+        uri: string;
+        type: string;
+    }>;
+    category: string;
+    // Các thuộc tính tùy chỉnh cho collection
+    [key: string]: any;
+}
 
 export interface NFTMetadata {
     name: string;
@@ -14,13 +25,7 @@ export interface NFTMetadata {
         trait_type: string;
         value: string;
     }>;
-    properties: {
-        files: Array<{
-            uri: string;
-            type: string;
-        }>;
-        category: string;
-    };
+    properties: ExtendedProperties;
 }
 
 // Biến để theo dõi nếu Pinata thất bại
@@ -63,6 +68,10 @@ async function safeUpload(file: File, metadata: any): Promise<string> {
         return mockCid;
     }
 }
+
+// ID tĩnh cho collections
+const VOID_CUBE_COLLECTION_ID = "void-cube-collection";
+const VOID_MUSIC_COLLECTION_ID = "void-music-collection";
 
 export async function mintNFT(
     connection: Connection,
@@ -164,12 +173,37 @@ export async function mintNFT(
             audioType = 'audio/mpeg';
         }
 
+        // Xác định loại NFT (music hoặc cube)
+        const isMusic = !!audioUri;
+
+        // Xác định collection dựa vào loại NFT
+        const collectionName = isMusic ? "VOID Music Collection" : "VOID Cube Collection";
+        const collectionSymbol = isMusic ? "VMUSIC" : "VOID";
+        const collectionType = isMusic ? "audio" : "cube";
+        const collectionId = isMusic ? VOID_MUSIC_COLLECTION_ID : VOID_CUBE_COLLECTION_ID;
+
+        // Thêm thuộc tính collection vào attributes
+        const collectionAttribute = {
+            trait_type: 'Collection',
+            value: collectionName
+        };
+
+        // Thêm vào danh sách attributes nếu chưa có
+        const hasCollectionAttribute = metadata.attributes.some(attr => attr.trait_type === 'Collection');
+        if (!hasCollectionAttribute) {
+            metadata.attributes.push(collectionAttribute);
+        }
+
         // Chuẩn bị metadata với cả ảnh và model
         const metadataWithFiles: any = {
             name: metadata.name,
             description: metadata.description,
             image: imageUri,
             attributes: metadata.attributes,
+            collection: {
+                name: collectionName,
+                family: isMusic ? "VOID Music" : "VOID Cube",
+            },
             properties: {
                 files: [
                     {
@@ -178,7 +212,11 @@ export async function mintNFT(
                         cdn: getIpfsUrl(imageIpfsHash)
                     }
                 ],
-                category: 'image'
+                category: isMusic ? 'audio' : 'image',
+                collection: {
+                    name: collectionName,
+                    family: isMusic ? "VOID Music" : "VOID Cube",
+                }
             }
         };
 
@@ -249,10 +287,10 @@ export async function mintNFT(
         const metaplex = Metaplex.make(enhancedConnection)
             .use(walletAdapterIdentity(wallet));
 
-        // Khai báo biến để theo dõi số lần thử
+        // Số lần thử lại cho mint NFT
         let attemptCount = 0;
         const maxAttempts = 3;
-        let lastError: any = null;
+        let mintedNftAddress = "";
 
         // Sử dụng vòng lặp để thử lại khi gặp lỗi blockhash
         while (attemptCount < maxAttempts) {
@@ -270,119 +308,47 @@ export async function mintNFT(
                     uri: metadataUri,
                     name: metadata.name,
                     sellerFeeBasisPoints: 500, // 5% royalty
-                    symbol: metadata.symbol || 'VOID',
+                    symbol: isMusic ? 'VMUSIC' : 'VOID',
                     creators: [
                         {
                             address: wallet.publicKey,
                             share: 100,
                         },
-                    ]
+                    ],
+                    collection: null, // Tạm thời không sử dụng collection chính thức
+                    tokenStandard: 0, // Non-Fungible Token standard
+                    uses: null
                 });
 
                 console.log("NFT đã được tạo thành công:", nft.address.toString());
                 console.log("Signature giao dịch:", response.signature);
 
-                // Lưu NFT vào localStorage để hiển thị trong profile
-                if (typeof window !== 'undefined') {
-                    try {
-                        // Đọc danh sách NFT hiện có
-                        const userNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
+                // Lưu lại địa chỉ của NFT
+                mintedNftAddress = nft.address.toString();
 
-                        // Tạo bản ghi NFT mới
-                        userNfts.push({
-                            id: nft.address.toString(),
-                            mintAddress: nft.address.toString(),
-                            txSignature: response.signature,
-                            name: metadata.name,
-                            description: metadata.description,
-                            image: imageUri,
-                            ipfsHash: imageIpfsHash,
-                            ipfsUrl: `ipfs://${imageIpfsHash}`,
-                            model3d: modelUri ? getDirectModelUrl(modelUri.replace('ipfs://', '')) : undefined,
-                            model3dHash: modelUri ? modelUri.replace('ipfs://', '') : undefined,
-                            audioUrl: audioUri,
-                            attributes: metadata.attributes,
-                            mintedAt: new Date().toISOString(),
-                            type: audioUri ? "music" : "cube",
-                            isMock: false
-                        });
+                // Đã mint thành công, thoát vòng lặp
+                break;
+            } catch (error) {
+                // Xử lý lỗi và quyết định có thử lại không
+                console.error(`Lỗi khi mint NFT (lần thử ${attemptCount}/${maxAttempts}):`, error);
 
-                        localStorage.setItem('userNfts', JSON.stringify(userNfts));
-                        console.log("Đã lưu NFT vào localStorage");
-                    } catch (e) {
-                        console.error("Không thể lưu NFT vào localStorage:", e);
-                    }
-                }
-
-                // Nếu thành công thì trả về địa chỉ mint
-                return nft.address.toString();
-            } catch (error: any) {
-                lastError = error;
-                console.warn(`Lỗi khi tạo NFT (lần thử ${attemptCount}/${maxAttempts}):`, error);
-
-                // Kiểm tra nếu là lỗi blockhash not found hoặc lỗi liên quan đến giao dịch
-                const errorMessage = error.toString().toLowerCase();
-                const isBlockhashError = errorMessage.includes("blockhash not found") ||
-                    errorMessage.includes("transaction simulation failed") ||
-                    errorMessage.includes("failed to send transaction");
-
-                if (isBlockhashError && attemptCount < maxAttempts) {
-                    // Đợi một khoảng thời gian trước khi thử lại
-                    console.log(`Lỗi blockhash, đợi 3 giây trước khi thử lại...`);
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                    continue;
-                } else {
-                    // Các lỗi khác hoặc đã hết số lần thử, ném lỗi
+                // Nếu đã thử lại tối đa, ném lỗi
+                if (attemptCount >= maxAttempts) {
+                    console.error("Đã thử lại tối đa, không thể mint NFT");
                     throw error;
                 }
+
+                // Chờ một khoảng thời gian trước khi thử lại
+                console.log("Chờ 2 giây trước khi thử lại...");
+                await new Promise(resolve => setTimeout(resolve, 2000));
             }
         }
 
-        // Nếu đã thử hết số lần mà vẫn lỗi
-        throw lastError || new Error("Không thể tạo NFT sau nhiều lần thử");
+        // Trả về địa chỉ của NFT đã mint
+        return mintedNftAddress;
     } catch (error) {
-        console.error("Lỗi khi tạo NFT qua Metaplex:", error);
-
-        // Tạo mock NFT nếu mint thật thất bại
-        console.log("Sử dụng địa chỉ mock:", `mockMint${Date.now()}`);
-
-        // Tạo mock NFT trong localStorage để hiển thị trong profile
-        if (typeof window !== 'undefined') {
-            try {
-                // Đọc danh sách NFT hiện có
-                const userNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
-
-                // Tạo ID mới cho NFT giả lập
-                const mockId = `mockMint${Date.now()}`;
-
-                // Đọc dữ liệu hình ảnh để lưu vào localStorage
-                const reader = new FileReader();
-                reader.readAsDataURL(metadata.image);
-                reader.onload = () => {
-                    // Tạo NFT giả lập đơn giản
-                    userNfts.push({
-                        id: mockId,
-                        name: metadata.name,
-                        description: metadata.description,
-                        image: reader.result,
-                        attributes: metadata.attributes,
-                        mintedAt: new Date().toISOString(),
-                        type: metadata.audio || metadata.audioUrl ? "music" : "cube",
-                        local: true,
-                        isMock: true,
-                        txSignature: `mock${Date.now()}`,
-                        mintAddress: mockId
-                    });
-
-                    localStorage.setItem('userNfts', JSON.stringify(userNfts));
-                    console.log("Đã lưu mock NFT vào localStorage để hiển thị trong profile");
-                };
-            } catch (e) {
-                console.error("Không thể lưu mock NFT vào localStorage:", e);
-            }
-        }
-
-        return `mockMint${Date.now()}`;
+        console.error("Lỗi trong quá trình mint NFT:", error);
+        throw error;
     }
 }
 
@@ -393,6 +359,16 @@ export async function getCubeNFTMetadata(
     model: File | null,
     attributes: any
 ): Promise<NFTMetadata> {
+    // Thêm Collection attribute nếu chưa có
+    const hasCollectionAttribute = attributes.some((attr: any) => attr.trait_type === 'Collection');
+    const completeAttributes = hasCollectionAttribute ? attributes : [
+        ...attributes,
+        {
+            trait_type: 'Collection',
+            value: 'VOID Cube Collection'
+        }
+    ];
+
     return {
         name,
         symbol: 'VOID',
@@ -404,7 +380,7 @@ export async function getCubeNFTMetadata(
                 trait_type: 'Type',
                 value: 'Cube'
             },
-            ...attributes
+            ...completeAttributes
         ],
         properties: {
             files: [
@@ -413,7 +389,11 @@ export async function getCubeNFTMetadata(
                     type: 'image/png'
                 }
             ],
-            category: 'image'
+            category: 'image',
+            collection: {
+                name: 'VOID Cube Collection',
+                family: 'VOID Cube'
+            }
         }
     };
 }
@@ -426,9 +406,19 @@ export async function getMusicNFTMetadata(
     audioUrl: string,
     attributes: any
 ): Promise<NFTMetadata> {
+    // Thêm Collection attribute nếu chưa có
+    const hasCollectionAttribute = attributes.some((attr: any) => attr.trait_type === 'Collection');
+    const completeAttributes = hasCollectionAttribute ? attributes : [
+        ...attributes,
+        {
+            trait_type: 'Collection',
+            value: 'VOID Music Collection'
+        }
+    ];
+
     return {
         name,
-        symbol: 'VOID',
+        symbol: 'VMUSIC',
         description,
         image,
         audioUrl,
@@ -437,7 +427,7 @@ export async function getMusicNFTMetadata(
                 trait_type: 'Type',
                 value: 'Music'
             },
-            ...attributes
+            ...completeAttributes
         ],
         properties: {
             files: [
@@ -450,7 +440,11 @@ export async function getMusicNFTMetadata(
                     type: 'audio/mpeg'
                 }
             ],
-            category: 'audio'
+            category: 'audio',
+            collection: {
+                name: 'VOID Music Collection',
+                family: 'VOID Music'
+            }
         }
     };
 }
