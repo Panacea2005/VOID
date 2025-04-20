@@ -14,7 +14,7 @@ const IPFS_GATEWAYS = [
     'https://hardbin.com/ipfs/',
 ];
 
-// Pinata Gateway key (nếu có)
+// Pinata Gateway key 
 const PINATA_GATEWAY_KEY = process.env.PINATA_GATEWAY_KEY || '';
 
 export async function GET(

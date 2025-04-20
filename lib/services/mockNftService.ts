@@ -14,6 +14,10 @@ export interface MockNFTMetadata {
     audioUrl?: string;
 }
 
+// Tên và ID collection cố định
+const VOID_CUBE_COLLECTION = "VOID Cube Collection";
+const VOID_MUSIC_COLLECTION = "VOID Music Collection";
+
 // Mô phỏng quá trình mint NFT và lưu vào localStorage để hiển thị trong profile
 export async function mockMintNFT(metadata: MockNFTMetadata): Promise<string> {
     try {
@@ -36,6 +40,16 @@ export async function mockMintNFT(metadata: MockNFTMetadata): Promise<string> {
 
         // Xác định loại NFT (music hoặc cube)
         const isMusic = !!metadata.audioUrl;
+        const collectionName = isMusic ? VOID_MUSIC_COLLECTION : VOID_CUBE_COLLECTION;
+
+        // Thêm thuộc tính Collection vào attributes nếu chưa có
+        const hasCollection = metadata.attributes.some(attr => attr.trait_type === 'Collection');
+        if (!hasCollection) {
+            metadata.attributes.push({
+                trait_type: 'Collection',
+                value: collectionName
+            });
+        }
 
         let audioUrl = metadata.audioUrl || '';
         let audioType = 'audio/mpeg';
@@ -79,10 +93,12 @@ export async function mockMintNFT(metadata: MockNFTMetadata): Promise<string> {
             ];
         }
 
-        // Tạo NFT giả lập với ID ngẫu nhiên
+        // Tạo NFT giả lập với ID ngẫu nhiên và chuẩn hóa
+        // Ví Phantom sẽ có thể dựa vào định dạng ID này để phân loại 
+        const randomId = Math.floor(Math.random() * 900000 + 100000).toString();
         const nftId = isMusic
-            ? `void-music-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-            : `void-cube-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            ? `void-music-${randomId}`
+            : `void-cube-${randomId}`;
 
         // Tạo một signature để theo dõi trên Solscan
         const txSignature = `mockTx${Date.now()}${Math.random().toString(36).substring(2, 15)}`;
@@ -98,6 +114,10 @@ export async function mockMintNFT(metadata: MockNFTMetadata): Promise<string> {
             ipfsHash,
             mintAddress: nftId,
             txSignature: txSignature,
+            collection: {
+                name: collectionName,
+                family: isMusic ? "VOID Music" : "VOID Cube"
+            },
             properties: {
                 files: [
                     {
@@ -106,10 +126,15 @@ export async function mockMintNFT(metadata: MockNFTMetadata): Promise<string> {
                         cdn: imageUrl
                     }
                 ],
-                category: isMusic ? 'audio' : 'image'
+                category: isMusic ? 'audio' : 'image',
+                collection: {
+                    name: collectionName,
+                    family: isMusic ? "VOID Music" : "VOID Cube"
+                }
             },
             attributes: metadata.attributes,
-            mintedAt: new Date().toISOString()
+            mintedAt: new Date().toISOString(),
+            symbol: isMusic ? 'VMUSIC' : 'VOID'
         };
 
         // Tạo NFT data với đầy đủ thông tin tùy theo loại
@@ -734,6 +759,15 @@ export async function mintRealNFT(
             `https://dweb.link/ipfs/${model3dIpfsHash}`
         ];
 
+        // Đảm bảo thuộc tính Collection được thêm vào
+        const hasCollection = cubeData.attributes.some(attr => attr.trait_type === 'Collection');
+        if (!hasCollection) {
+            cubeData.attributes.push({
+                trait_type: 'Collection',
+                value: VOID_CUBE_COLLECTION
+            });
+        }
+
         // Chuẩn bị metadata với đầy đủ thông tin
         const nftMetadata: any = {
             name: cubeData.name,
@@ -744,6 +778,10 @@ export async function mintRealNFT(
             model: modelIpfsUri, // Trường tùy chỉnh cho model
             external_url: modelViewerUrl, // URL để xem model từ bên ngoài
             attributes: cubeData.attributes,
+            collection: {
+                name: VOID_CUBE_COLLECTION,
+                family: "VOID Cube"
+            },
             properties: {
                 files: [
                     {
@@ -759,7 +797,11 @@ export async function mintRealNFT(
                 ],
                 category: "image",
                 model_type: "glb",
-                model_viewer_url: modelViewerUrl
+                model_viewer_url: modelViewerUrl,
+                collection: {
+                    name: VOID_CUBE_COLLECTION,
+                    family: "VOID Cube"
+                }
             }
         };
 
@@ -825,6 +867,11 @@ export async function mintRealNFT(
             shapeType: "complex",
             price: 1.0 + Math.random() * 2,
             owner: wallet.publicKey.toString(),
+            collection: {
+                name: VOID_CUBE_COLLECTION,
+                family: "VOID Cube"
+            },
+            symbol: "VOID"
         };
 
         // Lưu vào localStorage
