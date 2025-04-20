@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, ChangeEvent, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import * as THREE from "three";
 import {
@@ -10,7 +10,6 @@ import {
   BloomEffect,
 } from "postprocessing";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
 import AbstractShape from "@/components/abstract-shape";
@@ -29,11 +28,6 @@ import { generateMusic, getMusicGenerationDetails } from "../ai/aiMusicService";
 import { Connection } from "@solana/web3.js";
 import { mockMintNFT, convertCubeToFile, mintRealNFT } from "@/lib/services/mockNftService";
 import { getMusicNFTMetadata, getCubeNFTMetadata, mintNFT } from "@/lib/services/nftService";
-import Image from "next/image";
-import { SiOpenai } from "react-icons/si";
-import { IoMdMusicalNote } from "react-icons/io";
-import { IoCube } from "react-icons/io5";
-import { AudioPlayer } from "@/components/AudioPlayer";
 
 interface MaterialParams {
   color?: string;
@@ -2286,125 +2280,340 @@ export default function AIPage() {
                         text="MUSIC PREVIEW"
                         className="text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
                       />
-                      <div className="w-full aspect-square bg-gradient-to-br from-purple-900/30 via-black to-pink-900/30 flex items-center justify-center relative overflow-hidden">
+                      <div className="w-full aspect-square bg-black relative overflow-hidden flex items-center justify-center">
+                        {/* Glowing Neon Border Around Canvas */}
                         <motion.div
-                          className="absolute inset-0"
+                          className="absolute inset-0 border-4 border-transparent"
+                          style={{
+                            borderImage: "linear-gradient(to right, #00FFFF, #FF00FF, #FFD700, #00FFFF) 1",
+                            borderImageSlice: 1,
+                          }}
                           animate={{
-                            background: [
-                              "radial-gradient(circle, rgba(147, 51, 234, 0.2) 0%, transparent 70%)",
-                              "radial-gradient(circle, rgba(236, 72, 153, 0.2) 0%, transparent 70%)",
+                            opacity: [0.6, 1, 0.6],
+                            scale: [1, 1.03, 1],
+                            boxShadow: [
+                              "0 0 15px rgba(0, 255, 255, 0.7)",
+                              "0 0 30px rgba(255, 0, 255, 0.9)",
+                              "0 0 15px rgba(255, 215, 0, 0.7)",
                             ],
                           }}
                           transition={{
-                            duration: 3,
+                            duration: 1.8,
                             repeat: Infinity,
-                            repeatType: "reverse",
+                            ease: "easeInOut",
                           }}
-                        >
+                        />
+                        {/* Ripple Effect Around Canvas Edges */}
+                        <motion.div
+                          className="absolute inset-0 border-2 border-transparent"
+                          style={{
+                            borderImage: "linear-gradient(to right, rgba(0, 255, 255, 0.4), rgba(255, 215, 0, 0.4)) 1",
+                            borderImageSlice: 1,
+                          }}
+                          initial={{ scale: 1, opacity: 0 }}
+                          animate={{ scale: 1.15, opacity: 0 }}
+                          transition={{
+                            duration: 2.5,
+                            repeat: Infinity,
+                            delay: 0.3,
+                            ease: "easeOut",
+                          }}
+                        />
+                        {/* Blurred Circles Appearing/Disappearing Randomly */}
+                        {[...Array(12)].map((_, i) => (
                           <motion.div
-                            className="absolute w-2 h-2 bg-purple-500 rounded-full"
-                            style={{ top: "20%", left: "30%" }}
-                            animate={{
-                              scale: [1, 1.5, 1],
-                              opacity: [0.5, 1, 0.5],
+                            key={i}
+                            className="absolute rounded-full"
+                            style={{
+                              width: `${20 + Math.random() * 60}px`,
+                              height: `${20 + Math.random() * 60}px`,
+                              background: `radial-gradient(circle, rgba(${Math.random() * 255}, 100, 255, 0.5), transparent)`,
+                              filter: "blur(10px)",
+                              top: `${Math.random() * 100}%`,
+                              left: `${Math.random() * 100}%`,
                             }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                          />
-                          <motion.div
-                            className="absolute w-2 h-2 bg-pink-500 rounded-full"
-                            style={{ top: "70%", left: "60%" }}
+                            initial={{ scale: 0, opacity: 0 }}
                             animate={{
-                              scale: [1, 1.5, 1],
-                              opacity: [0.5, 1, 0.5],
+                              scale: [0, 1.5, 0],
+                              opacity: [0, 0.7, 0],
                             }}
                             transition={{
-                              duration: 2,
+                              duration: 3 + Math.random() * 2,
                               repeat: Infinity,
-                              delay: 0.5,
+                              delay: Math.random() * 2,
+                              ease: "easeInOut",
                             }}
                           />
-                          <motion.div
-                            className="absolute w-2 h-2 bg-blue-500 rounded-full"
-                            style={{ top: "40%", left: "80%" }}
-                            animate={{
-                              scale: [1, 1.5, 1],
-                              opacity: [0.5, 1, 0.5],
-                            }}
-                            transition={{
-                              duration: 2,
-                              repeat: Infinity,
-                              delay: 1,
-                            }}
-                          />
-                        </motion.div>
+                        ))}
 
                         {isGeneratingMusic ? (
-                          <AbstractShape
-                            className="w-32 h-32 text-purple-500"
-                            type="loading"
-                            animate
-                          />
+                          <div className="flex items-center justify-center h-full relative">
+                            {/* Enhanced Loading Animation */}
+                            <motion.div
+                              className="relative flex items-center justify-center"
+                              animate={{
+                                scale: [1, 1.1, 1],
+                                opacity: [0.85, 1, 0.85],
+                              }}
+                              transition={{
+                                duration: 1.8,
+                                repeat: Infinity,
+                                ease: "easeInOut",
+                              }}
+                            >
+                              {/* Spinning Equalizer Effect */}
+                              <motion.div
+                                className="absolute"
+                                animate={{
+                                  rotate: [0, 360],
+                                }}
+                                transition={{
+                                  duration: 8,
+                                  repeat: Infinity,
+                                  ease: "linear",
+                                }}
+                              >
+                                {[...Array(8)].map((_, i) => (
+                                  <motion.div
+                                    key={i}
+                                    className="absolute w-4 h-12 bg-gradient-to-b from-cyan-400 to-purple-500 rounded"
+                                    style={{
+                                      transform: `translate(-50%, -50%) rotate(${i * 45}deg) translateY(60px)`,
+                                    }}
+                                    animate={{
+                                      height: [20, 60, 20],
+                                      opacity: [0.7, 1, 0.7],
+                                    }}
+                                    transition={{
+                                      duration: 1.2,
+                                      repeat: Infinity,
+                                      delay: i * 0.15,
+                                      ease: "easeInOut",
+                                    }}
+                                  />
+                                ))}
+                              </motion.div>
+                              {/* Central Glowing Orb */}
+                              <motion.div
+                                className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full"
+                                animate={{
+                                  scale: [1, 1.2, 1],
+                                  boxShadow: [
+                                    "0 0 20px rgba(147, 51, 234, 0.5)",
+                                    "0 0 40px rgba(147, 51, 234, 0.8)",
+                                    "0 0 20px rgba(147, 51, 234, 0.5)",
+                                  ],
+                                }}
+                                transition={{
+                                  duration: 1.5,
+                                  repeat: Infinity,
+                                  ease: "easeInOut",
+                                }}
+                              />
+                              {/* Particle Bursts */}
+                              {[...Array(6)].map((_, i) => (
+                                <motion.div
+                                  key={i}
+                                  className="absolute w-3 h-3 bg-cyan-400 rounded-full"
+                                  style={{
+                                    transform: `translate(-50%, -50%)`,
+                                  }}
+                                  animate={{
+                                    x: Math.cos((i * Math.PI) / 3) * 100,
+                                    y: Math.sin((i * Math.PI) / 3) * 100,
+                                    opacity: [0, 1, 0],
+                                  }}
+                                  transition={{
+                                    duration: 2,
+                                    repeat: Infinity,
+                                    delay: i * 0.3,
+                                    ease: "easeOut",
+                                  }}
+                                />
+                              ))}
+                            </motion.div>
+                          </div>
                         ) : musicGeneration ? (
                           (musicGeneration.status === "SUCCESS" ||
                             musicGeneration.status === "completed") &&
                             musicGeneration.audio_url ? (
                             <motion.div
-                              className="text-center space-y-6 w-full max-w-md px-4"
-                              initial={{ opacity: 0, scale: 0.9 }}
+                              className="text-center space-y-8 w-full max-w-md px-4 relative"
+                              initial={{ opacity: 0, scale: 0.3 }}
                               animate={{ opacity: 1, scale: 1 }}
-                              transition={{ duration: 0.5 }}
+                              transition={{ duration: 1.2, ease: "easeOut", type: "spring", stiffness: 120 }}
                             >
-                              <audio
-                                ref={audioRef}
-                                src={musicGeneration.audio_url}
-                                controls
-                                className="w-full rounded-none border-2 border-transparent bg-gradient-to-r from-purple-500 to-pink-500 p-1 shadow-lg hover:shadow-xl transition-shadow duration-300"
+                              {/* Starburst Background */}
+                              <motion.div
+                                className="absolute inset-0"
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 4, opacity: 0 }}
+                                transition={{
+                                  duration: 1.5,
+                                  ease: "easeOut",
+                                  delay: 0.2,
+                                }}
+                                style={{
+                                  background: "radial-gradient(circle, rgba(0, 255, 255, 0.8) 0%, rgba(255, 215, 0, 0.4) 50%, transparent 80%)",
+                                  transformOrigin: "center",
+                                }}
                               />
-                              <div className="w-full h-16 bg-purple-900/50 rounded-md flex items-center justify-center">
+                              {/* Sparkling Particle Bursts */}
+                              {[...Array(12)].map((_, i) => (
                                 <motion.div
-                                  className="flex space-x-1"
-                                  animate={{ y: [0, -5, 0] }}
+                                  key={i}
+                                  className="absolute w-5 h-5 bg-gradient-to-b from-cyan-400 to-yellow-500 rounded-full"
+                                  style={{
+                                    top: "50%",
+                                    left: "50%",
+                                    transform: `translate(-50%, -50%)`,
+                                  }}
+                                  initial={{ scale: 0, opacity: 0 }}
+                                  animate={{
+                                    x: Math.cos((i * 2 * Math.PI) / 12) * (60 + Math.random() * 120),
+                                    y: Math.sin((i * 2 * Math.PI) / 12) * (60 + Math.random() * 120),
+                                    scale: [0, 2, 0],
+                                    opacity: [0, 1, 0],
+                                  }}
                                   transition={{
-                                    duration: 0.5,
+                                    duration: 1.8,
+                                    delay: 0.4 + i * 0.1,
+                                    ease: "easeOut",
+                                  }}
+                                />
+                              ))}
+                              {/* Glowing Trails */}
+                              {[...Array(6)].map((_, i) => (
+                                <motion.div
+                                  key={i}
+                                  className="absolute w-3 h-3 bg-gradient-to-b from-yellow-400 to-cyan-500 rounded-full"
+                                  style={{
+                                    top: "50%",
+                                    left: "50%",
+                                    transform: `translate(-50%, -50%)`,
+                                    filter: "blur(5px)",
+                                  }}
+                                  initial={{ scale: 0, opacity: 0 }}
+                                  animate={{
+                                    x: Math.cos((i * Math.PI) / 3 + Math.random()) * 150,
+                                    y: Math.sin((i * Math.PI) / 3 + Math.random()) * 150,
+                                    scale: [0, 1.5, 0],
+                                    opacity: [0, 0.8, 0],
+                                  }}
+                                  transition={{
+                                    duration: 2,
+                                    delay: 0.6 + i * 0.15,
                                     repeat: Infinity,
-                                    repeatType: "loop",
+                                    ease: "easeOut",
+                                  }}
+                                />
+                              ))}
+                              {/* Rotating Sparkles Around Audio Player */}
+                              <motion.div
+                                className="relative"
+                                initial={{ y: 100, opacity: 0, scale: 0.7 }}
+                                animate={{ y: 0, opacity: 1, scale: 1 }}
+                                transition={{ duration: 1, delay: 0.8, ease: "easeOut", type: "spring", stiffness: 150 }}
+                              >
+                                <motion.div
+                                  className="absolute inset-0"
+                                  animate={{
+                                    rotate: [0, 360],
+                                  }}
+                                  transition={{
+                                    duration: 10,
+                                    repeat: Infinity,
+                                    ease: "linear",
                                   }}
                                 >
-                                  {[...Array(10)].map((_, i) => (
+                                  {[...Array(8)].map((_, i) => (
                                     <motion.div
                                       key={i}
-                                      className="w-1 h-8 bg-gradient-to-b from-purple-400 to-pink-500"
-                                      animate={{ height: [16, 32, 16] }}
+                                      className="absolute w-4 h-4 bg-yellow-400 rounded-full"
+                                      style={{
+                                        transform: `translate(-50%, -50%) rotate(${i * 45}deg) translateY(70px)`,
+                                        filter: "blur(3px)",
+                                      }}
+                                      animate={{
+                                        scale: [1, 1.3, 1],
+                                        opacity: [0.5, 1, 0.5],
+                                      }}
                                       transition={{
-                                        duration: 0.5,
+                                        duration: 1.5,
                                         repeat: Infinity,
                                         delay: i * 0.1,
+                                        ease: "easeInOut",
                                       }}
                                     />
                                   ))}
                                 </motion.div>
-                              </div>
-                              <div className="flex justify-center">
-                                <Button
-                                  onClick={() =>
-                                    audioRef.current?.currentTime &&
-                                    (audioRef.current.currentTime = 0)
-                                  }
-                                  className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-none px-6 py-2 font-pixel border-2 border-transparent hover:from-purple-600 hover:to-pink-600 hover:scale-105 transition-all duration-300"
-                                  onMouseEnter={() => setCursorHover(true)}
-                                  onMouseLeave={() => setCursorHover(false)}
+                                <motion.div
+                                  className="absolute inset-0 rounded-none border-2 border-transparent"
+                                  style={{
+                                    borderImage: "linear-gradient(to right, #00FFFF, #FFD700, #FF00FF) 1",
+                                    borderImageSlice: 1,
+                                  }}
+                                  animate={{
+                                    scale: [1, 1.08, 1],
+                                    opacity: [0.6, 1, 0.6],
+                                    boxShadow: [
+                                      "0 0 10px rgba(0, 255, 255, 0.5)",
+                                      "0 0 20px rgba(255, 215, 0, 0.8)",
+                                      "0 0 10px rgba(0, 255, 255, 0.5)",
+                                    ],
+                                  }}
+                                  transition={{
+                                    duration: 1.8,
+                                    repeat: Infinity,
+                                    ease: "easeInOut",
+                                  }}
+                                />
+                                <audio
+                                  ref={audioRef}
+                                  src={musicGeneration.audio_url}
+                                  controls
+                                  className="w-full rounded-none border-2 border-transparent bg-gradient-to-r from-cyan-500 to-yellow-500 p-1 shadow-2xl hover:shadow-[0_0_25px_rgba(0,255,255,0.9)] transition-shadow duration-300"
+                                />
+                              </motion.div>
+                              {/* Metadata with Enhanced Bouncing Effects */}
+                              <motion.div
+                                className="space-y-3"
+                                initial={{ y: 100, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                transition={{ duration: 1, delay: 1, ease: "easeOut", type: "spring", stiffness: 100 }}
+                              >
+                                <motion.p
+                                  className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-yellow-500 to-pink-500"
+                                  initial={{ scale: 0.5 }}
+                                  animate={{
+                                    scale: [1, 1.15, 1],
+                                    opacity: [0.7, 1, 0.7],
+                                    rotate: [-3, 3, 0],
+                                    y: [0, -5, 0],
+                                  }}
+                                  transition={{
+                                    duration: 2.2,
+                                    repeat: Infinity,
+                                    ease: "easeInOut",
+                                    delay: 1.2,
+                                  }}
                                 >
-                                  REWIND
-                                </Button>
-                              </div>
-                              <div className="space-y-2">
-                                <p className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 animate-pulse">
                                   {musicTitle}
-                                </p>
-                                <p className="text-sm text-gray-400">
+                                </motion.p>
+                                <motion.p
+                                  className="text-sm text-gray-100"
+                                  initial={{ opacity: 0, x: -60 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ duration: 0.8, delay: 1.4, ease: "easeOut", type: "spring", stiffness: 120 }}
+                                >
                                   Style: {musicGeneration.style || "Unknown"}
-                                </p>
-                                <p className="text-sm text-gray-400">
+                                </motion.p>
+                                <motion.p
+                                  className="text-sm text-gray-100"
+                                  initial={{ opacity: 0, x: 60 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ duration: 0.8, delay: 1.6, ease: "easeOut", type: "spring", stiffness: 120 }}
+                                >
                                   Duration:{" "}
                                   {audioRef.current?.duration
                                     ? `${Math.floor(
@@ -2415,8 +2624,8 @@ export default function AIPage() {
                                       .toString()
                                       .padStart(2, "0")}`
                                     : "Loading..."}
-                                </p>
-                              </div>
+                                </motion.p>
+                              </motion.div>
                             </motion.div>
                           ) : musicGeneration.status === "failed" ? (
                             <p className="text-red-500 font-pixel">
@@ -2424,14 +2633,67 @@ export default function AIPage() {
                             </p>
                           ) : (
                             <p className="text-gray-400 font-pixel">
-                              Processing music generation... (Status:{" "}
-                              {musicGeneration.status})
+                              Processing music generation... (Status: {musicGeneration.status})
                             </p>
                           )
                         ) : (
-                          <p className="text-gray-400 font-pixel">
-                            ENTER MUSIC DETAILS AND CLICK GENERATE
-                          </p>
+                          <div className="flex items-center justify-center h-full relative">
+                            {/* Neon Ring System */}
+                            <motion.div
+                              className="absolute"
+                              animate={{
+                                rotate: [0, 360],
+                              }}
+                              transition={{
+                                duration: 12,
+                                repeat: Infinity,
+                                ease: "linear",
+                              }}
+                            >
+                              {[...Array(3)].map((_, i) => (
+                                <motion.div
+                                  key={i}
+                                  className="absolute rounded-full border-2 border-gradient-to-br from-cyan-400 to-purple-500"
+                                  style={{
+                                    width: `${120 + i * 40}px`,
+                                    height: `${120 + i * 40}px`,
+                                    transform: `translate(-50%, -50%)`,
+                                    borderImage: `linear-gradient(to bottom right, #00FFFF, #9333EA) 1`,
+                                    borderImageSlice: 1,
+                                  }}
+                                  animate={{
+                                    scale: [1, 1.1, 1],
+                                    opacity: [0.6, 1, 0.6],
+                                  }}
+                                  transition={{
+                                    duration: 2 + i * 0.5,
+                                    repeat: Infinity,
+                                    ease: "easeInOut",
+                                  }}
+                                />
+                              ))}
+                            </motion.div>
+                            {/* Central Animated Text */}
+                            <motion.div
+                              className="text-center"
+                              animate={{
+                                scale: [1, 1.08, 1],
+                                opacity: [0.9, 1, 0.9],
+                              }}
+                              transition={{
+                                duration: 1.5,
+                                repeat: Infinity,
+                                ease: "easeInOut",
+                              }}
+                            >
+                              <p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 font-pixel">
+                                CRAFT YOUR SOUND
+                              </p>
+                              <p className="text-lg text-gray-200 font-pixel mt-3">
+                                Unleash Epic Music
+                              </p>
+                            </motion.div>
+                          </div>
                         )}
                       </div>
                     </>
