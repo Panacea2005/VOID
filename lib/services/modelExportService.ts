@@ -2,28 +2,42 @@ import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 
 // Tạo một cube 3D đơn giản với các màu đã cho
-// Updated createCube function in modelExportService.ts
 export async function createCube(colors: string[]): Promise<ArrayBuffer> {
-    // Use the first color as the primary color for the cube
-    const primaryColor = colors[0] || "#FFFFFF";
-
+    console.log("Creating 3D model with colors:", colors);
+    
+    // Ensure we have 6 colors (one for each face)
+    const faceColors = [...colors];
+    while (faceColors.length < 6) {
+        // If not enough colors provided, repeat the last one
+        faceColors.push(faceColors[faceColors.length - 1] || "#FFFFFF");
+    }
+    
     // Create scene
     const scene = new THREE.Scene();
 
     // Create cube geometry
     const geometry = new THREE.BoxGeometry(2, 2, 2);
-
-    // Create a SINGLE material instead of an array
-    const material = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(primaryColor),
-        roughness: 0.5,
-        metalness: 0.3,
-        emissive: new THREE.Color(primaryColor).multiplyScalar(0.2),
-        name: "cube_material"
+    
+    // Create an array of materials, one for each face
+    const materials = faceColors.map((color, index) => {
+        return new THREE.MeshStandardMaterial({
+            color: new THREE.Color(color),
+            roughness: 0.5,
+            metalness: 0.3,
+            emissive: new THREE.Color(color).multiplyScalar(0.2),
+            name: `cube_material_${index}`
+        });
     });
-
-    // Create mesh with single material
-    const cube = new THREE.Mesh(geometry, material);
+    
+    // Create a mesh with per-face materials
+    const cube = new THREE.Mesh(geometry, materials);
+    
+    // Store color information in userData for easier retrieval later
+    cube.userData = {
+        colors: faceColors,
+        primaryColor: faceColors[0]
+    };
+    
     scene.add(cube);
 
     // Add lighting
@@ -42,14 +56,18 @@ export async function createCube(colors: string[]): Promise<ArrayBuffer> {
                 scene,
                 (result) => {
                     if (result instanceof ArrayBuffer) {
+                        console.log(`Exported GLB binary with size: ${result.byteLength} bytes`);
                         resolve(result);
                     } else {
+                        // Handle JSON result (rare case)
+                        console.log("Received JSON output instead of binary, converting...");
                         const output = JSON.stringify(result);
                         const blob = new Blob([output], { type: 'application/json' });
                         const reader = new FileReader();
                         reader.readAsArrayBuffer(blob);
                         reader.onloadend = () => {
                             if (reader.result) {
+                                console.log(`Converted JSON to ArrayBuffer with size: ${(reader.result as ArrayBuffer).byteLength} bytes`);
                                 resolve(reader.result as ArrayBuffer);
                             } else {
                                 reject(new Error("Failed to convert to ArrayBuffer"));
@@ -62,7 +80,14 @@ export async function createCube(colors: string[]): Promise<ArrayBuffer> {
                     console.error("GLTFExporter parse error:", error);
                     reject(error);
                 },
-                { binary: true }
+                {
+                    binary: true,
+                    // Include metadata in the exported file
+                    animations: [],
+                    onlyVisible: true,
+                    embedImages: true,
+                    includeCustomExtensions: true 
+                }
             );
         } catch (error) {
             console.error("Exception in GLTFExporter:", error);

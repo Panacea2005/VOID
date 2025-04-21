@@ -14,7 +14,9 @@ import {
   useAudio,
   AudioController,
 } from "./contexts/audio-context";
-// Updated import to get AudioController from audio-context.tsx instead of audio-manager.tsx
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { Button } from "@/components/ui/button";
 
 // Main Game Component
 interface VoidResonanceGameProps {
@@ -31,6 +33,22 @@ const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
 
   // Access audio context
   const audio = useAudio();
+  
+  // Access wallet context
+  const { connected, publicKey } = useWallet();
+  
+  // Format wallet address for display
+  const shortenAddress = (address: string, chars = 4) => {
+    return `${address.slice(0, chars)}...${address.slice(-chars)}`;
+  };
+  
+  // Log wallet connection status for debugging
+  useEffect(() => {
+    console.log("VoidGame - Wallet status:", connected ? "Connected" : "Disconnected");
+    if (publicKey) {
+      console.log("Wallet public key:", publicKey.toString());
+    }
+  }, [connected, publicKey]);
 
   // Log the selected cube ID for debugging
   useEffect(() => {
@@ -42,6 +60,14 @@ const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
     console.log("VoidResonanceGame - Initial loading...");
     setTimeout(() => setLoading(false), 1000);
   }, []);
+
+  // Handle wallet profile click
+  const handleWalletClick = () => {
+    if (connected) {
+      // Navigate to profile page
+      window.location.href = "/profile";
+    }
+  };
 
   // Handle realm selection and audio change
   const selectRealm = (realm: string) => {
@@ -299,13 +325,31 @@ const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
         )}
       </AnimatePresence>
 
-      {/* Exit Button - always visible */}
-      <button
-        onClick={onExit}
-        className="fixed top-4 right-4 z-50 px-3 py-2 text-sm bg-black/50 backdrop-blur-sm text-pink-300 border border-pink-700 hover:bg-pink-800 hover:text-white transition-all duration-300 font-pixel"
-      >
-        EXIT
-      </button>
+      {/* Game Controls Panel - Contains Exit Button and Wallet Button */}
+      <div className="fixed top-4 right-4 z-50 flex items-center space-x-2">
+        {/* Wallet Connection Button - Styled to match navigation component */}
+        {connected ? (
+          <Button
+            onClick={handleWalletClick}
+            className="bg-transparent border border-pink-500 hover:bg-pink-950/30 text-pink-400 rounded-none px-4 py-2 text-sm font-pixel tracking-wide z-50"
+          >
+            <span className="mr-2 w-2 h-2 bg-green-500 rounded-full inline-block"></span>
+            {publicKey ? shortenAddress(publicKey.toString()) : "CONNECTED"}
+          </Button>
+        ) : (
+          <div className="wallet-adapter-button-wrapper">
+            <WalletMultiButton className="bg-transparent border border-purple-500 hover:bg-purple-950/30 text-purple-400 rounded-none px-4 py-2 text-sm font-pixel tracking-wide z-50" />
+          </div>
+        )}
+        
+        {/* Exit Button */}
+        <button
+          onClick={onExit}
+          className="bg-transparent border border-pink-500 hover:bg-pink-950/30 text-pink-400 rounded-none px-4 py-2 text-sm font-pixel tracking-wide z-50"
+        >
+          EXIT
+        </button>
+      </div>
 
       {/* Global styles */}
       <style jsx global>{`
