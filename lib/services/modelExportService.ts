@@ -2,33 +2,31 @@ import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 
 // Tạo một cube 3D đơn giản với các màu đã cho
+// Updated createCube function in modelExportService.ts
 export async function createCube(colors: string[]): Promise<ArrayBuffer> {
-    // Đảm bảo có đủ 6 màu cho 6 mặt của cube, nếu không đủ thì nhân đôi màu đã có
-    const faceColors = colors.length >= 6
-        ? colors
-        : [...colors, ...colors, ...colors].slice(0, 6);
+    // Use the first color as the primary color for the cube
+    const primaryColor = colors[0] || "#FFFFFF";
 
-    // Tạo scene
+    // Create scene
     const scene = new THREE.Scene();
 
-    // Tạo cube geometry
+    // Create cube geometry
     const geometry = new THREE.BoxGeometry(2, 2, 2);
 
-    // Tạo materials cho từng mặt
-    const materials = faceColors.map(color =>
-        new THREE.MeshStandardMaterial({
-            color: new THREE.Color(color),
-            roughness: 0.5,
-            metalness: 0.3,
-            emissive: new THREE.Color(color).multiplyScalar(0.2)
-        })
-    );
+    // Create a SINGLE material instead of an array
+    const material = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(primaryColor),
+        roughness: 0.5,
+        metalness: 0.3,
+        emissive: new THREE.Color(primaryColor).multiplyScalar(0.2),
+        name: "cube_material"
+    });
 
-    // Tạo mesh với MultiMaterial
-    const cube = new THREE.Mesh(geometry, materials);
+    // Create mesh with single material
+    const cube = new THREE.Mesh(geometry, material);
     scene.add(cube);
 
-    // Thêm ánh sáng vào scene để có hiệu ứng tốt hơn
+    // Add lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
@@ -36,23 +34,40 @@ export async function createCube(colors: string[]): Promise<ArrayBuffer> {
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
 
-    // Xuất scene thành GLTF
+    // Export with proper error handling
     return new Promise((resolve, reject) => {
-        const exporter = new GLTFExporter();
-        exporter.parse(scene, (result: ArrayBuffer | object) => {
-            if (result instanceof ArrayBuffer) {
-                resolve(result);
-            } else {
-                // Nếu kết quả là object, chuyển đổi thành ArrayBuffer
-                const output = JSON.stringify(result);
-                const blob = new Blob([output], { type: 'application/json' });
-                const reader = new FileReader();
-                reader.readAsArrayBuffer(blob);
-                reader.onloadend = () => {
-                    resolve(reader.result as ArrayBuffer);
-                };
-            }
-        }, { binary: true } as any);
+        try {
+            const exporter = new GLTFExporter();
+            exporter.parse(
+                scene,
+                (result) => {
+                    if (result instanceof ArrayBuffer) {
+                        resolve(result);
+                    } else {
+                        const output = JSON.stringify(result);
+                        const blob = new Blob([output], { type: 'application/json' });
+                        const reader = new FileReader();
+                        reader.readAsArrayBuffer(blob);
+                        reader.onloadend = () => {
+                            if (reader.result) {
+                                resolve(reader.result as ArrayBuffer);
+                            } else {
+                                reject(new Error("Failed to convert to ArrayBuffer"));
+                            }
+                        };
+                        reader.onerror = (error) => reject(error);
+                    }
+                },
+                (error) => {
+                    console.error("GLTFExporter parse error:", error);
+                    reject(error);
+                },
+                { binary: true }
+            );
+        } catch (error) {
+            console.error("Exception in GLTFExporter:", error);
+            reject(error);
+        }
     });
 }
 
@@ -108,7 +123,8 @@ async function createSimpleCube(): Promise<ArrayBuffer> {
     const material = new THREE.MeshStandardMaterial({
         color: 0x5d4fff,
         roughness: 0.5,
-        metalness: 0.3
+        metalness: 0.3,
+        name: "simple_cube_material" // Add name to avoid undefined issues
     });
 
     const cube = new THREE.Mesh(geometry, material);
@@ -118,20 +134,37 @@ async function createSimpleCube(): Promise<ArrayBuffer> {
     scene.add(light);
 
     return new Promise((resolve, reject) => {
-        const exporter = new GLTFExporter();
-        exporter.parse(scene, (result: ArrayBuffer | object) => {
-            if (result instanceof ArrayBuffer) {
-                resolve(result);
-            } else {
-                const output = JSON.stringify(result);
-                const blob = new Blob([output], { type: 'application/json' });
-                const reader = new FileReader();
-                reader.readAsArrayBuffer(blob);
-                reader.onloadend = () => {
-                    resolve(reader.result as ArrayBuffer);
-                };
-            }
-        }, { binary: true } as any);
+        try {
+            const exporter = new GLTFExporter();
+            exporter.parse(
+                scene,
+                (result) => {
+                    if (result instanceof ArrayBuffer) {
+                        resolve(result);
+                    } else {
+                        const output = JSON.stringify(result);
+                        const blob = new Blob([output], { type: 'application/json' });
+                        const reader = new FileReader();
+                        reader.readAsArrayBuffer(blob);
+                        reader.onloadend = () => {
+                            if (reader.result) {
+                                resolve(reader.result as ArrayBuffer);
+                            } else {
+                                reject(new Error("Failed to convert to ArrayBuffer"));
+                            }
+                        };
+                        reader.onerror = (error) => reject(error);
+                    }
+                },
+                (error) => {
+                    reject(error);
+                },
+                { binary: true }
+            );
+        } catch (error) {
+            console.error("Exception in GLTFExporter for simple cube:", error);
+            reject(error);
+        }
     });
 }
 

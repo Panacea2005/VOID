@@ -26,8 +26,17 @@ import {
 } from "../ai/aiService";
 import { generateMusic, getMusicGenerationDetails } from "../ai/aiMusicService";
 import { Connection } from "@solana/web3.js";
-import { mockMintNFT, convertCubeToFile, mintRealNFT } from "@/lib/services/mockNftService";
-import { getMusicNFTMetadata, getCubeNFTMetadata, mintNFT } from "@/lib/services/nftService";
+import {
+  mockMintNFT,
+  convertCubeToFile,
+  mintRealNFT,
+} from "@/lib/services/mockNftService";
+import {
+  getMusicNFTMetadata,
+  getCubeNFTMetadata,
+  mintNFT,
+} from "@/lib/services/nftService";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 interface MaterialParams {
   color?: string;
@@ -109,6 +118,32 @@ export default function AIPage() {
   });
   const [variantPreviews, setVariantPreviews] = useState<MaterialParams[]>([]);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const { publicKey, connected, signTransaction, signAllTransactions, sendTransaction } = useWallet();
+  const [walletStatus, setWalletStatus] = useState<{
+    exists: boolean;
+    isConnected: boolean;
+    publicKey: string | null;
+  }>({
+    exists: false,
+    isConnected: false,
+    publicKey: null,
+  });
+
+  useEffect(() => {
+    // Update wallet status whenever connection state changes
+    setWalletStatus({
+      exists: true, // The wallet adapter is always available when using useWallet()
+      isConnected: connected,
+      publicKey: publicKey?.toString() || null
+    });
+    
+    console.log("Wallet status updated:", {
+      exists: true,
+      isConnected: connected,
+      publicKey: publicKey?.toString() || undefined
+    });
+  }, [connected, publicKey]);
+
 
   useEffect(() => {
     console.log("Current isInstrumental state:", isInstrumental);
@@ -319,7 +354,7 @@ export default function AIPage() {
 
   // Hàm helper để tạo material từ params
   const createMaterialFromParams = (params: MaterialParams): THREE.Material => {
-    if (params.texturePattern === 'stripes') {
+    if (params.texturePattern === "stripes") {
       const material = new THREE.MeshPhysicalMaterial({
         color: params.color || "#666666",
         metalness: params.metalness ?? 0.5,
@@ -356,8 +391,14 @@ export default function AIPage() {
         fragmentShader: flowShader.fragmentShader,
         uniforms: {
           ...flowShader.uniforms,
-          color1: { value: new THREE.Color(params.gradientColors?.[0] || params.color || "#ffffff") },
-          color2: { value: new THREE.Color(params.gradientColors?.[1] || "#000000") },
+          color1: {
+            value: new THREE.Color(
+              params.gradientColors?.[0] || params.color || "#ffffff"
+            ),
+          },
+          color2: {
+            value: new THREE.Color(params.gradientColors?.[1] || "#000000"),
+          },
         },
       });
     } else if (params.gradientColors && params.gradientColors.length >= 2) {
@@ -382,14 +423,18 @@ export default function AIPage() {
         opacity: params.opacity ?? 1.0,
         envMapIntensity: params.envMapIntensity ?? 0.5,
         bumpScale: params.bumpScale ?? 0.0,
-        normalScale: params.normalScale ? new THREE.Vector2(params.normalScale, params.normalScale) : new THREE.Vector2(1, 1),
+        normalScale: params.normalScale
+          ? new THREE.Vector2(params.normalScale, params.normalScale)
+          : new THREE.Vector2(1, 1),
         clearcoat: params.clearcoat ?? 0,
         clearcoatRoughness: params.clearcoatRoughness ?? 0.1,
         anisotropy: params.anisotropy ?? 0,
         displacementScale: params.displacementScale ?? 0,
         transmission: params.transmission ?? 0,
         sheen: params.sheen ?? 0,
-        sheenColor: params.sheenColor ? new THREE.Color(params.sheenColor) : new THREE.Color("#ffffff"),
+        sheenColor: params.sheenColor
+          ? new THREE.Color(params.sheenColor)
+          : new THREE.Color("#ffffff"),
       });
 
       if (params.map) {
@@ -436,7 +481,9 @@ export default function AIPage() {
 
         const max = Math.max(r, g, b);
         const min = Math.min(r, g, b);
-        let h = 0, s, l = (max + min) / 2;
+        let h = 0,
+          s,
+          l = (max + min) / 2;
 
         if (max === min) {
           h = s = 0; // grayscale
@@ -444,9 +491,15 @@ export default function AIPage() {
           const d = max - min;
           s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
           switch (max) {
-            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-            case g: h = (b - r) / d + 2; break;
-            case b: h = (r - g) / d + 4; break;
+            case r:
+              h = (g - b) / d + (g < b ? 6 : 0);
+              break;
+            case g:
+              h = (b - r) / d + 2;
+              break;
+            case b:
+              h = (r - g) / d + 4;
+              break;
           }
           h /= 6;
         }
@@ -478,7 +531,7 @@ export default function AIPage() {
 
         const toHex = (x: number) => {
           const hex = Math.round(x * 255).toString(16);
-          return hex.length === 1 ? '0' + hex : hex;
+          return hex.length === 1 ? "0" + hex : hex;
         };
 
         return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
@@ -492,16 +545,23 @@ export default function AIPage() {
 
       // Kiểm tra nếu prompt có từ "stripes" thì đảm bảo texture được áp dụng
       if (cubePrompt.toLowerCase().includes("stripes") && !baseParams.map) {
-        const secondaryColor = cubePrompt.toLowerCase().includes("white stripes") ? "#ffffff" :
-          cubePrompt.toLowerCase().includes("black stripes") ? "#000000" :
-            cubePrompt.toLowerCase().includes("red stripes") ? "#ff0000" :
-              cubePrompt.toLowerCase().includes("gold stripes") ? "#ffcc00" :
-                "#808080"; // Default gray stripes if no color specified
+        const secondaryColor = cubePrompt
+          .toLowerCase()
+          .includes("white stripes")
+          ? "#ffffff"
+          : cubePrompt.toLowerCase().includes("black stripes")
+          ? "#000000"
+          : cubePrompt.toLowerCase().includes("red stripes")
+          ? "#ff0000"
+          : cubePrompt.toLowerCase().includes("gold stripes")
+          ? "#ffcc00"
+          : "#808080"; // Default gray stripes if no color specified
 
         baseParams.texturePattern = "stripes";
-        baseParams.map = generateProceduralTexture("stripes", 1024, { // Tăng resolution texture
+        baseParams.map = generateProceduralTexture("stripes", 1024, {
+          // Tăng resolution texture
           color: baseParams.color,
-          secondaryColor: secondaryColor
+          secondaryColor: secondaryColor,
         });
 
         // Ghi đè lên secondaryColor trong baseParams để các variants có thể sử dụng
@@ -513,11 +573,11 @@ export default function AIPage() {
         // Biến thể 1: Crystal - Trong suốt với màu từ prompt
         {
           ...baseParams,
-          roughness: 0.05,  // Bề mặt cực nhẵn
-          metalness: 0.1,   // Chút kim loại cho phản chiếu
+          roughness: 0.05, // Bề mặt cực nhẵn
+          metalness: 0.1, // Chút kim loại cho phản chiếu
           transmission: 0.8, // Trong suốt
-          ior: 1.8,         // Chỉ số khúc xạ cao như pha lê
-          clearcoat: 1.0,   // Lớp phủ trong
+          ior: 1.8, // Chỉ số khúc xạ cao như pha lê
+          clearcoat: 1.0, // Lớp phủ trong
           clearcoatRoughness: 0.05,
           opacity: 0.8,
           transparent: true,
@@ -533,17 +593,17 @@ export default function AIPage() {
           showBorder: true,
           borderColor: "#ffffff",
           borderWidth: 1,
-          description: "Crystal"
+          description: "Crystal",
         },
 
         // Biến thể 2: Metallic - Bề mặt kim loại sáng bóng
         {
           ...baseParams,
           gradientColors: [brightColor, baseColor],
-          roughness: 0.05,  // Bề mặt cực nhẵn
-          metalness: 1.0,   // Hoàn toàn kim loại
-          clearcoat: 0.8,   // Lớp phủ sáng
-          anisotropy: 0.7,  // Hiệu ứng kim loại đánh bóng theo hướng
+          roughness: 0.05, // Bề mặt cực nhẵn
+          metalness: 1.0, // Hoàn toàn kim loại
+          clearcoat: 0.8, // Lớp phủ sáng
+          anisotropy: 0.7, // Hiệu ứng kim loại đánh bóng theo hướng
           clearcoatRoughness: 0.1,
           emissive: brightColor,
           emissiveIntensity: 0.3,
@@ -551,14 +611,16 @@ export default function AIPage() {
           showBorder: true,
           borderColor: brightColor,
           borderWidth: 1,
-          description: "Chrome"
+          description: "Chrome",
         },
 
         // Biến thể 3: Plasma - Phát sáng mạnh, hiệu ứng chảy plasma
         {
           ...baseParams,
           texturePattern: "plasma",
-          map: baseParams.map || generateProceduralTexture("plasma", 1024, { color: baseColor }),
+          map:
+            baseParams.map ||
+            generateProceduralTexture("plasma", 1024, { color: baseColor }),
           normalScale: 1.5,
           roughness: 0.4,
           metalness: 0.6,
@@ -569,7 +631,7 @@ export default function AIPage() {
           animationSpeed: 0.08, // Tăng tốc độ animation
           showBorder: false,
           customEffects: ["energy"],
-          description: "Plasma"
+          description: "Plasma",
         },
 
         // Biến thể 4: Hologram - Cải tiến hoàn toàn
@@ -579,7 +641,10 @@ export default function AIPage() {
           transparent: true,
           opacity: 0.8,
           color: adjustColorBrightness(analogousColor1, 1.8), // Màu cơ bản sáng hơn
-          gradientColors: [adjustColorBrightness(brightColor, 1.6), analogousColor1],
+          gradientColors: [
+            adjustColorBrightness(brightColor, 1.6),
+            analogousColor1,
+          ],
           roughness: 0.1,
           metalness: 0.9,
           emissive: adjustColorBrightness(brightColor, 2.0),
@@ -589,7 +654,7 @@ export default function AIPage() {
           showBorder: true,
           borderColor: adjustColorBrightness(brightColor, 2.0), // Viền sáng hơn
           borderWidth: 1.5, // Viền đậm hơn
-          description: "Hologram"
+          description: "Hologram",
         },
 
         // Biến thể 5: Carbon Fiber - Cải tiến hoàn toàn
@@ -597,16 +662,18 @@ export default function AIPage() {
           ...baseParams,
           texturePattern: "carbon",
           // Sử dụng màu cơ bản sáng hơn nhiều cho texture
-          map: baseParams.map || generateProceduralTexture("carbon", 1024, {
-            color: adjustColorBrightness(darkColor, 2.2)
-          }),
+          map:
+            baseParams.map ||
+            generateProceduralTexture("carbon", 1024, {
+              color: adjustColorBrightness(darkColor, 2.2),
+            }),
           // Tạo normal map mạnh hơn cho hiệu ứng 3D sâu hơn
           normalMap: generateProceduralTexture("carbon_normal", 1024, {
-            color: adjustColorBrightness(darkColor, 1.8)
+            color: adjustColorBrightness(darkColor, 1.8),
           }),
           // Tạo displacement map mạnh hơn
           displacementMap: generateProceduralTexture("carbon_disp", 1024, {
-            color: adjustColorBrightness(baseColor, 1.4)
+            color: adjustColorBrightness(baseColor, 1.4),
           }),
           displacementScale: 0.15, // Tăng độ nổi cao hơn
           roughness: 0.2, // Giảm roughness để bóng hơn
@@ -625,7 +692,7 @@ export default function AIPage() {
           showBorder: true,
           borderColor: adjustColorBrightness(brightColor, 1.2), // Viền sáng
           borderWidth: 1.2, // Viền vừa phải
-          description: "Carbon"
+          description: "Carbon",
         },
 
         // Biến thể 6: Nebula - Hiệu ứng không gian màu sắc
@@ -633,7 +700,9 @@ export default function AIPage() {
           ...baseParams,
           gradientColors: [analogousColor1, complementaryColorTrue],
           texturePattern: "nebula",
-          map: baseParams.map || generateProceduralTexture("nebula", 1024, { color: baseColor }),
+          map:
+            baseParams.map ||
+            generateProceduralTexture("nebula", 1024, { color: baseColor }),
           roughness: 0.4,
           metalness: 0.7,
           emissive: complementaryColorTrue,
@@ -644,8 +713,8 @@ export default function AIPage() {
           showBorder: true,
           borderColor: analogousColor2,
           borderWidth: 2,
-          description: "Nebula"
-        }
+          description: "Nebula",
+        },
       ];
 
       // Đảm bảo rằng các khác biệt về rotation rõ ràng hơn
@@ -655,47 +724,48 @@ export default function AIPage() {
         { x: 0.4, y: 0.6, z: 0 },
         { x: 0.3, y: 0.5, z: 0.2 },
         { x: 0.6, y: 0.3, z: 0.1 },
-        { x: 0.4, y: 0.4, z: 0.1 }
+        { x: 0.4, y: 0.4, z: 0.1 },
       ];
 
       // Tạo previews cho từng biến thể với độ chi tiết cao
-      const variants = await Promise.all(variantsBase.map(async (variant, index) => {
-        // Tạo preview cho biến thể với canvas lớn hơn và hỗ trợ độ phân giải cao
-        const previewCanvas = document.createElement('canvas');
-        previewCanvas.width = 400; // Tăng kích thước để nét hơn
-        previewCanvas.height = 400;
-        const previewRenderer = new THREE.WebGLRenderer({
-          canvas: previewCanvas,
-          alpha: true,
-          antialias: true,
-          precision: 'highp'
-        });
-        previewRenderer.setPixelRatio(2); // Tăng pixel ratio cho sắc nét
-        previewRenderer.toneMapping = THREE.ACESFilmicToneMapping;
-        previewRenderer.toneMappingExposure = 1.2;
+      const variants = await Promise.all(
+        variantsBase.map(async (variant, index) => {
+          // Tạo preview cho biến thể với canvas lớn hơn và hỗ trợ độ phân giải cao
+          const previewCanvas = document.createElement("canvas");
+          previewCanvas.width = 400; // Tăng kích thước để nét hơn
+          previewCanvas.height = 400;
+          const previewRenderer = new THREE.WebGLRenderer({
+            canvas: previewCanvas,
+            alpha: true,
+            antialias: true,
+            precision: "highp",
+          });
+          previewRenderer.setPixelRatio(2); // Tăng pixel ratio cho sắc nét
+          previewRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+          previewRenderer.toneMappingExposure = 1.2;
 
-        const previewScene = new THREE.Scene();
-        // Thêm background gradient cho từng preview
-        const colors = [
-          ['#000000', '#1a0033'], // Crystal
-          ['#000000', '#0d0d1a'], // Chrome
-          ['#0a001a', '#1a0033'], // Plasma
-          ['#000033', '#001a33'], // Hologram
-          ['#0d0d0d', '#1a1a1a'], // Carbon
-          ['#000022', '#1a0033']  // Nebula
-        ];
+          const previewScene = new THREE.Scene();
+          // Thêm background gradient cho từng preview
+          const colors = [
+            ["#000000", "#1a0033"], // Crystal
+            ["#000000", "#0d0d1a"], // Chrome
+            ["#0a001a", "#1a0033"], // Plasma
+            ["#000033", "#001a33"], // Hologram
+            ["#0d0d0d", "#1a1a1a"], // Carbon
+            ["#000022", "#1a0033"], // Nebula
+          ];
 
-        // Tạo background gradient bằng shader
-        const bgGeometry = new THREE.PlaneGeometry(20, 20);
-        const bgMaterial = new THREE.ShaderMaterial({
-          vertexShader: `
+          // Tạo background gradient bằng shader
+          const bgGeometry = new THREE.PlaneGeometry(20, 20);
+          const bgMaterial = new THREE.ShaderMaterial({
+            vertexShader: `
             varying vec2 vUv;
             void main() {
               vUv = uv;
               gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
             }
           `,
-          fragmentShader: `
+            fragmentShader: `
             uniform vec3 colorA;
             uniform vec3 colorB;
             varying vec2 vUv;
@@ -704,94 +774,102 @@ export default function AIPage() {
               gl_FragColor = vec4(color, 1.0);
             }
           `,
-          uniforms: {
-            colorA: { value: new THREE.Color(colors[index][0]) },
-            colorB: { value: new THREE.Color(colors[index][1]) }
-          },
-        });
-        const bgMesh = new THREE.Mesh(bgGeometry, bgMaterial);
-        bgMesh.position.z = -10;
-        previewScene.add(bgMesh);
-
-        const previewCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-        previewCamera.position.z = 2.2;
-
-        // Tạo cube với độ chi tiết cao hơn
-        const geometry = new THREE.BoxGeometry(1, 1, 1, 64, 64, 64);
-        const material = createMaterialFromParams(variant);
-        const previewCube = new THREE.Mesh(geometry, material);
-
-        // Thêm wireframe cho cube nếu có border
-        if (variant.showBorder) {
-          const wireGeometry = new THREE.EdgesGeometry(geometry, 15);
-          const wireMaterial = new THREE.LineBasicMaterial({
-            color: variant.borderColor || "#ffffff",
-            linewidth: 1,
-            transparent: true,
-            opacity: 0.7
+            uniforms: {
+              colorA: { value: new THREE.Color(colors[index][0]) },
+              colorB: { value: new THREE.Color(colors[index][1]) },
+            },
           });
-          const wireframe = new THREE.LineSegments(wireGeometry, wireMaterial);
-          previewCube.add(wireframe);
-        }
+          const bgMesh = new THREE.Mesh(bgGeometry, bgMaterial);
+          bgMesh.position.z = -10;
+          previewScene.add(bgMesh);
 
-        // Thêm ánh sáng cho scene preview
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-        previewScene.add(ambientLight);
+          const previewCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+          previewCamera.position.z = 2.2;
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        directionalLight.position.set(5, 5, 5);
-        previewScene.add(directionalLight);
+          // Tạo cube với độ chi tiết cao hơn
+          const geometry = new THREE.BoxGeometry(1, 1, 1, 64, 64, 64);
+          const material = createMaterialFromParams(variant);
+          const previewCube = new THREE.Mesh(geometry, material);
 
-        // Thêm point light để làm nổi bật các texture
-        const pointLight = new THREE.PointLight(0xffffff, 1.0);
-        pointLight.position.set(-2, 1, 3);
-        previewScene.add(pointLight);
+          // Thêm wireframe cho cube nếu có border
+          if (variant.showBorder) {
+            const wireGeometry = new THREE.EdgesGeometry(geometry, 15);
+            const wireMaterial = new THREE.LineBasicMaterial({
+              color: variant.borderColor || "#ffffff",
+              linewidth: 1,
+              transparent: true,
+              opacity: 0.7,
+            });
+            const wireframe = new THREE.LineSegments(
+              wireGeometry,
+              wireMaterial
+            );
+            previewCube.add(wireframe);
+          }
 
-        // Thêm ánh sáng màu để tạo hiệu ứng đặc biệt cho từng loại
-        const accentColorLight = new THREE.PointLight(
-          variant.emissive || variant.color || "#ffffff",
-          variant.texturePattern === "plasma" ? 2.0 : 0.8,
-          10
-        );
-        accentColorLight.position.set(2, -1, 1);
-        previewScene.add(accentColorLight);
+          // Thêm ánh sáng cho scene preview
+          const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+          previewScene.add(ambientLight);
 
-        previewScene.add(previewCube);
+          const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+          directionalLight.position.set(5, 5, 5);
+          previewScene.add(directionalLight);
 
-        // Áp dụng rotation khác nhau cho từng biến thể
-        const rotation = rotationSettings[index % rotationSettings.length];
-        previewCube.rotation.x = rotation.x * Math.PI;
-        previewCube.rotation.y = rotation.y * Math.PI;
-        previewCube.rotation.z = rotation.z * Math.PI;
+          // Thêm point light để làm nổi bật các texture
+          const pointLight = new THREE.PointLight(0xffffff, 1.0);
+          pointLight.position.set(-2, 1, 3);
+          previewScene.add(pointLight);
 
-        // Thêm hiệu ứng hậu kỳ cho preview
-        const composer = new EffectComposer(previewRenderer);
-        const renderPass = new RenderPass(previewScene, previewCamera);
-        composer.addPass(renderPass);
+          // Thêm ánh sáng màu để tạo hiệu ứng đặc biệt cho từng loại
+          const accentColorLight = new THREE.PointLight(
+            variant.emissive || variant.color || "#ffffff",
+            variant.texturePattern === "plasma" ? 2.0 : 0.8,
+            10
+          );
+          accentColorLight.position.set(2, -1, 1);
+          previewScene.add(accentColorLight);
 
-        // Thêm bloom cho các preview
-        const bloomStrength = variant.emissiveIntensity ? 1.0 : 0.5;
-        const bloomEffect = new BloomEffect({
-          luminanceThreshold: 0.2,
-          luminanceSmoothing: 0.9,
-          intensity: bloomStrength,
-          radius: variant.description === "Crystal" || variant.description === "Hologram" ? 1.0 : 0.8 // Tăng radius cho Crystal và Hologram
-        });
-        const bloomPass = new EffectPass(previewCamera, bloomEffect);
-        composer.addPass(bloomPass);
+          previewScene.add(previewCube);
 
-        // Render vài frame để hiệu ứng bloom hiện rõ
-        for (let i = 0; i < 3; i++) {
-          composer.render();
-        }
+          // Áp dụng rotation khác nhau cho từng biến thể
+          const rotation = rotationSettings[index % rotationSettings.length];
+          previewCube.rotation.x = rotation.x * Math.PI;
+          previewCube.rotation.y = rotation.y * Math.PI;
+          previewCube.rotation.z = rotation.z * Math.PI;
 
-        // Lưu preview vào variant với mô tả
-        return {
-          ...variant,
-          preview: previewCanvas.toDataURL('image/png', 0.95), // Tăng chất lượng export
-          description: variant.description || "Custom" // Sử dụng mô tả đã có
-        };
-      }));
+          // Thêm hiệu ứng hậu kỳ cho preview
+          const composer = new EffectComposer(previewRenderer);
+          const renderPass = new RenderPass(previewScene, previewCamera);
+          composer.addPass(renderPass);
+
+          // Thêm bloom cho các preview
+          const bloomStrength = variant.emissiveIntensity ? 1.0 : 0.5;
+          const bloomEffect = new BloomEffect({
+            luminanceThreshold: 0.2,
+            luminanceSmoothing: 0.9,
+            intensity: bloomStrength,
+            radius:
+              variant.description === "Crystal" ||
+              variant.description === "Hologram"
+                ? 1.0
+                : 0.8, // Tăng radius cho Crystal và Hologram
+          });
+          const bloomPass = new EffectPass(previewCamera, bloomEffect);
+          composer.addPass(bloomPass);
+
+          // Render vài frame để hiệu ứng bloom hiện rõ
+          for (let i = 0; i < 3; i++) {
+            composer.render();
+          }
+
+          // Lưu preview vào variant với mô tả
+          return {
+            ...variant,
+            preview: previewCanvas.toDataURL("image/png", 0.95), // Tăng chất lượng export
+            description: variant.description || "Custom", // Sử dụng mô tả đã có
+          };
+        })
+      );
 
       setMaterialParams(variants[0]);
       setVariantPreviews(variants);
@@ -818,8 +896,8 @@ export default function AIPage() {
       canvas: canvasRef.current,
       alpha: true,
       antialias: true,
-      precision: 'highp',
-      powerPreference: 'high-performance'
+      precision: "highp",
+      powerPreference: "high-performance",
     });
     renderer.setSize(400, 400);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.5)); // Tăng pixel ratio cho sắc nét
@@ -831,11 +909,14 @@ export default function AIPage() {
 
     // Cải thiện HDR environment map
     const rgbeLoader = new RGBELoader();
-    rgbeLoader.load("/textures/studio_small_08_1k.hdr", (texture: THREE.DataTexture) => {
-      texture.mapping = THREE.EquirectangularReflectionMapping;
-      scene.environment = texture;
-      scene.background = new THREE.Color('#000000'); // Đảm bảo nền đen hoàn toàn
-    });
+    rgbeLoader.load(
+      "/textures/studio_small_08_1k.hdr",
+      (texture: THREE.DataTexture) => {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        scene.environment = texture;
+        scene.background = new THREE.Color("#000000"); // Đảm bảo nền đen hoàn toàn
+      }
+    );
 
     // Tăng độ chi tiết của geometry
     const geometry = new THREE.BoxGeometry(1, 1, 1, 128, 128, 128); // Tăng phân mảnh
@@ -845,7 +926,7 @@ export default function AIPage() {
       roughness: 0.5,
       envMapIntensity: 1.0, // Tăng cường phản chiếu môi trường
       clearcoat: 0.3, // Thêm lớp phủ bóng
-      clearcoatRoughness: 0.2
+      clearcoatRoughness: 0.2,
     });
     const cube = new THREE.Mesh(geometry, material);
     cube.castShadow = true; // Bật đổ bóng
@@ -861,7 +942,10 @@ export default function AIPage() {
       transparent: true,
       opacity: 0.5,
     });
-    const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
+    const wireframe = new THREE.LineSegments(
+      wireframeGeometry,
+      wireframeMaterial
+    );
     wireframeRef.current = wireframe;
     scene.add(wireframe);
 
@@ -878,7 +962,7 @@ export default function AIPage() {
       luminanceThreshold: 0.2,
       luminanceSmoothing: 0.9,
       intensity: 0.6,
-      radius: 0.8
+      radius: 0.8,
     });
     bloomEffectRef.current = bloomEffect;
 
@@ -917,7 +1001,14 @@ export default function AIPage() {
     scene.add(backLight);
 
     // Ánh sáng tập trung cho hiệu ứng thật hơn
-    const spotLight = new THREE.SpotLight(0xffffff, 1.5, 15, Math.PI / 6, 0.5, 1);
+    const spotLight = new THREE.SpotLight(
+      0xffffff,
+      1.5,
+      15,
+      Math.PI / 6,
+      0.5,
+      1
+    );
     spotLight.position.set(0, 5, 3);
     spotLight.castShadow = true;
     spotLight.shadow.mapSize.width = 1024;
@@ -955,7 +1046,13 @@ export default function AIPage() {
               fragmentShader: hologramShader.fragmentShader,
               uniforms: {
                 time: { value: timeRef.current },
-                baseColor: { value: new THREE.Color(materialParams.color || materialParams.gradientColors?.[0] || "#ffffff") },
+                baseColor: {
+                  value: new THREE.Color(
+                    materialParams.color ||
+                      materialParams.gradientColors?.[0] ||
+                      "#ffffff"
+                  ),
+                },
               },
               transparent: true,
               opacity: materialParams.opacity || 0.8,
@@ -964,10 +1061,14 @@ export default function AIPage() {
             // Áp dụng material mới
             if (cubeRef.current.material instanceof THREE.ShaderMaterial) {
               // Chỉ cập nhật uniforms nếu đã là shader material
-              cubeRef.current.material.uniforms.time.value = timeRef.current * 0.5;
-              cubeRef.current.material.uniforms.baseColor.value = new THREE.Color(
-                materialParams.color || materialParams.gradientColors?.[0] || "#ffffff"
-              );
+              cubeRef.current.material.uniforms.time.value =
+                timeRef.current * 0.5;
+              cubeRef.current.material.uniforms.baseColor.value =
+                new THREE.Color(
+                  materialParams.color ||
+                    materialParams.gradientColors?.[0] ||
+                    "#ffffff"
+                );
             } else {
               // Thay thế hoàn toàn nếu chưa phải là shader material
               cubeRef.current.material = newHologramMaterial;
@@ -976,7 +1077,8 @@ export default function AIPage() {
 
           // Điều chỉnh wireframe để hiển thị rõ hơn
           if (wireframeRef.current && wireframeRef.current.visible) {
-            const wireMaterial = wireframeRef.current.material as THREE.LineBasicMaterial;
+            const wireMaterial = wireframeRef.current
+              .material as THREE.LineBasicMaterial;
 
             // Màu viền trắng hoặc theo màu được chỉ định
             wireMaterial.color.set(materialParams.borderColor || "#ffffff");
@@ -991,37 +1093,50 @@ export default function AIPage() {
         if (materialParams?.description === "Carbon") {
           if (cubeRef.current.material instanceof THREE.MeshPhysicalMaterial) {
             // Đặt trực tiếp màu cơ bản
-            cubeRef.current.material.color.set(materialParams.color || "#ffea00");
+            cubeRef.current.material.color.set(
+              materialParams.color || "#ffea00"
+            );
 
             // Đặt màu phát sáng
             if (materialParams.emissive) {
               cubeRef.current.material.emissive.set(materialParams.emissive);
-              cubeRef.current.material.emissiveIntensity = materialParams.emissiveIntensity || 0.5;
+              cubeRef.current.material.emissiveIntensity =
+                materialParams.emissiveIntensity || 0.5;
             }
 
             // Tăng cường hiệu ứng clearcoat để làm nổi bật màu sắc
-            cubeRef.current.material.clearcoat = materialParams.clearcoat || 1.0;
+            cubeRef.current.material.clearcoat =
+              materialParams.clearcoat || 1.0;
             cubeRef.current.material.clearcoatRoughness = 0.1;
 
             // Đảm bảo độ bóng được áp dụng
-            cubeRef.current.material.roughness = materialParams.roughness || 0.2;
-            cubeRef.current.material.metalness = materialParams.metalness || 0.8;
+            cubeRef.current.material.roughness =
+              materialParams.roughness || 0.2;
+            cubeRef.current.material.metalness =
+              materialParams.metalness || 0.8;
           }
 
           // Điều chỉnh wireframe cho carbon
           if (wireframeRef.current && wireframeRef.current.visible) {
-            const wireMaterial = wireframeRef.current.material as THREE.LineBasicMaterial;
+            const wireMaterial = wireframeRef.current
+              .material as THREE.LineBasicMaterial;
             wireMaterial.color.set(materialParams.borderColor || "#ffffee");
             wireMaterial.opacity = 0.8;
           }
         }
 
         // Hiệu ứng nhịp đập cải tiến
-        if (materialParams?.animationType === "pulse" && materialParams.animateEmissive) {
-          const material = cubeRef.current.material as THREE.MeshPhysicalMaterial;
+        if (
+          materialParams?.animationType === "pulse" &&
+          materialParams.animateEmissive
+        ) {
+          const material = cubeRef.current
+            .material as THREE.MeshPhysicalMaterial;
           // Nhịp đập mạnh hơn với tần số cao
           const pulseValue = Math.sin(timeRef.current * 4) * 0.5 + 0.5;
-          material.emissiveIntensity = (materialParams.emissiveIntensity || 0.2) * (0.7 + pulseValue * 1.2);
+          material.emissiveIntensity =
+            (materialParams.emissiveIntensity || 0.2) *
+            (0.7 + pulseValue * 1.2);
 
           // Thêm hiệu ứng scale theo nhịp
           const scaleValue = 1 + pulseValue * 0.03;
@@ -1029,13 +1144,17 @@ export default function AIPage() {
 
           // Làm cho wireframe cũng nhấp nháy
           if (wireframeRef.current && wireframeRef.current.visible) {
-            const wireMaterial = wireframeRef.current.material as THREE.LineBasicMaterial;
+            const wireMaterial = wireframeRef.current
+              .material as THREE.LineBasicMaterial;
             wireMaterial.opacity = 0.3 + pulseValue * 0.7;
           }
         }
 
         // Hiệu ứng flow cải tiến
-        if (materialParams?.animationType === "flow" && cubeRef.current.material instanceof THREE.ShaderMaterial) {
+        if (
+          materialParams?.animationType === "flow" &&
+          cubeRef.current.material instanceof THREE.ShaderMaterial
+        ) {
           const material = cubeRef.current.material;
           material.uniforms.time.value = timeRef.current * 0.5; // Giảm tốc độ flow
 
@@ -1057,11 +1176,17 @@ export default function AIPage() {
         }
 
         // Thêm hiệu ứng rung nhẹ cho khối 3D
-        if (materialParams?.texturePattern === "noise" || materialParams?.displacementScale) {
+        if (
+          materialParams?.texturePattern === "noise" ||
+          materialParams?.displacementScale
+        ) {
           const vibrationAmount = 0.005; // Tăng cường độ rung
-          cubeRef.current.scale.x = 1 + Math.sin(timeRef.current * 12) * vibrationAmount;
-          cubeRef.current.scale.y = 1 + Math.sin(timeRef.current * 14) * vibrationAmount;
-          cubeRef.current.scale.z = 1 + Math.sin(timeRef.current * 16) * vibrationAmount;
+          cubeRef.current.scale.x =
+            1 + Math.sin(timeRef.current * 12) * vibrationAmount;
+          cubeRef.current.scale.y =
+            1 + Math.sin(timeRef.current * 14) * vibrationAmount;
+          cubeRef.current.scale.z =
+            1 + Math.sin(timeRef.current * 16) * vibrationAmount;
         }
 
         // Hiệu ứng đặc biệt cho Crystal
@@ -1069,10 +1194,13 @@ export default function AIPage() {
           // Hiệu ứng tỏa sáng từ bên trong
           const pulseValue = Math.sin(timeRef.current * 2.5) * 0.5 + 0.5;
           if (cubeRef.current.material instanceof THREE.MeshPhysicalMaterial) {
-            // Tăng cường hiển thị màu 
-            cubeRef.current.material.emissiveIntensity = (materialParams.emissiveIntensity || 0.4) * (0.6 + pulseValue * 1.8);
+            // Tăng cường hiển thị màu
+            cubeRef.current.material.emissiveIntensity =
+              (materialParams.emissiveIntensity || 0.4) *
+              (0.6 + pulseValue * 1.8);
             // Điều chỉnh transmission theo thời gian
-            cubeRef.current.material.transmission = (materialParams.transmission || 0.8) * (0.85 + pulseValue * 0.15);
+            cubeRef.current.material.transmission =
+              (materialParams.transmission || 0.8) * (0.85 + pulseValue * 0.15);
 
             // Đảm bảo màu phát sáng cực mạnh theo màu của prompt
             if (materialParams.emissive) {
@@ -1081,7 +1209,11 @@ export default function AIPage() {
               const hsl = { h: 0, s: 0, l: 0 };
               color.getHSL(hsl);
               // Tăng độ sáng nhưng giữ nguyên màu sắc
-              color.setHSL(hsl.h, hsl.s, Math.min(0.8, hsl.l + 0.2 * pulseValue));
+              color.setHSL(
+                hsl.h,
+                hsl.s,
+                Math.min(0.8, hsl.l + 0.2 * pulseValue)
+              );
               cubeRef.current.material.emissive.copy(color);
             }
           }
@@ -1090,7 +1222,10 @@ export default function AIPage() {
 
       // Cập nhật hiệu ứng bloom tùy theo material
       if (bloomEffectRef.current && materialParams) {
-        if (materialParams.emissiveIntensity || materialParams.customEffects?.includes("hologram")) {
+        if (
+          materialParams.emissiveIntensity ||
+          materialParams.customEffects?.includes("hologram")
+        ) {
           bloomEffectRef.current.intensity = 1.4; // Tăng cường bloom cho các material phát sáng
         } else {
           bloomEffectRef.current.intensity = 0.6; // Tăng nhẹ bloom cho các material không phát sáng
@@ -1113,7 +1248,10 @@ export default function AIPage() {
 
       cubeRef.current.rotation.y += deltaX * 0.005;
       cubeRef.current.rotation.x += deltaY * 0.005;
-      cubeRef.current.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cubeRef.current.rotation.x));
+      cubeRef.current.rotation.x = Math.max(
+        -Math.PI / 2,
+        Math.min(Math.PI / 2, cubeRef.current.rotation.x)
+      );
 
       if (wireframeRef.current) {
         wireframeRef.current.rotation.copy(cubeRef.current.rotation);
@@ -1151,7 +1289,7 @@ export default function AIPage() {
     let newMaterial: THREE.Material;
 
     // Xử lý đặc biệt cho texture stripes
-    if (materialParams.texturePattern === 'stripes') {
+    if (materialParams.texturePattern === "stripes") {
       newMaterial = new THREE.MeshPhysicalMaterial({
         color: materialParams.color || "#666666",
         metalness: materialParams.metalness ?? 0.5,
@@ -1165,7 +1303,10 @@ export default function AIPage() {
 
       if (materialParams.map) {
         const texture = new THREE.TextureLoader().load(materialParams.map);
-        texture.repeat.set(materialParams.textureScale || 1, materialParams.textureScale || 1);
+        texture.repeat.set(
+          materialParams.textureScale || 1,
+          materialParams.textureScale || 1
+        );
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
         (newMaterial as THREE.MeshPhysicalMaterial).map = texture;
@@ -1176,7 +1317,9 @@ export default function AIPage() {
         fragmentShader: hologramShader.fragmentShader,
         uniforms: {
           time: { value: 0 },
-          baseColor: { value: new THREE.Color(materialParams.color || "#7dd3fc") },
+          baseColor: {
+            value: new THREE.Color(materialParams.color || "#7dd3fc"),
+          },
         },
         transparent: true,
         opacity: materialParams.opacity ?? 0.6,
@@ -1187,11 +1330,24 @@ export default function AIPage() {
         fragmentShader: flowShader.fragmentShader,
         uniforms: {
           ...flowShader.uniforms,
-          color1: { value: new THREE.Color(materialParams.gradientColors?.[0] || materialParams.color || "#ffffff") },
-          color2: { value: new THREE.Color(materialParams.gradientColors?.[1] || "#000000") },
+          color1: {
+            value: new THREE.Color(
+              materialParams.gradientColors?.[0] ||
+                materialParams.color ||
+                "#ffffff"
+            ),
+          },
+          color2: {
+            value: new THREE.Color(
+              materialParams.gradientColors?.[1] || "#000000"
+            ),
+          },
         },
       });
-    } else if (materialParams.gradientColors && materialParams.gradientColors.length >= 2) {
+    } else if (
+      materialParams.gradientColors &&
+      materialParams.gradientColors.length >= 2
+    ) {
       newMaterial = new THREE.ShaderMaterial({
         vertexShader: gradientShader.vertexShader,
         fragmentShader: gradientShader.fragmentShader,
@@ -1213,20 +1369,30 @@ export default function AIPage() {
         opacity: materialParams.opacity ?? 1.0,
         envMapIntensity: materialParams.envMapIntensity ?? 0.5,
         bumpScale: materialParams.bumpScale ?? 0.0,
-        normalScale: materialParams.normalScale ? new THREE.Vector2(materialParams.normalScale, materialParams.normalScale) : new THREE.Vector2(1, 1),
+        normalScale: materialParams.normalScale
+          ? new THREE.Vector2(
+              materialParams.normalScale,
+              materialParams.normalScale
+            )
+          : new THREE.Vector2(1, 1),
         clearcoat: materialParams.clearcoat ?? 0,
         clearcoatRoughness: materialParams.clearcoatRoughness ?? 0.1,
         anisotropy: materialParams.anisotropy ?? 0,
         displacementScale: materialParams.displacementScale ?? 0,
         transmission: materialParams.transmission ?? 0,
         sheen: materialParams.sheen ?? 0,
-        sheenColor: materialParams.sheenColor ? new THREE.Color(materialParams.sheenColor) : new THREE.Color("#ffffff"),
+        sheenColor: materialParams.sheenColor
+          ? new THREE.Color(materialParams.sheenColor)
+          : new THREE.Color("#ffffff"),
       });
 
       if (materialParams.map) {
         textureLoader.load(materialParams.map, (texture) => {
           (newMaterial as THREE.MeshPhysicalMaterial).map = texture;
-          texture.repeat.set(materialParams.textureScale || 1, materialParams.textureScale || 1);
+          texture.repeat.set(
+            materialParams.textureScale || 1,
+            materialParams.textureScale || 1
+          );
           texture.wrapS = THREE.RepeatWrapping;
           texture.wrapT = THREE.RepeatWrapping;
           newMaterial.needsUpdate = true;
@@ -1253,7 +1419,10 @@ export default function AIPage() {
       if (materialParams.proceduralTexture) {
         textureLoader.load(materialParams.proceduralTexture, (texture) => {
           (newMaterial as THREE.MeshPhysicalMaterial).map = texture;
-          texture.repeat.set(materialParams.textureScale || 1, materialParams.textureScale || 1);
+          texture.repeat.set(
+            materialParams.textureScale || 1,
+            materialParams.textureScale || 1
+          );
           texture.wrapS = THREE.RepeatWrapping;
           texture.wrapT = THREE.RepeatWrapping;
           newMaterial.needsUpdate = true;
@@ -1270,7 +1439,9 @@ export default function AIPage() {
     wireframe.visible = materialParams.showBorder ?? false;
 
     if (bloomEffectRef.current) {
-      bloomEffectRef.current.intensity = materialParams.emissiveIntensity ? materialParams.emissiveIntensity * 0.8 : 0;
+      bloomEffectRef.current.intensity = materialParams.emissiveIntensity
+        ? materialParams.emissiveIntensity * 0.8
+        : 0;
     }
   }, [materialParams]);
 
@@ -1284,10 +1455,13 @@ export default function AIPage() {
       const response = await generateCubeSkin({ prompt: cubePrompt });
 
       // Create preview for main material
-      const previewCanvas = document.createElement('canvas');
+      const previewCanvas = document.createElement("canvas");
       previewCanvas.width = 200;
       previewCanvas.height = 200;
-      const previewRenderer = new THREE.WebGLRenderer({ canvas: previewCanvas, alpha: true });
+      const previewRenderer = new THREE.WebGLRenderer({
+        canvas: previewCanvas,
+        alpha: true,
+      });
       const previewScene = new THREE.Scene();
       const previewCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
       previewCamera.position.z = 2;
@@ -1302,14 +1476,14 @@ export default function AIPage() {
       // Save preview to material params
       const mainMaterialParams = {
         ...response.materialParams,
-        preview: previewCanvas.toDataURL()
+        preview: previewCanvas.toDataURL(),
       };
 
       // Set main material params
       setMaterialParams(mainMaterialParams);
 
       // Wait a bit for material to be applied
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Then generate variants
       await generateVariants();
@@ -1333,7 +1507,7 @@ export default function AIPage() {
 
     try {
       // First, clear any previous error state
-      setMusicGeneration(prev => prev ? { ...prev, error: null } : null);
+      setMusicGeneration((prev) => (prev ? { ...prev, error: null } : null));
 
       console.log("isInstrumental value:", isInstrumental);
       const params = {
@@ -1362,25 +1536,36 @@ export default function AIPage() {
       const pollStatus = async () => {
         try {
           // First, check the callback endpoint for the audio_url
-          const callbackRes = await fetch(`/api/music/callback?taskId=${response.id}`, {
-            headers: {
-              'Accept': 'application/json'
+          const callbackRes = await fetch(
+            `/api/music/callback?taskId=${response.id}`,
+            {
+              headers: {
+                Accept: "application/json",
+              },
             }
-          });
+          );
 
           // Check if response is ok before proceeding
           if (!callbackRes.ok) {
             const errorText = await callbackRes.text();
-            console.error(`Callback endpoint returned ${callbackRes.status}:`, errorText);
-            throw new Error(`Callback endpoint returned status ${callbackRes.status}`);
+            console.error(
+              `Callback endpoint returned ${callbackRes.status}:`,
+              errorText
+            );
+            throw new Error(
+              `Callback endpoint returned status ${callbackRes.status}`
+            );
           }
 
           // Check content type to ensure we're getting JSON
-          const contentType = callbackRes.headers.get('content-type');
-          if (!contentType || !contentType.includes('application/json')) {
+          const contentType = callbackRes.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
             const responseText = await callbackRes.text();
-            console.error('Callback endpoint returned non-JSON response:', responseText);
-            throw new Error('Callback endpoint returned non-JSON response');
+            console.error(
+              "Callback endpoint returned non-JSON response:",
+              responseText
+            );
+            throw new Error("Callback endpoint returned non-JSON response");
           }
 
           // Parse JSON response
@@ -1390,11 +1575,15 @@ export default function AIPage() {
           // Check if we have audio URL from callback
           if (callbackData.audio_url) {
             // If the callback has the audio_url, use it and stop polling
-            setMusicGeneration((prev) => prev ? {
-              ...prev,
-              ...callbackData,
-              style: musicStyle
-            } : null);
+            setMusicGeneration((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    ...callbackData,
+                    style: musicStyle,
+                  }
+                : null
+            );
             clearInterval(pollingInterval);
             return;
           }
@@ -1408,45 +1597,79 @@ export default function AIPage() {
             let audioUrl = details.audio_url;
 
             // If status is success but no audio URL, search deeper
-            if ((details.status === "SUCCESS" || details.status === "completed") && !audioUrl) {
-              console.log("SUCCESS status but no audio_url, searching for URL in raw response...");
+            if (
+              (details.status === "SUCCESS" ||
+                details.status === "completed") &&
+              !audioUrl
+            ) {
+              console.log(
+                "SUCCESS status but no audio_url, searching for URL in raw response..."
+              );
 
               // Attempt to fetch raw details again to do deep inspection
               try {
-                const rawResponse = await fetch(`/api/music/callback?taskId=${response.id}&full=true`, {
-                  headers: { 'Accept': 'application/json' }
-                });
+                const rawResponse = await fetch(
+                  `/api/music/callback?taskId=${response.id}&full=true`,
+                  {
+                    headers: { Accept: "application/json" },
+                  }
+                );
 
                 if (rawResponse.ok) {
                   const rawData = await rawResponse.json();
-                  console.log("Raw callback data for deep inspection:", rawData);
+                  console.log(
+                    "Raw callback data for deep inspection:",
+                    rawData
+                  );
 
                   // Look for audio URLs in common places
                   const possibleUrlFields = [
-                    'audio_url', 'audioUrl', 'url', 'fileUrl', 'mp3_url',
-                    'audio', 'music_url', 'result_url', 'output_url'
+                    "audio_url",
+                    "audioUrl",
+                    "url",
+                    "fileUrl",
+                    "mp3_url",
+                    "audio",
+                    "music_url",
+                    "result_url",
+                    "output_url",
                   ];
 
                   // Check all top-level fields
                   for (const field of possibleUrlFields) {
-                    if (rawData[field] && typeof rawData[field] === 'string' &&
-                      rawData[field].includes('http')) {
+                    if (
+                      rawData[field] &&
+                      typeof rawData[field] === "string" &&
+                      rawData[field].includes("http")
+                    ) {
                       audioUrl = rawData[field];
-                      console.log(`Found audio URL in field: ${field}`, audioUrl);
+                      console.log(
+                        `Found audio URL in field: ${field}`,
+                        audioUrl
+                      );
                       break;
                     }
                   }
 
                   // Check nested fields - data, payload, result
-                  const nestedObjects = ['data', 'payload', 'result', 'output'];
+                  const nestedObjects = ["data", "payload", "result", "output"];
                   for (const nestedField of nestedObjects) {
-                    if (!audioUrl && rawData[nestedField] && typeof rawData[nestedField] === 'object') {
+                    if (
+                      !audioUrl &&
+                      rawData[nestedField] &&
+                      typeof rawData[nestedField] === "object"
+                    ) {
                       for (const field of possibleUrlFields) {
-                        if (rawData[nestedField][field] &&
-                          typeof rawData[nestedField][field] === 'string' &&
-                          rawData[nestedField][field].includes('http')) {
+                        if (
+                          rawData[nestedField][field] &&
+                          typeof rawData[nestedField][field] === "string" &&
+                          rawData[nestedField][field].includes("http")
+                        ) {
                           audioUrl = rawData[nestedField][field];
-                          console.log(`Found audio URL in ${nestedField}.${field}`, audioUrl);
+                          console.log(
+                            `Found audio URL in ${nestedField}.${field}`,
+                            audioUrl
+                          );
                           break;
                         }
                       }
@@ -1459,60 +1682,92 @@ export default function AIPage() {
             }
 
             // Update state with the results
-            setMusicGeneration(prev => ({
+            setMusicGeneration((prev) => ({
               ...(prev || {}),
               ...details,
               audio_url: audioUrl, // Use our extracted URL
-              style: musicStyle
+              style: musicStyle,
             }));
 
             // Map API-specific status codes to user-friendly statuses
-            if (details.status === "SUCCESS" || details.status === "completed") {
+            if (
+              details.status === "SUCCESS" ||
+              details.status === "completed"
+            ) {
               clearInterval(pollingInterval);
               if (!audioUrl) {
-                console.error("No audio URL found despite SUCCESS status. Falling back to error state.");
-                setMusicGeneration((prev) => (prev ? {
-                  ...prev,
-                  status: "failed",
-                  error: "Audio URL missing after successful generation",
-                  style: musicStyle
-                } : null));
+                console.error(
+                  "No audio URL found despite SUCCESS status. Falling back to error state."
+                );
+                setMusicGeneration((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        status: "failed",
+                        error: "Audio URL missing after successful generation",
+                        style: musicStyle,
+                      }
+                    : null
+                );
               }
-            } else if (details.status === "failed" || details.status === "GENERATE_AUDIO_FAILED" ||
-              details.status?.includes("FAILED")) {
+            } else if (
+              details.status === "failed" ||
+              details.status === "GENERATE_AUDIO_FAILED" ||
+              details.status?.includes("FAILED")
+            ) {
               clearInterval(pollingInterval);
 
               // Extract error message from various possible locations
-              let errorMessage = details.error || details.errorMessage ||
-                (details.response?.errorMessage) ||
+              let errorMessage =
+                details.error ||
+                details.errorMessage ||
+                details.response?.errorMessage ||
                 "Music generation failed";
 
               // Handle specific error codes with user-friendly messages
               if (details.errorCode === 500) {
-                errorMessage = "The music service is experiencing technical difficulties. Please try again later or try a different style/prompt.";
+                errorMessage =
+                  "The music service is experiencing technical difficulties. Please try again later or try a different style/prompt.";
               }
 
-              console.error(`Music generation failed: ${errorMessage}`, details);
+              console.error(
+                `Music generation failed: ${errorMessage}`,
+                details
+              );
 
-              setMusicGeneration((prev) => (prev ? {
-                ...prev,
-                status: "failed",
-                error: errorMessage,
-                style: musicStyle
-              } : null));
+              setMusicGeneration((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      status: "failed",
+                      error: errorMessage,
+                      style: musicStyle,
+                    }
+                  : null
+              );
             }
-
           } catch (detailsError) {
-            console.error("Error fetching music generation details:", detailsError);
+            console.error(
+              "Error fetching music generation details:",
+              detailsError
+            );
 
             // If we already have some data from the callback, use that instead of failing completely
             if (callbackData && callbackData.status) {
-              setMusicGeneration((prev) => prev ? {
-                ...prev,
-                ...callbackData,
-                style: musicStyle,
-                error: `Details API error: ${detailsError instanceof Error ? detailsError.message : String(detailsError)}`
-              } : null);
+              setMusicGeneration((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      ...callbackData,
+                      style: musicStyle,
+                      error: `Details API error: ${
+                        detailsError instanceof Error
+                          ? detailsError.message
+                          : String(detailsError)
+                      }`,
+                    }
+                  : null
+              );
             } else {
               throw detailsError;
             }
@@ -1520,13 +1775,19 @@ export default function AIPage() {
         } catch (error) {
           console.error("Error polling music generation status:", error);
           clearInterval(pollingInterval);
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          setMusicGeneration((prev) => (prev ? {
-            ...prev,
-            status: "failed",
-            error: errorMessage || "Failed to fetch music generation details",
-            style: musicStyle
-          } : null));
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          setMusicGeneration((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: "failed",
+                  error:
+                    errorMessage || "Failed to fetch music generation details",
+                  style: musicStyle,
+                }
+              : null
+          );
         }
       };
 
@@ -1555,143 +1816,121 @@ export default function AIPage() {
   const handleMint = async () => {
     if (activeTab === "cube" && materialParams) {
       try {
-        // Show minting status
         setIsGeneratingCube(true);
-
-        // 1. Convert canvas to PNG file
+        
+        // Use the wallet adapter instead of window.solana
+        console.log("Wallet status before minting:", { 
+          exists: true, // The wallet adapter always exists
+          isConnected: connected,
+          publicKey: publicKey?.toString() 
+        });
+        
+        if (!connected || !publicKey) {
+          alert("Please connect your wallet first to mint real NFTs");
+          throw new Error("Wallet not connected");
+        }
+        
+        // Generate model and image file
         if (!canvasRef.current) {
           throw new Error("Canvas doesn't exist");
         }
-
+        
         // Get name and description for NFT
         const cubeId = Math.floor(Math.random() * 900000 + 100000).toString();
         const nftName = `VOID Cube ${cubeId}`;
         const nftDescription = materialParams.description ||
           `A unique cube with ${materialParams.color || "custom"} color and ${materialParams.texturePattern || "special"} texture pattern.`;
-
+        
         // Convert canvas to file
         const imageFile = await convertCubeToFile(canvasRef.current, nftName);
         console.log("Created image file:", imageFile.name, imageFile.size);
-
-        // 2. Prepare attributes for NFT
+        
+        // Prepare attributes for NFT
         const attributes = [
           { trait_type: "Type", value: "Cube" },
           { trait_type: "Color", value: materialParams.color || "Custom" },
           { trait_type: "Texture", value: materialParams.texturePattern || "None" },
           { trait_type: "Animation", value: materialParams.animationType || "None" }
         ];
-
-        if (materialParams.metalness) {
-          attributes.push({ trait_type: "Metalness", value: materialParams.metalness.toString() });
-        }
-
-        if (materialParams.roughness) {
-          attributes.push({ trait_type: "Roughness", value: materialParams.roughness.toString() });
-        }
-
-        if (materialParams.emissiveIntensity) {
-          attributes.push({ trait_type: "Glow", value: materialParams.emissiveIntensity.toString() });
-        }
-
-        // 3. Get color information to create 3D model
+        
+        // Get color information to create 3D model
         const colors = materialParams.gradientColors || [materialParams.color || "#FFFFFF"];
-
-        // 4. Mint NFT
-        const wallet = window.solana;
-
+        
+        // Create Solana connection
+        const connection = new Connection(
+          process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
+          'confirmed'
+        );
+        console.log("Solana connection created:", connection.rpcEndpoint);
+        
+        // Prepare cube NFT metadata
+        const cubeMetadata = await getCubeNFTMetadata(
+          nftName,
+          nftDescription,
+          imageFile,
+          null, // model created automatically
+          attributes
+        );
+        
+        // Try primary minting method
         try {
-          if (wallet && wallet.isConnected) {
-            // Create Solana connection for direct mint to wallet
-            const connection = new Connection(
-              process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
-              'confirmed' // Thêm commitment level 'confirmed' để cải thiện độ tin cậy
-            );
-
-            // Prepare cube NFT metadata
-            const cubeMetadata = await getCubeNFTMetadata(
-              nftName,
-              nftDescription,
-              imageFile,
-              null, // model sẽ được tạo tự động trong mintRealNFT
-              attributes
-            );
-
-            // Mint trực tiếp sử dụng hàm mintNFT thay vì mintRealNFT
-            console.log("Starting real NFT minting on Solana");
-
-            try {
-              // Mint thông qua Metaplex API
-              const mintedAddress = await mintNFT(connection, wallet, cubeMetadata);
-              console.log("NFT minted successfully with address:", mintedAddress);
-              alert(`NFT đã được mint thành công! Địa chỉ: ${mintedAddress}. Kiểm tra Profile hoặc ví Phantom của bạn.`);
-            } catch (mintError) {
-              console.error("Error during Metaplex minting:", mintError);
-
-              // Thử phương pháp thay thế (mintRealNFT) nếu mintNFT thất bại
-              console.log("Falling back to alternative minting method");
-              const alternativeAddress = await mintRealNFT(
-                connection,
-                wallet,
-                {
-                  name: nftName,
-                  description: nftDescription,
-                  attributes,
-                  colors
-                },
-                imageFile
-              );
-
-              console.log("NFT minted with alternative method:", alternativeAddress);
-              alert(`NFT đã được mint! Kiểm tra trong Profile và ví Phantom của bạn.`);
-            }
-          } else {
-            // Use mock minting method if no wallet is connected
-            console.log("No wallet connected, using mock minting");
-            await mockMintNFT({
-              name: nftName,
-              description: nftDescription,
-              image: imageFile,
-              attributes
-            });
-
-            alert("NFT đã được tạo! Xem trong trang Profile của bạn.");
-          }
-        } catch (mintingError) {
-          console.error("All minting methods failed:", mintingError);
-
-          // Fallback - Lưu NFT vào localStorage ngay cả khi mint thất bại
+          console.log("Starting real NFT minting on Solana with metadata:", cubeMetadata);
+          
+          // Pass the wallet adapter functions instead of the window.solana object
+          const mintedAddress = await mintNFT(
+            connection, 
+            {
+              publicKey,
+              signTransaction,
+              signAllTransactions,
+              sendTransaction
+            }, 
+            cubeMetadata
+          );
+          
+          console.log("NFT minted successfully with address:", mintedAddress);
+          alert(`NFT has been minted successfully! Address: ${mintedAddress}. Check your Profile or Phantom wallet.`);
+          return; // Exit on success
+        } catch (mintError) {
+          console.error("Detailed error during Metaplex minting:", mintError);
+          
+          // Try alternative minting method
+          console.log("Falling back to alternative minting method");
           try {
-            // Tạo data URL cho hình ảnh
-            const reader = new FileReader();
-            reader.readAsDataURL(imageFile);
-            reader.onload = () => {
-              const userNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
-              const mockId = `local-${Date.now()}`;
-
-              userNfts.push({
-                id: mockId,
+            const alternativeAddress = await mintRealNFT(
+              connection,
+              {
+                publicKey,
+                signTransaction,
+                signAllTransactions,
+                sendTransaction
+              },
+              {
                 name: nftName,
                 description: nftDescription,
-                image: reader.result,
                 attributes,
-                mintedAt: new Date().toISOString(),
-                type: "cube",
-                local: true // Đánh dấu đây là NFT lưu cục bộ
-              });
-
-              localStorage.setItem('userNfts', JSON.stringify(userNfts));
-              alert("Không thể mint NFT thật, nhưng đã lưu cục bộ. Xem trong trang Profile của bạn.");
-            };
-          } catch (localError) {
-            // Nếu cả phương pháp lưu cục bộ cũng thất bại, hiển thị lỗi
-            throw mintingError;
+                colors
+              },
+              imageFile
+            );
+            
+            console.log("NFT minted with alternative method:", alternativeAddress);
+            alert(`NFT has been minted! Check your Profile and Phantom wallet.`);
+            return; // Exit on success
+          } catch (altMintError) {
+            console.error("Alternative minting failed:", altMintError);
+            throw new Error(`Both minting methods failed: ${mintError instanceof Error ? mintError.message : String(mintError)}, ${altMintError instanceof Error ? altMintError.message : String(altMintError)}`);
           }
         }
-
-        console.log("NFT processing complete");
-      } catch (error: any) {
-        console.error("Error minting NFT:", error);
-        alert(`Lỗi khi mint NFT: ${error.message}`);
+      } catch (error) {
+        console.error("Complete error trace for minting:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+        alert(`Error minting NFT: ${errorMessage}. Check console for details.`);
+        
+        // Only store locally if explicitly requested as fallback
+        if (confirm("Would you like to store this NFT locally instead?")) {
+          // Local storage fallback here...
+        }
       } finally {
         setIsGeneratingCube(false);
       }
@@ -1702,36 +1941,42 @@ export default function AIPage() {
 
         // Tạo metadata cho NFT âm nhạc
         const nftName = `VOID Music: ${musicTitle || "Untitled"}`;
-        const nftDescription = `${musicStyle} music track${musicPrompt ? `: ${musicPrompt.substring(0, 100)}${musicPrompt.length > 100 ? '...' : ''}` : ''}`;
+        const nftDescription = `${musicStyle} music track${
+          musicPrompt
+            ? `: ${musicPrompt.substring(0, 100)}${
+                musicPrompt.length > 100 ? "..." : ""
+              }`
+            : ""
+        }`;
 
         // Chuẩn bị thuộc tính
         const attributes = [
           { trait_type: "Style", value: musicStyle || "Custom" },
-          { trait_type: "Instrumental", value: isInstrumental ? "Yes" : "No" }
+          { trait_type: "Instrumental", value: isInstrumental ? "Yes" : "No" },
         ];
 
         // Tạo hình ảnh hiển thị mặc định (banner mẫu) cho nhạc
-        const audioName = nftName.replace(/\s+/g, '-').toLowerCase();
+        const audioName = nftName.replace(/\s+/g, "-").toLowerCase();
 
         // Tạo hình ảnh hiển thị từ canvas trống với mẫu nhạc
-        const tempCanvas = document.createElement('canvas');
+        const tempCanvas = document.createElement("canvas");
         tempCanvas.width = 800;
         tempCanvas.height = 800;
-        const ctx = tempCanvas.getContext('2d');
+        const ctx = tempCanvas.getContext("2d");
 
         if (ctx) {
           // Tạo nền gradient đẹp
           const gradient = ctx.createLinearGradient(0, 0, 800, 800);
-          gradient.addColorStop(0, '#5d4fff');
-          gradient.addColorStop(0.5, '#c42bb4');
-          gradient.addColorStop(1, '#1e58af');
+          gradient.addColorStop(0, "#5d4fff");
+          gradient.addColorStop(0.5, "#c42bb4");
+          gradient.addColorStop(1, "#1e58af");
 
           // Vẽ nền
           ctx.fillStyle = gradient;
           ctx.fillRect(0, 0, 800, 800);
 
           // Vẽ hình sóng âm nhạc
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
           ctx.lineWidth = 3;
 
           const waveHeight = 200;
@@ -1751,17 +1996,17 @@ export default function AIPage() {
           ctx.stroke();
 
           // Vẽ tên và thông tin
-          ctx.fillStyle = 'white';
-          ctx.font = 'bold 48px Arial';
-          ctx.textAlign = 'center';
+          ctx.fillStyle = "white";
+          ctx.font = "bold 48px Arial";
+          ctx.textAlign = "center";
           ctx.fillText(musicTitle || "VOID Music", 400, 300);
 
-          ctx.font = '32px Arial';
+          ctx.font = "32px Arial";
           ctx.fillText(musicStyle, 400, 350);
 
           // Vẽ logo VOID
-          ctx.font = 'bold 24px Arial';
-          ctx.fillText('VOID RESONANCE', 400, 720);
+          ctx.font = "bold 24px Arial";
+          ctx.fillText("VOID RESONANCE", 400, 720);
         }
 
         // Chuyển đổi canvas thành file hình ảnh
@@ -1769,10 +2014,12 @@ export default function AIPage() {
           tempCanvas.toBlob((blob) => {
             if (blob) resolve(blob);
             else resolve(new Blob([]));
-          }, 'image/png');
+          }, "image/png");
         });
 
-        const imageFile = new File([imageBlob], `${audioName}-cover.png`, { type: 'image/png' });
+        const imageFile = new File([imageBlob], `${audioName}-cover.png`, {
+          type: "image/png",
+        });
 
         // Lấy URL âm thanh từ thư viện Vercel Blob
         const audioUrl = musicGeneration.audio_url;
@@ -1786,7 +2033,8 @@ export default function AIPage() {
             // Tạo kết nối Solana
             console.log("Kết nối ví cho mint NFT âm nhạc");
             const connection = new Connection(
-              process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com'
+              process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
+                "https://api.devnet.solana.com"
             );
 
             // Lấy metadata từ hàm helper
@@ -1800,10 +2048,16 @@ export default function AIPage() {
 
             // Mint NFT thật trên Solana
             console.log("Bắt đầu mint NFT âm nhạc thật trên Solana");
-            const mintedAddress = await mintNFT(connection, wallet, musicMetadata);
+            const mintedAddress = await mintNFT(
+              connection,
+              wallet,
+              musicMetadata
+            );
 
             console.log("NFT âm nhạc đã được mint, địa chỉ:", mintedAddress);
-            alert(`NFT âm nhạc đã được mint thành công trên Solana! Kiểm tra trong Profile và ví Phantom của bạn.`);
+            alert(
+              `NFT âm nhạc đã được mint thành công trên Solana! Kiểm tra trong Profile và ví Phantom của bạn.`
+            );
           } else {
             // Sử dụng phương thức mint giả lập nếu ví không được kết nối
             console.log("Không có ví kết nối, sử dụng mint giả lập");
@@ -1812,10 +2066,12 @@ export default function AIPage() {
               description: nftDescription,
               audioUrl: musicGeneration.audio_url,
               attributes,
-              image: imageFile
+              image: imageFile,
             });
 
-            alert("NFT âm nhạc đã được tạo! Xem nó trong trang Profile của bạn.");
+            alert(
+              "NFT âm nhạc đã được tạo! Xem nó trong trang Profile của bạn."
+            );
           }
         } catch (mintingError) {
           console.error("Music NFT minting methods failed:", mintingError);
@@ -1826,7 +2082,9 @@ export default function AIPage() {
             const reader = new FileReader();
             reader.readAsDataURL(imageFile);
             reader.onload = () => {
-              const userNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
+              const userNfts = JSON.parse(
+                localStorage.getItem("userNfts") || "[]"
+              );
               const mockId = `local-music-${Date.now()}`;
 
               userNfts.push({
@@ -1838,11 +2096,13 @@ export default function AIPage() {
                 attributes,
                 mintedAt: new Date().toISOString(),
                 type: "music",
-                local: true // Đánh dấu đây là NFT lưu cục bộ
+                local: true, // Đánh dấu đây là NFT lưu cục bộ
               });
 
-              localStorage.setItem('userNfts', JSON.stringify(userNfts));
-              alert("Không thể mint NFT âm nhạc thật, nhưng đã lưu cục bộ. Xem trong trang Profile của bạn.");
+              localStorage.setItem("userNfts", JSON.stringify(userNfts));
+              alert(
+                "Không thể mint NFT âm nhạc thật, nhưng đã lưu cục bộ. Xem trong trang Profile của bạn."
+              );
             };
           } catch (localError) {
             throw mintingError;
@@ -2186,43 +2446,97 @@ export default function AIPage() {
                       />
                       <div className="text-gray-400 font-pixel text-sm grid grid-cols-2 gap-2">
                         <div>
-                          <p className="font-bold text-purple-400 mb-1">APPEARANCE:</p>
+                          <p className="font-bold text-purple-400 mb-1">
+                            APPEARANCE:
+                          </p>
                           <p>
                             Type: {materialParams.description || "Standard"}
                           </p>
                           <p>
-                            Color: {materialParams.gradientColors ?
-                              `Gradient (${materialParams.gradientColors[0]} → ${materialParams.gradientColors[1]})` :
-                              materialParams.color || "#FFFFFF"}
+                            Color:{" "}
+                            {materialParams.gradientColors
+                              ? `Gradient (${materialParams.gradientColors[0]} → ${materialParams.gradientColors[1]})`
+                              : materialParams.color || "#FFFFFF"}
                           </p>
-                          <p>Smoothness: {materialParams.roughness ? (1 - Number(materialParams.roughness)).toFixed(2) : "0.50"}</p>
-                          <p>Metalness: {materialParams.metalness ? (Number(materialParams.metalness) * 100).toFixed(0) + "%" : "50%"}</p>
-                          <p>Clearcoat: {materialParams.clearcoat ? (Number(materialParams.clearcoat)).toFixed(1) : "0.0"}</p>
+                          <p>
+                            Smoothness:{" "}
+                            {materialParams.roughness
+                              ? (1 - Number(materialParams.roughness)).toFixed(
+                                  2
+                                )
+                              : "0.50"}
+                          </p>
+                          <p>
+                            Metalness:{" "}
+                            {materialParams.metalness
+                              ? (
+                                  Number(materialParams.metalness) * 100
+                                ).toFixed(0) + "%"
+                              : "50%"}
+                          </p>
+                          <p>
+                            Clearcoat:{" "}
+                            {materialParams.clearcoat
+                              ? Number(materialParams.clearcoat).toFixed(1)
+                              : "0.0"}
+                          </p>
                         </div>
                         <div>
-                          <p className="font-bold text-purple-400 mb-1">EFFECTS:</p>
-                          <p>Texture: {
-                            materialParams.texturePattern === "circuit" ? "Circuit" :
-                              materialParams.texturePattern === "marble" ? "Marble" :
-                                materialParams.texturePattern === "noise" ? "Noise" :
-                                  materialParams.texturePattern === "stripes" ? "Stripes" :
-                                    materialParams.texturePattern === "plasma" ? "Plasma" :
-                                      materialParams.texturePattern === "rust" ? "Rust" :
-                                        (materialParams.proceduralTexture ? "Auto-generated" : "None")
-                          }</p>
-                          <p>Displacement: {materialParams.displacementScale || "0.0"}</p>
-                          <p>Animation: {
-                            materialParams.animationType === "pulse" ? "Pulse" :
-                              materialParams.animationType === "flow" ? "Flow" :
-                                materialParams.animationType === "rotate" ? "Rotate" :
-                                  "None"
-                          }</p>
-                          <p>Emissive: {materialParams.emissiveIntensity ? (Number(materialParams.emissiveIntensity) * 100).toFixed(0) + "%" : "0%"}</p>
-                          <p>Border: {materialParams.showBorder ? `${materialParams.borderWidth}px ${materialParams.borderColor}` : "None"}</p>
+                          <p className="font-bold text-purple-400 mb-1">
+                            EFFECTS:
+                          </p>
+                          <p>
+                            Texture:{" "}
+                            {materialParams.texturePattern === "circuit"
+                              ? "Circuit"
+                              : materialParams.texturePattern === "marble"
+                              ? "Marble"
+                              : materialParams.texturePattern === "noise"
+                              ? "Noise"
+                              : materialParams.texturePattern === "stripes"
+                              ? "Stripes"
+                              : materialParams.texturePattern === "plasma"
+                              ? "Plasma"
+                              : materialParams.texturePattern === "rust"
+                              ? "Rust"
+                              : materialParams.proceduralTexture
+                              ? "Auto-generated"
+                              : "None"}
+                          </p>
+                          <p>
+                            Displacement:{" "}
+                            {materialParams.displacementScale || "0.0"}
+                          </p>
+                          <p>
+                            Animation:{" "}
+                            {materialParams.animationType === "pulse"
+                              ? "Pulse"
+                              : materialParams.animationType === "flow"
+                              ? "Flow"
+                              : materialParams.animationType === "rotate"
+                              ? "Rotate"
+                              : "None"}
+                          </p>
+                          <p>
+                            Emissive:{" "}
+                            {materialParams.emissiveIntensity
+                              ? (
+                                  Number(materialParams.emissiveIntensity) * 100
+                                ).toFixed(0) + "%"
+                              : "0%"}
+                          </p>
+                          <p>
+                            Border:{" "}
+                            {materialParams.showBorder
+                              ? `${materialParams.borderWidth}px ${materialParams.borderColor}`
+                              : "None"}
+                          </p>
                         </div>
                       </div>
                       {materialParams.customEffects?.includes("hologram") && (
-                        <p className="mt-2 text-purple-400 font-pixel text-sm">Special Effect: Hologram</p>
+                        <p className="mt-2 text-purple-400 font-pixel text-sm">
+                          Special Effect: Hologram
+                        </p>
                       )}
                     </div>
                   )}
@@ -2240,10 +2554,18 @@ export default function AIPage() {
                         <canvas ref={canvasRef} className="w-full h-full" />
                         {!materialParams && !isGeneratingCube && (
                           <div className="absolute text-center">
-                            <p className="text-gray-400 font-pixel">ENTER A PROMPT AND CLICK GENERATE</p>
+                            <p className="text-gray-400 font-pixel">
+                              ENTER A PROMPT AND CLICK GENERATE
+                            </p>
                           </div>
                         )}
-                        {isGeneratingCube && <AbstractShape className="w-32 h-32 text-purple-500 absolute" type="loading" animate />}
+                        {isGeneratingCube && (
+                          <AbstractShape
+                            className="w-32 h-32 text-purple-500 absolute"
+                            type="loading"
+                            animate
+                          />
+                        )}
                       </div>
 
                       {activeTab === "cube" && variantPreviews.length > 0 && (
@@ -2256,13 +2578,20 @@ export default function AIPage() {
                             {variantPreviews.map((variant, index) => (
                               <div
                                 key={index}
-                                className={`relative border-2 cursor-pointer transition-all ${materialParams === variant ? "border-purple-500 scale-105" : "border-purple-900/30"
-                                  }`}
+                                className={`relative border-2 cursor-pointer transition-all ${
+                                  materialParams === variant
+                                    ? "border-purple-500 scale-105"
+                                    : "border-purple-900/30"
+                                }`}
                                 onClick={() => setMaterialParams(variant)}
                                 onMouseEnter={() => setCursorHover(true)}
                                 onMouseLeave={() => setCursorHover(false)}
                               >
-                                <img src={variant.preview} alt={`Variant ${index + 1}`} className="w-full h-full object-cover" />
+                                <img
+                                  src={variant.preview}
+                                  alt={`Variant ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
                                 {variant.description && (
                                   <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-1 text-xs text-center font-pixel text-white">
                                     {variant.description}
@@ -2285,7 +2614,8 @@ export default function AIPage() {
                         <motion.div
                           className="absolute inset-0 border-4 border-transparent"
                           style={{
-                            borderImage: "linear-gradient(to right, #00FFFF, #FF00FF, #FFD700, #00FFFF) 1",
+                            borderImage:
+                              "linear-gradient(to right, #00FFFF, #FF00FF, #FFD700, #00FFFF) 1",
                             borderImageSlice: 1,
                           }}
                           animate={{
@@ -2307,7 +2637,8 @@ export default function AIPage() {
                         <motion.div
                           className="absolute inset-0 border-2 border-transparent"
                           style={{
-                            borderImage: "linear-gradient(to right, rgba(0, 255, 255, 0.4), rgba(255, 215, 0, 0.4)) 1",
+                            borderImage:
+                              "linear-gradient(to right, rgba(0, 255, 255, 0.4), rgba(255, 215, 0, 0.4)) 1",
                             borderImageSlice: 1,
                           }}
                           initial={{ scale: 1, opacity: 0 }}
@@ -2327,7 +2658,9 @@ export default function AIPage() {
                             style={{
                               width: `${20 + Math.random() * 60}px`,
                               height: `${20 + Math.random() * 60}px`,
-                              background: `radial-gradient(circle, rgba(${Math.random() * 255}, 100, 255, 0.5), transparent)`,
+                              background: `radial-gradient(circle, rgba(${
+                                Math.random() * 255
+                              }, 100, 255, 0.5), transparent)`,
                               filter: "blur(10px)",
                               top: `${Math.random() * 100}%`,
                               left: `${Math.random() * 100}%`,
@@ -2378,7 +2711,9 @@ export default function AIPage() {
                                     key={i}
                                     className="absolute w-4 h-12 bg-gradient-to-b from-cyan-400 to-purple-500 rounded"
                                     style={{
-                                      transform: `translate(-50%, -50%) rotate(${i * 45}deg) translateY(60px)`,
+                                      transform: `translate(-50%, -50%) rotate(${
+                                        i * 45
+                                      }deg) translateY(60px)`,
                                     }}
                                     animate={{
                                       height: [20, 60, 20],
@@ -2436,12 +2771,17 @@ export default function AIPage() {
                         ) : musicGeneration ? (
                           (musicGeneration.status === "SUCCESS" ||
                             musicGeneration.status === "completed") &&
-                            musicGeneration.audio_url ? (
+                          musicGeneration.audio_url ? (
                             <motion.div
                               className="text-center space-y-8 w-full max-w-md px-4 relative"
                               initial={{ opacity: 0, scale: 0.3 }}
                               animate={{ opacity: 1, scale: 1 }}
-                              transition={{ duration: 1.2, ease: "easeOut", type: "spring", stiffness: 120 }}
+                              transition={{
+                                duration: 1.2,
+                                ease: "easeOut",
+                                type: "spring",
+                                stiffness: 120,
+                              }}
                             >
                               {/* Starburst Background */}
                               <motion.div
@@ -2454,7 +2794,8 @@ export default function AIPage() {
                                   delay: 0.2,
                                 }}
                                 style={{
-                                  background: "radial-gradient(circle, rgba(0, 255, 255, 0.8) 0%, rgba(255, 215, 0, 0.4) 50%, transparent 80%)",
+                                  background:
+                                    "radial-gradient(circle, rgba(0, 255, 255, 0.8) 0%, rgba(255, 215, 0, 0.4) 50%, transparent 80%)",
                                   transformOrigin: "center",
                                 }}
                               />
@@ -2470,8 +2811,12 @@ export default function AIPage() {
                                   }}
                                   initial={{ scale: 0, opacity: 0 }}
                                   animate={{
-                                    x: Math.cos((i * 2 * Math.PI) / 12) * (60 + Math.random() * 120),
-                                    y: Math.sin((i * 2 * Math.PI) / 12) * (60 + Math.random() * 120),
+                                    x:
+                                      Math.cos((i * 2 * Math.PI) / 12) *
+                                      (60 + Math.random() * 120),
+                                    y:
+                                      Math.sin((i * 2 * Math.PI) / 12) *
+                                      (60 + Math.random() * 120),
                                     scale: [0, 2, 0],
                                     opacity: [0, 1, 0],
                                   }}
@@ -2495,8 +2840,14 @@ export default function AIPage() {
                                   }}
                                   initial={{ scale: 0, opacity: 0 }}
                                   animate={{
-                                    x: Math.cos((i * Math.PI) / 3 + Math.random()) * 150,
-                                    y: Math.sin((i * Math.PI) / 3 + Math.random()) * 150,
+                                    x:
+                                      Math.cos(
+                                        (i * Math.PI) / 3 + Math.random()
+                                      ) * 150,
+                                    y:
+                                      Math.sin(
+                                        (i * Math.PI) / 3 + Math.random()
+                                      ) * 150,
                                     scale: [0, 1.5, 0],
                                     opacity: [0, 0.8, 0],
                                   }}
@@ -2513,7 +2864,13 @@ export default function AIPage() {
                                 className="relative"
                                 initial={{ y: 100, opacity: 0, scale: 0.7 }}
                                 animate={{ y: 0, opacity: 1, scale: 1 }}
-                                transition={{ duration: 1, delay: 0.8, ease: "easeOut", type: "spring", stiffness: 150 }}
+                                transition={{
+                                  duration: 1,
+                                  delay: 0.8,
+                                  ease: "easeOut",
+                                  type: "spring",
+                                  stiffness: 150,
+                                }}
                               >
                                 <motion.div
                                   className="absolute inset-0"
@@ -2531,7 +2888,9 @@ export default function AIPage() {
                                       key={i}
                                       className="absolute w-4 h-4 bg-yellow-400 rounded-full"
                                       style={{
-                                        transform: `translate(-50%, -50%) rotate(${i * 45}deg) translateY(70px)`,
+                                        transform: `translate(-50%, -50%) rotate(${
+                                          i * 45
+                                        }deg) translateY(70px)`,
                                         filter: "blur(3px)",
                                       }}
                                       animate={{
@@ -2550,7 +2909,8 @@ export default function AIPage() {
                                 <motion.div
                                   className="absolute inset-0 rounded-none border-2 border-transparent"
                                   style={{
-                                    borderImage: "linear-gradient(to right, #00FFFF, #FFD700, #FF00FF) 1",
+                                    borderImage:
+                                      "linear-gradient(to right, #00FFFF, #FFD700, #FF00FF) 1",
                                     borderImageSlice: 1,
                                   }}
                                   animate={{
@@ -2580,7 +2940,13 @@ export default function AIPage() {
                                 className="space-y-3"
                                 initial={{ y: 100, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
-                                transition={{ duration: 1, delay: 1, ease: "easeOut", type: "spring", stiffness: 100 }}
+                                transition={{
+                                  duration: 1,
+                                  delay: 1,
+                                  ease: "easeOut",
+                                  type: "spring",
+                                  stiffness: 100,
+                                }}
                               >
                                 <motion.p
                                   className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-yellow-500 to-pink-500"
@@ -2604,7 +2970,13 @@ export default function AIPage() {
                                   className="text-sm text-gray-100"
                                   initial={{ opacity: 0, x: -60 }}
                                   animate={{ opacity: 1, x: 0 }}
-                                  transition={{ duration: 0.8, delay: 1.4, ease: "easeOut", type: "spring", stiffness: 120 }}
+                                  transition={{
+                                    duration: 0.8,
+                                    delay: 1.4,
+                                    ease: "easeOut",
+                                    type: "spring",
+                                    stiffness: 120,
+                                  }}
                                 >
                                   Style: {musicGeneration.style || "Unknown"}
                                 </motion.p>
@@ -2612,17 +2984,23 @@ export default function AIPage() {
                                   className="text-sm text-gray-100"
                                   initial={{ opacity: 0, x: 60 }}
                                   animate={{ opacity: 1, x: 0 }}
-                                  transition={{ duration: 0.8, delay: 1.6, ease: "easeOut", type: "spring", stiffness: 120 }}
+                                  transition={{
+                                    duration: 0.8,
+                                    delay: 1.6,
+                                    ease: "easeOut",
+                                    type: "spring",
+                                    stiffness: 120,
+                                  }}
                                 >
                                   Duration:{" "}
                                   {audioRef.current?.duration
                                     ? `${Math.floor(
-                                      audioRef.current.duration / 60
-                                    )}:${Math.floor(
-                                      audioRef.current.duration % 60
-                                    )
-                                      .toString()
-                                      .padStart(2, "0")}`
+                                        audioRef.current.duration / 60
+                                      )}:${Math.floor(
+                                        audioRef.current.duration % 60
+                                      )
+                                        .toString()
+                                        .padStart(2, "0")}`
                                     : "Loading..."}
                                 </motion.p>
                               </motion.div>
@@ -2633,7 +3011,8 @@ export default function AIPage() {
                             </p>
                           ) : (
                             <p className="text-gray-400 font-pixel">
-                              Processing music generation... (Status: {musicGeneration.status})
+                              Processing music generation... (Status:{" "}
+                              {musicGeneration.status})
                             </p>
                           )
                         ) : (
