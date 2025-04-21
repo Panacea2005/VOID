@@ -2,8 +2,10 @@
 
 import { ReactNode } from 'react';
 import dynamic from 'next/dynamic';
+import { SupabaseProvider } from '@/contexts/SupabaseContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 
-// Import WalletContextProvider một cách động để tránh lỗi SSR
+// Dynamically import WalletContextProvider to avoid SSR issues
 const WalletContextProvider = dynamic(
     () => import('@/components/WalletContextProvider'),
     { ssr: false }
@@ -16,7 +18,12 @@ interface ClientRootProps {
 export default function ClientRoot({ children }: ClientRootProps) {
     return (
         <WalletContextProvider>
-            {children}
+            {/* Restore Supabase providers */}
+            <SupabaseProvider>
+                <AuthProvider>
+                    {children}
+                </AuthProvider>
+            </SupabaseProvider>
         </WalletContextProvider>
     );
-} 
+}

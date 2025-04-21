@@ -1,39 +1,44 @@
 "use client";
 
-import { FC, ReactNode, useMemo } from "react";
-import {
-    ConnectionProvider,
-    WalletProvider
-} from "@solana/wallet-adapter-react";
-import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
-import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
-import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
-import { clusterApiUrl } from "@solana/web3.js";
+import { FC, ReactNode, useMemo } from 'react';
+import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
+import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
+import { PhantomWalletAdapter, SolflareWalletAdapter, AlphaWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { clusterApiUrl } from '@solana/web3.js';
 
-// Import default styles from wallet-adapter-react-ui
-import "@solana/wallet-adapter-react-ui/styles.css";
+// Import wallet adapter styles
+import '@solana/wallet-adapter-react-ui/styles.css';
 
 interface WalletContextProviderProps {
-    children: ReactNode;
+  children: ReactNode;
 }
 
-export const WalletContextProvider: FC<WalletContextProviderProps> = ({ children }) => {
-    // Sử dụng mạng Devnet để phát triển
-    const network = WalletAdapterNetwork.Devnet;
+const WalletContextProvider: FC<WalletContextProviderProps> = ({ children }) => {
+  // Set network to devnet or mainnet-beta based on environment
+  const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'mainnet-beta' 
+    ? WalletAdapterNetwork.Mainnet 
+    : WalletAdapterNetwork.Devnet;
+  
+  // You can also use a custom RPC endpoint
+  const endpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || clusterApiUrl(network);
+  
+  // Initialize wallet adapters array
+  const wallets = useMemo(() => [
+    new PhantomWalletAdapter(),
+    new SolflareWalletAdapter({ network }),
+    new AlphaWalletAdapter(),
+  ], [network]);
 
-    // Endpoint RPC của Solana
-    const endpoint = useMemo(() => clusterApiUrl(network), [network]);
-
-    // Adapters của các ví
-    const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
-
-    return (
-        <ConnectionProvider endpoint={endpoint}>
-            <WalletProvider wallets={wallets} autoConnect={true}>
-                <WalletModalProvider>{children}</WalletModalProvider>
-            </WalletProvider>
-        </ConnectionProvider>
-    );
+  return (
+    <ConnectionProvider endpoint={endpoint}>
+      <WalletProvider wallets={wallets} autoConnect>
+        <WalletModalProvider>
+          {children}
+        </WalletModalProvider>
+      </WalletProvider>
+    </ConnectionProvider>
+  );
 };
 
 export default WalletContextProvider;
