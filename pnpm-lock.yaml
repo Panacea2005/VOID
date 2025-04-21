@@ -218,9 +218,6 @@ importers:
       three:
         specifier: ^0.175.0
         version: 0.175.0
-      three-orbitcontrols-ts:
-        specifier: ^0.1.2
-        version: 0.1.2
       tone:
         specifier: ^15.0.4
         version: 15.0.4
@@ -6719,9 +6716,6 @@ packages:
     peerDependencies:
       three: '>= 0.159.0'
 
-  three-orbitcontrols-ts@0.1.2:
-    resolution: {integrity: sha512-HG45dhJX4010lt/Ohk2d2K0kBaxCS6NLO3+wG9BDfMM5ddH7zMPuF3fhcn8vI4eqcSITtid0OoHEttHhjkIKEQ==}
-
   three-stdlib@2.35.15:
     resolution: {integrity: sha512-2XbhiOV7jVCchUoWxTmsj5dNhTe8eYb58Nyrfoa2F2yL+6h/+2VRaU2gENljRW1d/P1mk4/uwNzbdkKWV3hwzw==}
     peerDependencies:
@@ -6729,9 +6723,6 @@ packages:
 
   three@0.175.0:
     resolution: {integrity: sha512-nNE3pnTHxXN/Phw768u0Grr7W4+rumGg/H6PgeseNJojkJtmeHJfZWi41Gp2mpXl1pg1pf1zjwR4McM1jTqkpg==}
-
-  three@0.83.0:
-    resolution: {integrity: sha512-x9TqsmvhHG/Lw16Zi9zbJ0ho+kP8SgIfsz8dJYZbeWaFWoVwdXKolQQAftkUlpuKDys1+6SZIBHoA2QdoZKByQ==}
 
   throat@5.0.0:
     resolution: {integrity: sha512-fcwX4mndzpLQKBS1DVYhGAcYaYt7vsHNIvQV+WXMvnow5cgjPphq5CaayLaGsjRdSCKZFNGt7/GYAuXaNOiYCA==}
@@ -16176,10 +16167,6 @@ snapshots:
     dependencies:
       three: 0.175.0
 
-  three-orbitcontrols-ts@0.1.2:
-    dependencies:
-      three: 0.83.0
-
   three-stdlib@2.35.15(three@0.175.0):
     dependencies:
       '@types/draco3d': 1.4.10
@@ -16191,8 +16178,6 @@ snapshots:
       three: 0.175.0
 
   three@0.175.0: {}
-
-  three@0.83.0: {}
 
   throat@5.0.0: {}
 
