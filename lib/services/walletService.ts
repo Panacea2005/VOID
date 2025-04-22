@@ -16,6 +16,9 @@ export interface WalletData {
 }
 
 export interface NFTData {
+    audioUrl: any;
+    createdAt: string;
+    properties: any;
     id: string;
     name: string;
     collection: string;
@@ -250,7 +253,10 @@ export async function getNFTs(publicKey: PublicKey): Promise<{
                         valueHistory: valueHistory,
                         rarity: Math.floor(Math.random() * 100),
                         lastSalePrice: Math.random() > 0.5 ? (Math.random() * 5) + 0.1 : undefined,
-                        estimatedValue: randomValue
+                        estimatedValue: randomValue,
+                        audioUrl: undefined,
+                        createdAt: "",
+                        properties: undefined
                     };
                     
                     // Add to minted collection if created by this wallet

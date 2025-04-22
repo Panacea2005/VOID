@@ -1863,13 +1863,19 @@ export default function AIPage() {
         );
         console.log("Solana connection created:", connection.rpcEndpoint);
         
-        // Prepare cube NFT metadata
+        // Prepare cube NFT metadata with full materialParams
         const cubeMetadata = await getCubeNFTMetadata(
           nftName,
           nftDescription,
           imageFile,
           null, // model created automatically
-          attributes
+          attributes,
+          {
+            // Include full materialParams to preserve all visual properties
+            materialParams: materialParams,
+            // Also include colors separately for easier access
+            colors: materialParams.gradientColors || [materialParams.color || "#FFFFFF"]
+          }
         );
         
         // Try primary minting method
@@ -1936,10 +1942,10 @@ export default function AIPage() {
       }
     } else if (activeTab === "music" && musicGeneration?.audio_url) {
       try {
-        // Hiển thị trạng thái mint
+        // Show minting status
         setIsGeneratingMusic(true);
-
-        // Tạo metadata cho NFT âm nhạc
+  
+        // Create metadata for music NFT
         const nftName = `VOID Music: ${musicTitle || "Untitled"}`;
         const nftDescription = `${musicStyle} music track${
           musicPrompt
@@ -1948,41 +1954,41 @@ export default function AIPage() {
               }`
             : ""
         }`;
-
-        // Chuẩn bị thuộc tính
+  
+        // Prepare attributes
         const attributes = [
+          { trait_type: "Type", value: "Music" },
           { trait_type: "Style", value: musicStyle || "Custom" },
           { trait_type: "Instrumental", value: isInstrumental ? "Yes" : "No" },
         ];
-
-        // Tạo hình ảnh hiển thị mặc định (banner mẫu) cho nhạc
+  
+        // Create display image for music
         const audioName = nftName.replace(/\s+/g, "-").toLowerCase();
-
-        // Tạo hình ảnh hiển thị từ canvas trống với mẫu nhạc
+  
+        // Create display image from empty canvas with music waveform
         const tempCanvas = document.createElement("canvas");
         tempCanvas.width = 800;
         tempCanvas.height = 800;
         const ctx = tempCanvas.getContext("2d");
-
+  
         if (ctx) {
-          // Tạo nền gradient đẹp
+          // Create nice gradient background
           const gradient = ctx.createLinearGradient(0, 0, 800, 800);
           gradient.addColorStop(0, "#5d4fff");
           gradient.addColorStop(0.5, "#c42bb4");
           gradient.addColorStop(1, "#1e58af");
-
-          // Vẽ nền
+  
+          // Draw background
           ctx.fillStyle = gradient;
           ctx.fillRect(0, 0, 800, 800);
-
-          // Vẽ hình sóng âm nhạc
+  
+          // Draw music waveform
           ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
           ctx.lineWidth = 3;
-
+  
           const waveHeight = 200;
-          const waveCount = 20;
           const centerY = 400;
-
+  
           ctx.beginPath();
           for (let i = 0; i < 800; i += 10) {
             const amplitude = Math.random() * waveHeight;
@@ -1994,125 +2000,159 @@ export default function AIPage() {
             }
           }
           ctx.stroke();
-
-          // Vẽ tên và thông tin
+  
+          // Draw title and info
           ctx.fillStyle = "white";
           ctx.font = "bold 48px Arial";
           ctx.textAlign = "center";
           ctx.fillText(musicTitle || "VOID Music", 400, 300);
-
+  
           ctx.font = "32px Arial";
           ctx.fillText(musicStyle, 400, 350);
-
-          // Vẽ logo VOID
+  
+          // Draw VOID logo
           ctx.font = "bold 24px Arial";
           ctx.fillText("VOID RESONANCE", 400, 720);
         }
-
-        // Chuyển đổi canvas thành file hình ảnh
+  
+        // Convert canvas to image file
         const imageBlob = await new Promise<Blob>((resolve) => {
           tempCanvas.toBlob((blob) => {
             if (blob) resolve(blob);
             else resolve(new Blob([]));
           }, "image/png");
         });
-
+  
         const imageFile = new File([imageBlob], `${audioName}-cover.png`, {
           type: "image/png",
         });
-
-        // Lấy URL âm thanh từ thư viện Vercel Blob
+  
+        // Get audio URL
         const audioUrl = musicGeneration.audio_url;
-        console.log("Audio URL để mint:", audioUrl);
-
-        // Kiểm tra xem ví có được kết nối không để mint NFT thật
-        const wallet = window.solana;
-
+        console.log("Audio URL for minting:", audioUrl);
+  
+        // Check if wallet is connected
+        if (!connected || !publicKey) {
+          alert("Please connect your wallet first to mint music NFTs");
+          throw new Error("Wallet not connected");
+        }
+  
         try {
-          if (wallet && wallet.isConnected) {
-            // Tạo kết nối Solana
-            console.log("Kết nối ví cho mint NFT âm nhạc");
+          // Create Solana connection - SAME as in the cube section
+          console.log("Creating Solana connection for music NFT");
+          const connection = new Connection(
+            process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
+            'confirmed'
+          );
+  
+          // Get metadata from helper function
+          const musicMetadata = await getMusicNFTMetadata(
+            nftName,
+            nftDescription,
+            imageFile,
+            audioUrl,
+            attributes
+          );
+  
+          // Mint real NFT on Solana - use the wallet adapter, not window.solana
+          console.log("Starting music NFT minting with wallet adapter");
+          const mintedAddress = await mintNFT(
+            connection,
+            {
+              publicKey,
+              signTransaction,
+              signAllTransactions,
+              sendTransaction
+            },
+            musicMetadata
+          );
+  
+          console.log("Music NFT minted successfully, address:", mintedAddress);
+          alert(`Music NFT has been minted successfully! Address: ${mintedAddress}. Check your Profile or Phantom wallet.`);
+        } catch (mintingError) {
+          console.error("Music NFT minting failed:", mintingError);
+          
+          // Try alternative minting method
+          try {
+            console.log("Falling back to alternative music minting method");
             const connection = new Connection(
-              process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
-                "https://api.devnet.solana.com"
+              process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
+              'confirmed'
             );
-
-            // Lấy metadata từ hàm helper
-            const musicMetadata = await getMusicNFTMetadata(
-              nftName,
-              nftDescription,
-              imageFile,
-              audioUrl,
-              attributes
-            );
-
-            // Mint NFT thật trên Solana
-            console.log("Bắt đầu mint NFT âm nhạc thật trên Solana");
-            const mintedAddress = await mintNFT(
-              connection,
-              wallet,
-              musicMetadata
-            );
-
-            console.log("NFT âm nhạc đã được mint, địa chỉ:", mintedAddress);
-            alert(
-              `NFT âm nhạc đã được mint thành công trên Solana! Kiểm tra trong Profile và ví Phantom của bạn.`
-            );
-          } else {
-            // Sử dụng phương thức mint giả lập nếu ví không được kết nối
-            console.log("Không có ví kết nối, sử dụng mint giả lập");
-            await mockMintNFT({
+            
+            // Add audio URL as an attribute
+            attributes.push({
+              trait_type: "Audio URL",
+              value: audioUrl || ""
+            });
+            
+            // Create a data object that matches the expected type for mintRealNFT
+            const mintData = {
               name: nftName,
               description: nftDescription,
-              audioUrl: musicGeneration.audio_url,
               attributes,
-              image: imageFile,
-            });
-
-            alert(
-              "NFT âm nhạc đã được tạo! Xem nó trong trang Profile của bạn."
-            );
-          }
-        } catch (mintingError) {
-          console.error("Music NFT minting methods failed:", mintingError);
-
-          // Fallback - Lưu NFT âm nhạc vào localStorage
-          try {
-            // Tạo data URL cho hình ảnh
-            const reader = new FileReader();
-            reader.readAsDataURL(imageFile);
-            reader.onload = () => {
-              const userNfts = JSON.parse(
-                localStorage.getItem("userNfts") || "[]"
-              );
-              const mockId = `local-music-${Date.now()}`;
-
-              userNfts.push({
-                id: mockId,
-                name: nftName,
-                description: nftDescription,
-                image: reader.result,
-                audioUrl: audioUrl,
-                attributes,
-                mintedAt: new Date().toISOString(),
-                type: "music",
-                local: true, // Đánh dấu đây là NFT lưu cục bộ
-              });
-
-              localStorage.setItem("userNfts", JSON.stringify(userNfts));
-              alert(
-                "Không thể mint NFT âm nhạc thật, nhưng đã lưu cục bộ. Xem trong trang Profile của bạn."
-              );
+              colors: ["#5d4fff", "#c42bb4", "#1e58af"] // Use the gradient colors from the canvas
             };
-          } catch (localError) {
-            throw mintingError;
+            
+            const alternativeAddress = await mintRealNFT(
+              connection,
+              {
+                publicKey,
+                signTransaction,
+                signAllTransactions,
+                sendTransaction
+              },
+              mintData,
+              imageFile
+            );
+            
+            console.log("Music NFT minted with alternative method:", alternativeAddress);
+            alert(`Music NFT has been minted! Check your Profile and Phantom wallet.`);
+            return;
+          } catch (altMintError) {
+            console.error("Alternative music minting failed:", altMintError);
+            
+            // Only if both methods fail, ask the user if they want to store locally
+            if (confirm("Failed to mint music NFT on the blockchain. Would you like to store it locally instead?")) {
+              try {
+                // Local storage fallback - create data URL for image
+                const reader = new FileReader();
+                reader.readAsDataURL(imageFile);
+                reader.onload = () => {
+                  const userNfts = JSON.parse(
+                    localStorage.getItem("userNfts") || "[]"
+                  );
+                  const mockId = `local-music-${Date.now()}`;
+  
+                  userNfts.push({
+                    id: mockId,
+                    name: nftName,
+                    description: nftDescription,
+                    image: reader.result,
+                    audioUrl: audioUrl,
+                    attributes,
+                    mintedAt: new Date().toISOString(),
+                    type: "music",
+                    local: true, // Mark as locally stored NFT
+                  });
+  
+                  localStorage.setItem("userNfts", JSON.stringify(userNfts));
+                  alert("Music NFT has been stored locally. View it in your Profile page.");
+                };
+              } catch (localError) {
+                console.error("Failed to store NFT locally:", localError);
+                alert("Failed to mint or store music NFT. Please try again later.");
+              }
+            } else {
+              alert("Music NFT minting was cancelled.");
+            }
           }
         }
-
-        console.log("Quá trình xử lý NFT âm nhạc hoàn tất");
+  
+        console.log("Music NFT processing complete");
       } catch (error: any) {
-        console.error("Lỗi khi mint NFT âm nhạc:", error);
-        alert(`Lỗi khi mint NFT âm nhạc: ${error.message}`);
+        console.error("Error when minting music NFT:", error);
+        alert(`Error minting music NFT: ${error.message}`);
       } finally {
         setIsGeneratingMusic(false);
       }

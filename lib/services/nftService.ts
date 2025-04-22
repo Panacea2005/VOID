@@ -353,12 +353,7 @@ export async function mintNFT(
 }
 
 export async function getCubeNFTMetadata(
-    name: string,
-    description: string,
-    image: File,
-    model: File | null,
-    attributes: any
-): Promise<NFTMetadata> {
+name: string, description: string, image: File, model: File | null, attributes: any, p0: { materialParams: any; colors: string[]; }): Promise<NFTMetadata> {
     // Thêm Collection attribute nếu chưa có
     const hasCollectionAttribute = attributes.some((attr: any) => attr.trait_type === 'Collection');
     const completeAttributes = hasCollectionAttribute ? attributes : [
