@@ -1679,11 +1679,6 @@ const VoidHub: React.FC<VoidHubProps> = ({
         </div>
       </section>
 
-      {/* For debugging - show selected cube */}
-      <div className="fixed bottom-2 left-2 text-xs text-gray-500 z-50">
-        Active Cube: {selectedCubeId}
-      </div>
-
       {/* Global styles for 3D transformations */}
       <style jsx global>{`
         .transform-style-preserve-3d {

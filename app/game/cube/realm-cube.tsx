@@ -267,9 +267,8 @@ function generateColorShades(baseColor: string) {
 }
 
 // Helper function to extract colors from a model or create default colors
-// Enhanced function to extract colors from NFT metadata
 const extractColorsFromNFT = (nft: any): string[] => {
-  // Default colors if we can't extract them (currently set to purple, which is causing the issue)
+  // Default colors if we can't extract them
   const defaultColors = ["#8b5cf6", "#7c3aed", "#6d28d9", "#5b21b6", "#4c1d95", "#3a1078"];
   
   console.log(`Extracting colors for NFT: ${nft.name || nft.id}`);
@@ -282,8 +281,7 @@ const extractColorsFromNFT = (nft: any): string[] => {
       return nft.colors;
     }
 
-    // More aggressive checking for color in different data structures
-    // 1. Look for materialParams which is where the AI generator stores colors
+    // Direct extraction from materialParams which is where we store color data during minting
     if (nft.materialParams) {
       console.log("Found materialParams in NFT data");
       
@@ -310,45 +308,38 @@ const extractColorsFromNFT = (nft: any): string[] => {
       }
     }
     
-    // 2. Check for color in nft.json which is how Solana NFTs often store metadata
+    // Check in JSON metadata (common in stored NFTs)
     if (nft.json) {
-      console.log("Checking json data for colors");
-      
-      // Check for materialParams in json
+      // First check for materialParams in json (this is our custom structure)
       if (nft.json.materialParams) {
         if (nft.json.materialParams.color) {
-          const primaryColor = nft.json.materialParams.color;
-          console.log(`Found primary color in json.materialParams: ${primaryColor}`);
-          return generateColorShades(primaryColor);
+          return generateColorShades(nft.json.materialParams.color);
         }
         
-        if (nft.json.materialParams.gradientColors && Array.isArray(nft.json.materialParams.gradientColors)) {
-          const gradientColors = [...nft.json.materialParams.gradientColors];
-          while (gradientColors.length < 6) {
-            gradientColors.push(
-              adjustColorBrightness(gradientColors[gradientColors.length - 1], -0.1 * gradientColors.length)
-            );
+        if (nft.json.materialParams.gradientColors) {
+          const colors = [...nft.json.materialParams.gradientColors];
+          while (colors.length < 6) {
+            colors.push(adjustColorBrightness(colors[colors.length - 1], -0.1 * colors.length));
           }
-          return gradientColors;
+          return colors;
         }
       }
       
-      // Direct color property in json
-      if (nft.json.color && typeof nft.json.color === 'string' && nft.json.color.startsWith('#')) {
-        console.log(`Found direct color in json: ${nft.json.color}`);
-        return generateColorShades(nft.json.color);
+      // Check properties.colors which might be present in our minted NFTs
+      if (nft.json.properties && nft.json.properties.colors) {
+        return Array.isArray(nft.json.properties.colors) 
+          ? nft.json.properties.colors 
+          : generateColorShades(nft.json.properties.colors);
       }
       
-      // Look in attributes array
-      if (nft.json.attributes && Array.isArray(nft.json.attributes)) {
+      // Check for standard color attributes
+      if (nft.json.attributes) {
         const colorAttr = nft.json.attributes.find((attr: any) => 
-          (attr.trait_type?.toLowerCase() === 'color' || 
-           attr.trait_type?.toLowerCase() === 'primary color') && 
-          attr.value
+          attr.trait_type?.toLowerCase() === 'color' || 
+          attr.trait_type?.toLowerCase() === 'primary color'
         );
         
         if (colorAttr && colorAttr.value) {
-          console.log(`Found color in json.attributes: ${colorAttr.value}`);
           const colorValue = colorAttr.value.startsWith('#') 
             ? colorAttr.value 
             : colorNameToHex(colorAttr.value) || '#8b5cf6';
@@ -357,76 +348,79 @@ const extractColorsFromNFT = (nft: any): string[] => {
       }
     }
     
-    // 3. Check in metadata object (common in Solana NFTs)
+    // Check in nftData.metadata
     if (nft.metadata) {
-      console.log("Checking metadata object for colors");
-      
-      // Check attributes
-      if (nft.metadata.attributes && Array.isArray(nft.metadata.attributes)) {
-        const colorAttr = nft.metadata.attributes.find((attr: any) => 
-          (attr.trait_type?.toLowerCase() === 'color' || 
-           attr.trait_type?.toLowerCase() === 'primary color') && 
-          attr.value
-        );
+      // Check for our materialParams in metadata
+      if (nft.metadata.materialParams) {
+        if (nft.metadata.materialParams.color) {
+          return generateColorShades(nft.metadata.materialParams.color);
+        }
         
-        if (colorAttr && colorAttr.value) {
-          console.log(`Found color in metadata.attributes: ${colorAttr.value}`);
-          const colorValue = colorAttr.value.startsWith('#') 
-            ? colorAttr.value 
-            : colorNameToHex(colorAttr.value) || '#8b5cf6';
-          return generateColorShades(colorValue);
+        if (nft.metadata.materialParams.gradientColors) {
+          return nft.metadata.materialParams.gradientColors;
         }
       }
       
       // Check properties
       if (nft.metadata.properties) {
-        if (nft.metadata.properties.color) {
-          console.log(`Found color in metadata.properties: ${nft.metadata.properties.color}`);
-          return generateColorShades(nft.metadata.properties.color);
+        if (nft.metadata.properties.colors) {
+          return Array.isArray(nft.metadata.properties.colors) 
+            ? nft.metadata.properties.colors 
+            : generateColorShades(nft.metadata.properties.colors);
         }
+      }
+      
+      // Check attributes
+      if (nft.metadata.attributes) {
+        const colorAttr = nft.metadata.attributes.find((attr: any) => 
+          attr.trait_type?.toLowerCase() === 'color' || 
+          attr.trait_type?.toLowerCase() === 'primary color'
+        );
         
-        if (nft.metadata.properties.colors && Array.isArray(nft.metadata.properties.colors)) {
-          console.log(`Found colors array in metadata.properties: ${nft.metadata.properties.colors.join(', ')}`);
-          const propsColors = [...nft.metadata.properties.colors];
-          while (propsColors.length < 6) {
-            propsColors.push(
-              adjustColorBrightness(propsColors[propsColors.length - 1], -0.1 * propsColors.length)
-            );
-          }
-          return propsColors;
+        if (colorAttr && colorAttr.value) {
+          return generateColorShades(colorAttr.value.startsWith('#') 
+            ? colorAttr.value 
+            : colorNameToHex(colorAttr.value) || '#8b5cf6');
         }
       }
     }
     
-    // 4. Look directly in attributes (sometimes they're at the top level)
-    if (nft.attributes && Array.isArray(nft.attributes)) {
+    // Check in nftData directly
+    if (nft.nftData) {
+      if (nft.nftData.materialParams) {
+        if (nft.nftData.materialParams.color) {
+          return generateColorShades(nft.nftData.materialParams.color);
+        }
+        
+        if (nft.nftData.materialParams.gradientColors) {
+          return nft.nftData.materialParams.gradientColors;
+        }
+      }
+    }
+    
+    // Also check direct attributes on the NFT
+    if (nft.attributes) {
       const colorAttr = nft.attributes.find((attr: any) => 
-        (attr.trait_type?.toLowerCase() === 'color' || 
-         attr.trait_type?.toLowerCase() === 'primary color') && 
-        attr.value
+        attr.trait_type?.toLowerCase() === 'color' || 
+        attr.trait_type?.toLowerCase() === 'primary color'
       );
       
       if (colorAttr && colorAttr.value) {
-        console.log(`Found color in top-level attributes: ${colorAttr.value}`);
-        const colorValue = colorAttr.value.startsWith('#') 
+        return generateColorShades(colorAttr.value.startsWith('#') 
           ? colorAttr.value 
-          : colorNameToHex(colorAttr.value) || '#8b5cf6';
-        return generateColorShades(colorValue);
+          : colorNameToHex(colorAttr.value) || '#8b5cf6');
       }
     }
     
-    // 5. Check for direct color property
+    // Check for color property directly on NFT
     if (nft.color && typeof nft.color === 'string') {
-      console.log(`Found direct color property: ${nft.color}`);
       return generateColorShades(nft.color);
     }
     
-    // 6. Check for color in name as a last resort
+    // Check for name-based color as last resort
     if (nft.name) {
-      console.log(`Checking name for color hints: ${nft.name}`);
       const colorMatches = extractColorFromName(nft.name);
       if (colorMatches) {
-        console.log(`Extracted color from name: ${colorMatches}`);
         return generateColorShades(colorMatches);
       }
     }
@@ -478,16 +472,38 @@ function colorNameToHex(colorName: string): string | null {
   return null; // No match found
 }
 
+// Helper function to sanitize and fix model URLs
+function sanitizeModelUrl(url: string): string {
+  if (!url) return url;
+  
+  try {
+    // Convert IPFS URLs to HTTP
+    if (url.startsWith('ipfs://')) {
+      return `https://ipfs.io/ipfs/${url.replace('ipfs://', '')}`;
+    }
+    
+    // Fix common URL issues
+    if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('data:')) {
+      return `https://${url}`;
+    }
+    
+    return url;
+  } catch (error) {
+    console.error(`Error sanitizing model URL ${url}:`, error);
+    return url;
+  }
+}
+
 const processModelUrl = async (nft: any): Promise<string | null> => {
   console.log(`Processing model URL for NFT: ${nft.name || nft.id}`);
   
   try {
-    // Extract model URL with more aggressive checks
+    // Direct extraction from NFT data with more exhaustive checks
     
-    // 1. Check for direct model3d URL
+    // 1. Check direct model3d URL
     if (nft.model3d) {
       console.log(`Found model3d URL: ${nft.model3d}`);
-      return nft.model3d;
+      return sanitizeModelUrl(nft.model3d);
     }
     
     // 2. Check for model3dHash and convert to URL
@@ -501,7 +517,7 @@ const processModelUrl = async (nft: any): Promise<string | null> => {
     // 3. Check in materialParams (from AI generator)
     if (nft.materialParams && nft.materialParams.model3d) {
       console.log(`Found model in materialParams: ${nft.materialParams.model3d}`);
-      return nft.materialParams.model3d;
+      return sanitizeModelUrl(nft.materialParams.model3d);
     }
     
     // 4. Check in json data
@@ -509,7 +525,7 @@ const processModelUrl = async (nft: any): Promise<string | null> => {
       // Check various possible locations in json
       if (nft.json.model3d) {
         console.log(`Found model3d in json: ${nft.json.model3d}`);
-        return nft.json.model3d;
+        return sanitizeModelUrl(nft.json.model3d);
       }
       
       if (nft.json.model3dHash) {
@@ -520,27 +536,31 @@ const processModelUrl = async (nft: any): Promise<string | null> => {
       
       if (nft.json.animation_url && isModelFile(nft.json.animation_url)) {
         console.log(`Found model in json.animation_url: ${nft.json.animation_url}`);
-        return nft.json.animation_url;
+        return sanitizeModelUrl(nft.json.animation_url);
       }
       
+      // Check for files array in properties
       if (nft.json.properties?.files) {
         const modelFile = nft.json.properties.files.find((file: any) => 
           (file.type === 'model/gltf-binary' || 
            file.type === 'model/gltf+json' || 
-           (file.uri && isModelFile(file.uri)))
+           file.type === 'model/gltf' ||
+           (file.uri && isModelFile(file.uri)) ||
+           (file.url && isModelFile(file.url))
+          )
         );
         
         if (modelFile) {
           const modelUrl = modelFile.uri || modelFile.url;
           console.log(`Found model in json.properties.files: ${modelUrl}`);
-          return modelUrl;
+          return sanitizeModelUrl(modelUrl);
         }
       }
       
       // Check for materialParams in json
       if (nft.json.materialParams && nft.json.materialParams.model3d) {
         console.log(`Found model in json.materialParams: ${nft.json.materialParams.model3d}`);
-        return nft.json.materialParams.model3d;
+        return sanitizeModelUrl(nft.json.materialParams.model3d);
       }
     }
     
@@ -548,25 +568,29 @@ const processModelUrl = async (nft: any): Promise<string | null> => {
     if (nft.metadata) {
       if (nft.metadata.animation_url && isModelFile(nft.metadata.animation_url)) {
         console.log(`Found model in metadata.animation_url: ${nft.metadata.animation_url}`);
-        return nft.metadata.animation_url;
+        return sanitizeModelUrl(nft.metadata.animation_url);
       }
       
       if (nft.metadata.model3d) {
         console.log(`Found model in metadata.model3d: ${nft.metadata.model3d}`);
-        return nft.metadata.model3d;
+        return sanitizeModelUrl(nft.metadata.model3d);
       }
       
+      // Check for files array in properties
       if (nft.metadata.properties?.files) {
         const modelFile = nft.metadata.properties.files.find((file: any) => 
           (file.type === 'model/gltf-binary' || 
            file.type === 'model/gltf+json' || 
-           (file.uri && isModelFile(file.uri)))
+           file.type === 'model/gltf' ||
+           (file.uri && isModelFile(file.uri)) ||
+           (file.url && isModelFile(file.url))
+          )
         );
         
         if (modelFile) {
           const modelUrl = modelFile.uri || modelFile.url;
           console.log(`Found model in metadata.properties.files: ${modelUrl}`);
-          return modelUrl;
+          return sanitizeModelUrl(modelUrl);
         }
       }
     }
@@ -574,7 +598,15 @@ const processModelUrl = async (nft: any): Promise<string | null> => {
     // 6. Check for animation_url at top level
     if (nft.animation_url && isModelFile(nft.animation_url)) {
       console.log(`Found model in top-level animation_url: ${nft.animation_url}`);
-      return nft.animation_url;
+      return sanitizeModelUrl(nft.animation_url);
+    }
+    
+    // 7. Generate custom model if we have colors but no model
+    if (nft.colors && Array.isArray(nft.colors) && nft.colors.length > 0) {
+      // We could generate a model from colors using a service or URL template
+      // For now, just use a fallback URL
+      console.log(`No model URL found, but colors are available. Using default cube model.`);
+      return "https://modelviewer.dev/shared-assets/models/Cube.glb";
     }
     
     console.log(`No model URL found for NFT: ${nft.name || nft.id}`);
@@ -594,7 +626,9 @@ function isModelFile(url: string): boolean {
     lowerUrl.endsWith('.glb') || 
     lowerUrl.endsWith('.gltf') || 
     lowerUrl.includes('model') || 
-    lowerUrl.includes('3d')
+    lowerUrl.includes('3d') ||
+    lowerUrl.includes('cube') ||
+    lowerUrl.includes('gltf')
   );
 }
 
@@ -603,84 +637,135 @@ const loadAndApplyModel = async (cube: THREE.Mesh, modelUrl: string, colors: str
   try {
     console.log(`Loading 3D model from URL: ${modelUrl}`);
     
+    // Validate the URL first
+    if (!modelUrl.startsWith('http') && !modelUrl.startsWith('data:') && !modelUrl.startsWith('blob:')) {
+      throw new Error(`Invalid model URL: ${modelUrl}`);
+    }
+    
     // Create a loader instance
     const loader = new GLTFLoader();
     
-    // Load the model
-    loader.load(
-      modelUrl,
-      (gltf) => {
-        console.log(`Successfully loaded model from: ${modelUrl}`);
+    // Add error handling and timeouts
+    const loadPromise = new Promise((resolve, reject) => {
+      // Set a timeout to avoid hanging
+      const timeout = setTimeout(() => {
+        reject(new Error(`Timeout loading model from ${modelUrl}`));
+      }, 10000); // 10 second timeout
+      
+      loader.load(
+        modelUrl,
+        (gltf) => {
+          clearTimeout(timeout);
+          resolve(gltf);
+        },
+        (progress) => {
+          console.log(`Loading model progress: ${Math.round(progress.loaded / progress.total * 100)}%`);
+        },
+        (error) => {
+          clearTimeout(timeout);
+          reject(error);
+        }
+      );
+    });
+    
+    const gltf = await loadPromise as any;
+    console.log(`Successfully loaded model from: ${modelUrl}`);
+    
+    // Extract geometry from the loaded model
+    let extractedGeometry: THREE.BufferGeometry | null = null;
+    
+    gltf.scene.traverse((child: { name: any; geometry: THREE.BufferGeometry<THREE.NormalBufferAttributes> | null; material: { length: any; forEach: (arg0: (mat: any, index: number) => void) => void; color: { getHexString: () => string; }; }; }) => {
+      if (child instanceof THREE.Mesh) {
+        console.log(`Found mesh in loaded model: ${child.name}`);
+        extractedGeometry = child.geometry;
         
-        // Extract geometry from the loaded model
-        let extractedGeometry: THREE.BufferGeometry | null = null;
-        
-        gltf.scene.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            console.log(`Found mesh in loaded model: ${child.name}`);
-            extractedGeometry = child.geometry;
-            
-            // Also try to extract materials/colors if available
-            if (child.material) {
-              if (Array.isArray(child.material)) {
-                console.log(`Model has ${child.material.length} materials`);
-                child.material.forEach((mat, index) => {
-                  if (mat.color) {
-                    const hexColor = '#' + mat.color.getHexString();
-                    console.log(`Material ${index} color: ${hexColor}`);
-                    if (index < colors.length) {
-                      colors[index] = hexColor;
-                    }
-                  }
-                });
-              } else if (child.material.color) {
-                const hexColor = '#' + child.material.color.getHexString();
-                console.log(`Model material color: ${hexColor}`);
-                colors[0] = hexColor;
+        // Also try to extract materials/colors if available
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            console.log(`Model has ${child.material.length} materials`);
+            child.material.forEach((mat, index) => {
+              if (mat.color) {
+                const hexColor = '#' + mat.color.getHexString();
+                console.log(`Material ${index} color: ${hexColor}`);
+                if (index < colors.length) {
+                  colors[index] = hexColor;
+                }
               }
-            }
+            });
+          } else if (child.material.color) {
+            const hexColor = '#' + child.material.color.getHexString();
+            console.log(`Model material color: ${hexColor}`);
+            colors[0] = hexColor;
           }
-        });
-        
-        // If we found geometry in the model, replace the cube's geometry
-        if (extractedGeometry) {
-          console.log(`Replacing cube geometry with model geometry`);
-          cube.geometry.dispose(); // Clean up old geometry
-          cube.geometry = (extractedGeometry as THREE.BufferGeometry).clone();
-        } else {
-          console.warn(`No usable geometry found in model, using default cube`);
         }
-        
-        // Apply the cube's colors
-        if (cube.material instanceof THREE.MeshPhysicalMaterial) {
-          cube.material.color.set(colors[0]);
-          cube.material.needsUpdate = true;
-        } else if (Array.isArray(cube.material)) {
-          // If cube has multiple materials, update each one
-          cube.material.forEach((mat, index) => {
-            if (mat instanceof THREE.MeshPhysicalMaterial && index < colors.length) {
-              mat.color.set(colors[index]);
-              mat.needsUpdate = true;
-            }
-          });
-        }
-        
-        console.log(`Successfully applied model and colors to cube`);
-      },
-      (progress) => {
-        console.log(`Loading model progress: ${Math.round(progress.loaded / progress.total * 100)}%`);
-      },
-      (error) => {
-        console.error(`Error loading model from ${modelUrl}:`, error);
       }
-    );
+    });
+    
+    // If we found geometry in the model, replace the cube's geometry
+    if (extractedGeometry) {
+      console.log(`Replacing cube geometry with model geometry`);
+      cube.geometry.dispose(); // Clean up old geometry
+      cube.geometry = (extractedGeometry as THREE.BufferGeometry).clone();
+    } else {
+      console.warn(`No usable geometry found in model, using default cube`);
+    }
+    
+    // Apply the cube's colors
+    if (cube.material instanceof THREE.MeshPhysicalMaterial) {
+      cube.material.color.set(colors[0]);
+      cube.material.needsUpdate = true;
+    } else if (Array.isArray(cube.material)) {
+      // If cube has multiple materials, update each one
+      cube.material.forEach((mat, index) => {
+        if (mat instanceof THREE.MeshPhysicalMaterial && index < colors.length) {
+          mat.color.set(colors[index]);
+          mat.needsUpdate = true;
+        }
+      });
+    }
+    
+    console.log(`Successfully applied model and colors to cube`);
   } catch (error) {
-    console.error(`Exception in loadAndApplyModel:`, error);
+    console.error(`Error loading model from ${modelUrl}:`, error);
+    
+    // Try fallback model in case of error
+    try {
+      console.log(`Attempting to load fallback model...`);
+      const fallbackUrl = "https://modelviewer.dev/shared-assets/models/Cube.glb";
+      const loader = new GLTFLoader();
+      
+      loader.load(
+        fallbackUrl,
+        (gltf) => {
+          console.log(`Loaded fallback model`);
+          // Apply fallback model if needed
+          // Simpler application - just show the model
+          
+          // Apply colors to material
+          if (cube.material instanceof THREE.MeshPhysicalMaterial) {
+            cube.material.color.set(colors[0]);
+            cube.material.needsUpdate = true;
+          } else if (Array.isArray(cube.material)) {
+            cube.material.forEach((mat, index) => {
+              if (mat instanceof THREE.MeshPhysicalMaterial && index < colors.length) {
+                mat.color.set(colors[index]);
+                mat.needsUpdate = true;
+              }
+            });
+          }
+        },
+        undefined,
+        (fallbackError) => {
+          console.error(`Even fallback model failed to load:`, fallbackError);
+        }
+      );
+    } catch (fallbackError) {
+      console.error(`Exception loading fallback model:`, fallbackError);
+    }
   }
 };
 
 // New function to convert user NFTs to realm cube format
-// Enhanced convertNFTsToCubes function
 const convertNFTsToCubes = async (nfts: any[]) => {
   console.log(`Starting conversion of ${nfts.length} NFTs to cube format`);
   const cubes = [];
@@ -688,14 +773,6 @@ const convertNFTsToCubes = async (nfts: any[]) => {
   // Process each NFT that could be a cube
   for (const nft of nfts) {
     try {
-      // Check if we should treat this as a cube
-      // More permissive check - treat all NFTs as potential cubes for now
-      const isCube = true;
-      
-      if (!isCube) {
-        continue;
-      }
-      
       console.log(`Processing NFT for cube conversion: ${nft.name || nft.id}`);
       
       // Extract colors with improved function
@@ -711,7 +788,7 @@ const convertNFTsToCubes = async (nfts: any[]) => {
         console.log(`Found 3D model URL: ${model3d}`);
       }
       
-      // Get or assign rarity
+      // Get or assign rarity based on available features
       let rarity = "common";
       if (nft.rarity) {
         rarity = nft.rarity.toLowerCase();
@@ -1238,45 +1315,13 @@ const RealmCube: React.FC<RealmCubeProps> = ({
             
             console.log(`Found ${nfts.length} total NFTs in wallet`);
             
-            // Filter for only VOID cube NFTs with broad criteria
-            const voidNfts = nfts.filter(nft => {
-              // Parse JSON attributes if available
-              let attributes: any[] = [];
-              if (nft.json?.attributes) {
-                attributes = nft.json.attributes;
-              }
-              
-              return (
-                // Check name
-                (nft.name && nft.name.includes('VOID')) ||
-                // Check symbol
-                (nft.symbol === 'VOID') ||
-                // Check collection
-                (nft.collection?.address?.toString() === process.env.NEXT_PUBLIC_VOID_COLLECTION_ADDRESS) ||
-                // Check attributes for Collection
-                attributes.some((attr: any) => 
-                  (attr.trait_type === 'Collection' && attr.value?.includes('VOID')) ||
-                  (attr.trait_type === 'Type' && attr.value === 'Cube')
-                ) ||
-                // Less restrictive check - just look for any NFTs with model data
-                (nft.uri && (
-                  nft.uri.includes('glb') || 
-                  nft.uri.includes('model') || 
-                  nft.uri.includes('cube')
-                ))
-              );
-            });
-            
-            console.log(`Found ${voidNfts.length} VOID NFTs on blockchain`);
-            
-            if (voidNfts.length > 0) {
+            // Process all NFTs - we'll filter cube-specific ones later
+            if (nfts.length > 0) {
               // Process each NFT to extract metadata
-              const processedNfts = await Promise.all(voidNfts.map(async (nft) => {
+              const processedNfts = await Promise.all(nfts.map(async (nft) => {
                 try {
                   // Try to fetch metadata if available
                   let metadata = null;
-                  let model3dUrl = null;
-                  let colors = null;
                   
                   if (nft.uri) {
                     try {
@@ -1285,60 +1330,6 @@ const RealmCube: React.FC<RealmCubeProps> = ({
                       if (response.ok) {
                         metadata = await response.json();
                         console.log(`Got metadata for: ${nft.name || nft.address.toString()}`);
-                        
-                        // Log metadata for debugging
-                        console.log("Metadata:", JSON.stringify(metadata).substring(0, 200) + "...");
-                        
-                        // Look for model URL in metadata
-                        if (metadata.animation_url && metadata.animation_url.endsWith('.glb')) {
-                          model3dUrl = metadata.animation_url;
-                          console.log(`Found model in animation_url: ${model3dUrl}`);
-                        } else if (metadata.model) {
-                          model3dUrl = metadata.model;
-                          console.log(`Found model in model field: ${model3dUrl}`);
-                        } else if (metadata.properties?.files) {
-                          // Look for model URL in properties.files array
-                          const modelFile = metadata.properties.files.find((file: any) => 
-                            file.type === 'model/gltf-binary' || 
-                            file.type === 'model/gltf+json' ||
-                            (file.uri && file.uri.endsWith('.glb'))
-                          );
-                          
-                          if (modelFile) {
-                            model3dUrl = modelFile.uri || modelFile.url;
-                            console.log(`Found model in properties.files: ${model3dUrl}`);
-                          }
-                        }
-                        
-                        // If model URL is IPFS format, convert to HTTP URL
-                        if (model3dUrl && model3dUrl.startsWith('ipfs://')) {
-                          const ipfsHash = model3dUrl.replace('ipfs://', '');
-                          model3dUrl = `https://ipfs.io/ipfs/${ipfsHash}`;
-                          console.log(`Converted IPFS URL to: ${model3dUrl}`);
-                        }
-                        
-                        // Extract color information
-                        if (metadata.attributes) {
-                          const colorAttr = metadata.attributes.find((attr: any) => 
-                            attr.trait_type === 'Color' || 
-                            attr.trait_type === 'color' ||
-                            attr.trait_type === 'PRIMARY_COLOR'
-                          );
-                          
-                          if (colorAttr) {
-                            // Generate a color scheme from the main color
-                            const mainColor = colorAttr.value;
-                            colors = [
-                              mainColor,
-                              adjustColorBrightness(mainColor, -0.1),
-                              adjustColorBrightness(mainColor, -0.2),
-                              adjustColorBrightness(mainColor, -0.3),
-                              adjustColorBrightness(mainColor, -0.4),
-                              adjustColorBrightness(mainColor, -0.5)
-                            ];
-                            console.log(`Generated colors from attribute: ${mainColor}`);
-                          }
-                        }
                       } else {
                         console.warn(`Failed to fetch metadata: ${response.status}`);
                       }
@@ -1347,45 +1338,71 @@ const RealmCube: React.FC<RealmCubeProps> = ({
                     }
                   }
                   
-                  // Use JSON data if it's already available
+                  // Use JSON data if it's already available in the nft object
                   if (!metadata && nft.json) {
                     metadata = nft.json;
                     console.log(`Using embedded JSON data for: ${nft.name || nft.address.toString()}`);
                   }
                   
-                  return {
+                  // Create basic NFT object with all available data
+                  const processedNft = {
                     id: nft.address.toString(),
-                    name: metadata?.name || nft.name || `VOID Cube #${nft.address.toString().slice(0, 6)}`,
-                    description: metadata?.description || "A unique VOID NFT",
-                    model3d: model3dUrl,
-                    colors: colors,
-                    type: 'cube', // Force type cube for display
-                    rarity: 'rare', // Default rarity for blockchain NFTs
-                    attributes: metadata?.attributes || [],
-                    metadata: metadata,
+                    name: metadata?.name || nft.name || `NFT #${nft.address.toString().slice(0, 6)}`,
+                    description: metadata?.description || "A unique NFT",
+                    image: metadata?.image || nft.json?.image,
+                    type: metadata?.properties?.type || 'unknown',
+                    materialParams: metadata?.materialParams || nft.json?.materialParams || null,
+                    attributes: metadata?.attributes || nft.json?.attributes || [],
+                    metadata: metadata || nft.json || {},
+                    json: nft.json || metadata || {},
                     mintAddress: nft.address.toString(),
+                    uri: nft.uri
                   };
+                  
+                  // Enhanced VOID cube detection
+                  const isCube = 
+                    // Check explicit type in attributes
+                    processedNft.attributes.some((attr: any) => 
+                      (attr.trait_type === 'Type' && attr.value === 'Cube') ||
+                      (attr.trait_type === 'type' && attr.value === 'Cube')
+                    ) ||
+                    // Check collection name
+                    (processedNft.metadata.collection?.name?.includes('VOID')) ||
+                    // Check name
+                    (processedNft.name?.includes('VOID') && processedNft.name?.includes('Cube')) ||
+                    // Check for materialParams (our custom structure)
+                    !!processedNft.materialParams ||
+                    // Check for model3d
+                    !!(processedNft.metadata.model3d || processedNft.json.model3d) ||
+                    // Check animation_url for glb
+                    !!(processedNft.metadata.animation_url?.includes('.glb') || 
+                       processedNft.json.animation_url?.includes('.glb'));
+                  
+                  return { ...processedNft, isCube };
                 } catch (error) {
                   console.error(`Error processing NFT ${nft.address.toString()}:`, error);
                   return null;
                 }
               }));
               
-              // Filter out any failed processing
-              const validNfts = processedNfts.filter(nft => nft !== null) as any[];
-              console.log(`Successfully processed ${validNfts.length} NFTs`);
+              // Filter out any failed processing and non-cube NFTs
+              const allNfts = processedNfts.filter(nft => nft !== null) as any[];
+              const cubeNfts = allNfts.filter(nft => nft.isCube);
               
-              if (validNfts.length > 0) {
-                // Convert NFTs to cube format
-                const nftCubes = await convertNFTsToCubes(validNfts);
-                console.log(`Converted ${nftCubes.length} NFTs into RealmCubes`);
+              console.log(`Successfully processed ${allNfts.length} NFTs, found ${cubeNfts.length} cubes`);
+              
+              // Convert NFTs to cube format
+              const nftCubes = await convertNFTsToCubes(cubeNfts);
+              console.log(`Converted ${nftCubes.length} NFTs into RealmCubes`);
+              
+              if (nftCubes.length > 0) {
+                // Combine default and NFT cubes, but make sure we don't add duplicates
+                const existingIds = new Set(cubeCollection.map(cube => cube.id));
+                const uniqueNftCubes = nftCubes.filter(cube => !existingIds.has(cube.id));
                 
-                if (nftCubes.length > 0) {
-                  // Combine default and NFT cubes
-                  setCombinedCubeCollection([...cubeCollection, ...nftCubes]);
-                  setIsLoadingNFTs(false);
-                  return; // Successfully loaded, exit function
-                }
+                setCombinedCubeCollection([...cubeCollection, ...uniqueNftCubes]);
+                setIsLoadingNFTs(false);
+                return; // Successfully loaded, exit function
               }
             }
           } catch (walletError) {
@@ -1395,8 +1412,8 @@ const RealmCube: React.FC<RealmCubeProps> = ({
           console.log("No wallet connected or not initialized yet");
         }
         
-        // If we get here, we couldn't load from blockchain
-        // Let's create some mock NFT cubes for testing
+        // If we get here, we couldn't load from blockchain or there were no cubes
+        // Either show no NFT cubes or create mock ones for testing
         console.log("Creating mock NFT cubes for testing");
         const mockNftCubes = [
           {
@@ -1428,13 +1445,13 @@ const RealmCube: React.FC<RealmCubeProps> = ({
         setIsLoadingNFTs(false);
       }
     };
-
+  
     // Only load NFTs after wallet is initialized
     if (wallet) {
       loadNFTCubesFromBlockchain();
     }
   }, [wallet.connected, wallet.publicKey]);
-
+  
   // Get the selected cube
   const selectedCube = (combinedCubeCollection.find((cube) => cube.id === selectedCubeId) ||
       combinedCubeCollection[0]) as typeof combinedCubeCollection[0] & { model3d?: string | null };
