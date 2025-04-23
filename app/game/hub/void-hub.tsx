@@ -4,7 +4,6 @@ import PixelHeading from "@/components/pixel-heading";
 import AbstractShape from "@/components/abstract-shape";
 import { cn } from "@/lib/utils";
 import RealmCube, { cubeCollection } from "../cube/realm-cube";
-import { useAudioController, AudioController } from "../manager/audio-manager";
 import { useAudio } from "../contexts/audio-context";
 
 // Realm data from the realm page
@@ -107,6 +106,22 @@ const realms = [
   },
   {
     id: "vortex",
+    name: "VORTEX",
+    theme: "Creativity and Expression",
+    description: "A mesmerizing realm where players manifest their imagination through pixel art creation. Craft intricate pixel masterpieces that come alive within the digital canvas.",
+    color: "from-amber-400 to-red-600",
+    brightColor: "from-amber-300 to-red-400", 
+    darkColor: "from-amber-950 to-red-950",
+    shapeType: "square" as "square",
+    particleCount: 160,
+    particleType: "pixel",
+    ambientSound: "/audio/vortex-theme.mp3",
+    modelType: "pixel-canvas",
+    gameplayElements: ["Pixel art creation", "Color palette mastery", "Animation frames"],
+    iconType: "pixel",
+  },
+  {
+    id: "enigma",
     name: "???",
     theme: "Unknown Dimensions",
     description: "A mysterious realm at the edge of perception. Strange geometries and fractal patterns suggest access to dimensions beyond conventional understanding.",
@@ -116,12 +131,13 @@ const realms = [
     shapeType: "complex" as "complex",
     particleCount: 160,
     particleType: "fractal",
-    ambientSound: "/audio/vortex-theme.mp3",
+    ambientSound: "/audio/enigma-theme.mp3",
     modelType: "fractal-vortex",
     gameplayElements: ["Dimensional shifting", "Reality manipulation", "Perception challenges"],
     iconType: "vortex",
   },
 ];
+
 
 // Particle background that changes based on selected realm
 const ParticleBackground = ({ realm }: { realm: (typeof realms)[0] }) => {
@@ -306,6 +322,53 @@ const RealmIcon = ({ realm, isSelected }: { realm: (typeof realms)[0]; isSelecte
       </div>
     )
   }
+
+  if (realm.iconType === "pixel") {
+    return (
+      <div className="relative w-6 h-6 flex items-center justify-center">
+        <motion.div
+          className="w-5 h-5 grid grid-cols-4 grid-rows-4 gap-0.5"
+          animate={{
+            rotate: isSelected ? [0, 0, 0, 5, -5, 0] : 0,
+            scale: isSelected ? [1, 1.1, 1] : 1
+          }}
+          transition={{
+            duration: 2,
+            repeat: isSelected ? Infinity : 0,
+            ease: "easeInOut"
+          }}
+        >
+          {/* Pixel art brush icon - 4x4 grid */}
+          {Array.from({ length: 16 }).map((_, i) => {
+            // Create a simple pixel brush pattern
+            const isColored = [0, 3, 4, 5, 6, 9, 12, 15].includes(i);
+            return (
+              <div 
+                key={`pixel-${i}`} 
+                className={`w-full h-full ${isColored ? `bg-gradient-to-br ${realm.color}` : 'bg-transparent'}`}
+              />
+            );
+          })}
+        </motion.div>
+        
+        {isSelected && (
+          <motion.div
+            className="absolute inset-0 rounded-sm border border-white/30"
+            animate={{
+              scale: [1, 1.2, 1],
+              opacity: [0.6, 0.3, 0.6]
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+        )}
+      </div>
+    )
+  }
+  
   
   if (realm.iconType === "vortex") {
     return (
@@ -1040,6 +1103,343 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: (typeof realms)[0]; mous
           })}
         </div>
       </motion.div>
+    );
+  }
+
+  if (realm.modelType === "pixel-canvas") {
+    return (
+      <div className="w-full h-full relative overflow-visible">
+        {/* Rainbow Pixel Blocks - First Ring */}
+        {Array.from({ length: 8 }).map((_, i) => {
+          // Calculate position in orbit
+          const angle = (i / 8) * Math.PI * 2;
+          const radius = 140;
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+          
+          // Size based on position
+          const size = 25 + Math.sin(i * 0.8) * 5;
+          
+          // Rainbow colors
+          const colors = [
+            '#f87171', // red
+            '#fb923c', // orange
+            '#fbbf24', // yellow
+            '#4ade80', // green
+            '#22d3ee', // cyan
+            '#60a5fa', // blue
+            '#a78bfa', // indigo
+            '#f472b6'  // pink
+          ];
+          
+          return (
+            <motion.div
+              key={`pixel-block-${i}`}
+              className="absolute rounded-sm"
+              style={{
+                width: `${size}px`,
+                height: `${size}px`,
+                left: '50%',
+                top: '50%',
+                backgroundColor: colors[i],
+                boxShadow: `0 0 20px ${colors[i]}`,
+                zIndex: 5,
+              }}
+              animate={{
+                x: [x, x + Math.cos(angle) * 15],
+                y: [y, y + Math.sin(angle) * 15],
+                rotate: [0, 90, 180, 270, 360],
+                scale: [1, 1.15, 1],
+              }}
+              transition={{
+                x: {
+                  duration: 3 + i * 0.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+                y: {
+                  duration: 3 + i * 0.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+                rotate: {
+                  duration: 8 + i,
+                  repeat: Infinity,
+                  ease: "linear",
+                },
+                scale: {
+                  duration: 2 + i * 0.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+              }}
+            />
+          );
+        })}
+  
+        {/* Smaller Pixel Cubes - Second Ring */}
+        {Array.from({ length: 12 }).map((_, i) => {
+          // Calculate position in second orbit
+          const angle = (i / 12) * Math.PI * 2 + Math.PI / 24;
+          const radius = 210;
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+          
+          // Size based on position
+          const size = 15 + Math.sin(i * 1.2) * 3;
+          
+          // Colors with more variety
+          const hue = (i / 12) * 360;
+          const color = `hsl(${hue}, 80%, 60%)`;
+          
+          return (
+            <motion.div
+              key={`small-pixel-${i}`}
+              className="absolute rounded-sm"
+              style={{
+                width: `${size}px`,
+                height: `${size}px`,
+                left: '50%',
+                top: '50%',
+                backgroundColor: color,
+                boxShadow: `0 0 15px ${color}`,
+                zIndex: 4,
+              }}
+              animate={{
+                x: [x, x + Math.cos(angle + Math.PI) * 10],
+                y: [y, y + Math.sin(angle + Math.PI) * 10],
+                rotate: [0, 180, 360],
+                scale: [1, 1.15, 1],
+              }}
+              transition={{
+                x: {
+                  duration: 3 + i * 0.15,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+                y: {
+                  duration: 3 + i * 0.15,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+                rotate: {
+                  duration: 10 - i * 0.3,
+                  repeat: Infinity,
+                  ease: "linear",
+                },
+                scale: {
+                  duration: 2.5 + i * 0.1,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+              }}
+            />
+          );
+        })}
+  
+        {/* Tiny Pixel Particles - Outer Ring */}
+        {Array.from({ length: 24 }).map((_, i) => {
+          // Calculate position in outer orbit
+          const angle = (i / 24) * Math.PI * 2 + Math.PI / 48;
+          const radius = 280;
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+          
+          // Tiny size
+          const size = 5 + Math.sin(i * 2) * 2;
+          
+          // Dynamic colors
+          const hue = (i / 24) * 360;
+          const color = `hsl(${hue}, 90%, 70%)`;
+          
+          return (
+            <motion.div
+              key={`tiny-pixel-${i}`}
+              className="absolute rounded-sm"
+              style={{
+                width: `${size}px`,
+                height: `${size}px`,
+                left: '50%',
+                top: '50%',
+                backgroundColor: color,
+                boxShadow: `0 0 10px ${color}`,
+                zIndex: 3,
+              }}
+              animate={{
+                x: [x, x + Math.cos(angle) * 5],
+                y: [y, y + Math.sin(angle) * 5],
+                opacity: [0.6, 1, 0.6],
+                scale: [1, 1.3, 1],
+              }}
+              transition={{
+                x: {
+                  duration: 2 + i * 0.08,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+                y: {
+                  duration: 2 + i * 0.08,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+                opacity: {
+                  duration: 1.5 + i * 0.05,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+                scale: {
+                  duration: 1.5 + i * 0.05,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+              }}
+            />
+          );
+        })}
+        
+        {/* Central Pixel Cluster */}
+        {Array.from({ length: 7 }).map((_, i) => {
+          // Arrange in a flower-like pattern
+          const angle = (i / 7) * Math.PI * 2;
+          const radius = i === 0 ? 0 : 25; // First at center, others around
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+          
+          // Size based on position
+          const size = i === 0 ? 22 : 16;
+          
+          // Colors
+          const colors = [
+            '#f472b6',  // center - pink
+            '#f87171', // red
+            '#fb923c', // orange
+            '#fbbf24', // yellow
+            '#4ade80', // green
+            '#60a5fa', // blue
+            '#a78bfa', // indigo
+          ];
+          
+          return (
+            <motion.div
+              key={`center-pixel-${i}`}
+              className="absolute rounded-sm"
+              style={{
+                width: `${size}px`,
+                height: `${size}px`,
+                left: '50%',
+                top: '50%',
+                backgroundColor: colors[i],
+                boxShadow: `0 0 15px ${colors[i]}`,
+                zIndex: 6
+              }}
+              animate={{
+                x: [x, x + (Math.random() - 0.5) * 6],
+                y: [y, y + (Math.random() - 0.5) * 6],
+                rotate: [0, 45, 0, -45, 0],
+                scale: [1, 1.15, 0.95, 1.1, 1]
+              }}
+              transition={{
+                x: {
+                  duration: 2 + i * 0.3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse"
+                },
+                y: {
+                  duration: 2 + i * 0.3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse"
+                },
+                rotate: {
+                  duration: 5 + i * 0.5,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                },
+                scale: {
+                  duration: 3 + i * 0.2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }
+              }}
+            />
+          );
+        })}
+        
+        {/* Spectacular Pixel Dust */}
+        {Array.from({ length: 40 }).map((_, i) => {
+          // Random starting positions
+          const startAngle = Math.random() * Math.PI * 2;
+          const startRadius = 80 + Math.random() * 220;
+          const startX = Math.cos(startAngle) * startRadius;
+          const startY = Math.sin(startAngle) * startRadius;
+          
+          // Random sizes
+          const size = 1 + Math.random() * 3;
+          
+          // Dynamic colors
+          const hue = (i / 40) * 360;
+          const color = `hsl(${hue}, 90%, 70%)`;
+          
+          // Generate a curved path using bezier-like animation
+          const mid1X = startX * 0.8 + (Math.random() - 0.5) * 40;
+          const mid1Y = startY * 0.8 + (Math.random() - 0.5) * 40;
+          const mid2X = startX * 0.5 + (Math.random() - 0.5) * 80; 
+          const mid2Y = startY * 0.5 + (Math.random() - 0.5) * 80;
+          const endX = startX * 0.2;
+          const endY = startY * 0.2;
+  
+          return (
+            <motion.div
+              key={`pixel-flow-${i}`}
+              className="absolute rounded-full"
+              style={{
+                width: `${size}px`,
+                height: `${size}px`,
+                left: "50%",
+                top: "50%",
+                backgroundColor: color,
+                boxShadow: `0 0 ${size*2}px ${color}`,
+                zIndex: 6,
+              }}
+              animate={{
+                x: [startX, mid1X, mid2X, endX, startX],
+                y: [startY, mid1Y, mid2Y, endY, startY],
+                opacity: [0.4, 0.9, 0.9, 0.4, 0.4],
+                scale: [1, 1.5, 1.5, 1, 1],
+              }}
+              transition={{
+                duration: 8 + Math.random() * 7,
+                repeat: Infinity,
+                ease: "easeInOut",
+                times: [0, 0.25, 0.5, 0.75, 1],
+              }}
+            />
+          );
+        })}
+        
+        {/* Subtle Scanline Effect - very subtle */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: "linear-gradient(transparent 50%, rgba(0, 0, 0, 0.03) 50%)",
+            backgroundSize: "100% 4px",
+            zIndex: 20,
+            opacity: 0.1,
+            mixBlendMode: "overlay"
+          }}
+        />
+      </div>
     );
   }
   

@@ -8,7 +8,7 @@ import PulseRealm from "./realms/pulse/pulse-realm";
 import CipherRealm from "./realms/cipher/cipher-realm";
 import CrypticRealm from "./realms/cryptic/cryptic-realm";
 import VortexRealm from "./realms/vortex/vortex-realm";
-import RealmPlaceholder from "./realms/vortex/realm-placeholder";
+import RealmPlaceholder from "./realms/unknown/realm-placeholder";
 import {
   AudioProvider,
   useAudio,
@@ -25,7 +25,7 @@ interface VoidResonanceGameProps {
 
 // Inner component that uses the audio context
 const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
-  const [currentScreen, setCurrentScreen] = useState("hub"); // "hub", "echo", "abyss", "pulse", "cipher", "nexus", "vortex"
+  const [currentScreen, setCurrentScreen] = useState("hub"); // "hub", "echo", "abyss", "pulse", "cipher", "nexus", "cryptic", "vortex", "enigma"
   const [loading, setLoading] = useState(true);
   const [enterAnimation, setEnterAnimation] = useState(false);
   // Add state for selectedCubeId
@@ -115,8 +115,12 @@ const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
         return { color: "#60a5fa", gradient: "from-blue-400 to-pink-600" };
       case "cipher":
         return { color: "#8b5cf6", gradient: "from-purple-400 to-blue-600" };
+      case "cryptic":
+        return { color: "#10b981", gradient: "from-green-400 to-blue-600" };
       case "vortex":
-        return { color: "#10b981", gradient: "from-emerald-400 to-cyan-600" };
+        return { color: "#f59e0b", gradient: "from-amber-400 to-red-600" }; // Updated for the new VORTEX realm
+      case "enigma":
+        return { color: "#10b981", gradient: "from-emerald-400 to-cyan-600" }; // For the ??? realm (now called enigma internally)
       default:
         return { color: "#a855f7", gradient: "from-blue-400 to-purple-600" };
     }
@@ -257,8 +261,11 @@ const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
           onToggleMute={audio.toggleMute}
           onTrackChange={audio.changeTrack}
           onVolumeChange={audio.setVolume}
-          onSeek={audio.seekTo}
-        />
+          onSeek={audio.seekTo} onSkipPrevious={function (): void {
+            throw new Error("Function not implemented.");
+          } } onSkipNext={function (): void {
+            throw new Error("Function not implemented.");
+          } }        />
       </div>
 
       {/* Main Content */}
@@ -317,9 +324,17 @@ const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
             )}
             {currentScreen === "vortex" && (
               <VortexRealm
-              onReturn={returnToHub}
-              selectedCubeId={selectedCubeId}
-            />
+                onReturn={returnToHub}
+                selectedCubeId={selectedCubeId}
+              />
+            )}
+            {currentScreen === "enigma" && (
+              <RealmPlaceholder
+                realmName="???"
+                realmColor="#10b981"
+                realmGradient="from-emerald-400 to-cyan-600"
+                onReturn={returnToHub}
+              />
             )}
           </motion.div>
         )}

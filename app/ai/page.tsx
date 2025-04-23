@@ -202,210 +202,238 @@ export default function AIPage() {
     );
   };
 
-  // Enhanced 3D Banner for AI Creator Page
-// 3D Banner for Creator Page
-const Creator3DBanner = () => {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
-  
-  // For tracking mouse movement
-  useEffect(() => {
-    const handleMouseMove = (e: { clientX: number; clientY: number }) => {
-      // Calculate mouse position relative to the center of the viewport
-      const x = (e.clientX / window.innerWidth - 0.5) * 2
-      const y = (e.clientY / window.innerHeight - 0.5) * 2
-      setMousePosition({ x, y })
-    }
-    
-    window.addEventListener('mousemove', handleMouseMove)
-    
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-    }
-  }, [])
+  // 3D Banner for Creator Page
+  const Creator3DBanner = () => {
+    // Use useRef instead of useState to prevent re-renders on mouse movement
+    const mousePositionRef = useRef({ x: 0, y: 0 });
 
-  return (
-    <div className="relative h-screen w-full flex items-center justify-center overflow-hidden">
-      {/* Background gradient and particles */}
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-black to-black z-0"></div>
-      
-      {/* 3D rotating grid */}
-      <motion.div 
-        className="absolute inset-0 z-0 opacity-20"
-        style={{
-          perspective: "1000px",
-          transformStyle: "preserve-3d",
-        }}
-      >
+    // For tracking mouse movement
+    useEffect(() => {
+      const handleMouseMove = (e: { clientX: number; clientY: number }) => {
+        // Calculate mouse position relative to the center of the viewport
+        const x = (e.clientX / window.innerWidth - 0.5) * 2;
+        const y = (e.clientY / window.innerHeight - 0.5) * 2;
+        mousePositionRef.current = { x, y };
+
+        // Apply the transform directly using DOM methods instead of re-rendering
+        const grid = document.querySelector(".creator-grid-3d") as HTMLElement;
+        if (grid) {
+          grid.style.transform = `rotateX(${y * 5}deg) rotateY(${-x * 5}deg)`;
+        }
+      };
+
+      window.addEventListener("mousemove", handleMouseMove);
+
+      return () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+      };
+    }, []);
+
+    return (
+      <div className="relative h-screen w-full flex items-center justify-center overflow-hidden">
+        {/* Background gradient and particles */}
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-black to-black z-0"></div>
+
+        {/* 3D rotating grid */}
         <motion.div
-          className="w-full h-full grid grid-cols-12 grid-rows-12 gap-4"
+          className="absolute inset-0 z-0 opacity-20"
           style={{
-            rotateX: mousePosition.y * 5,
-            rotateY: -mousePosition.x * 5,
+            perspective: "1000px",
             transformStyle: "preserve-3d",
           }}
-          transition={{ type: "spring", damping: 15 }}
         >
-          {Array.from({ length: 144 }).map((_, i) => (
-            <motion.div
-              key={`grid-${i}`}
-              className="border border-purple-500/30"
-              style={{
-                translateZ: Math.sin(i * 0.1) * 20,
-              }}
-              animate={{
-                opacity: [0.1, i % 10 === 0 ? 0.5 : 0.2, 0.1],
-                borderColor: [
-                  "rgba(168, 85, 247, 0.3)",
-                  "rgba(236, 72, 153, 0.3)",
-                  "rgba(168, 85, 247, 0.3)",
-                ],
-              }}
-              transition={{
-                duration: 4 + Math.random() * 6,
-                repeat: Infinity,
-                repeatType: "reverse",
-              }}
-            />
-          ))}
-        </motion.div>
-      </motion.div>
-
-      {/* Animated rings */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        {[100, 200, 300, 400].map((size, i) => (
-          <motion.div
-            key={`ring-${i}`}
-            className="absolute border border-purple-500/20 rounded-full"
+          <div
+            className="creator-grid-3d w-full h-full grid grid-cols-12 grid-rows-12 gap-4"
             style={{
-              width: size,
-              height: size,
-              borderRadius: "50%",
+              transformStyle: "preserve-3d",
             }}
-            animate={{
-              rotate: [0, 360],
-              scale: [1, 1.1, 1],
-              opacity: [0.1, 0.3, 0.1],
-            }}
-            transition={{
-              rotate: { duration: 20 + i * 5, repeat: Infinity, ease: "linear" },
-              scale: { duration: 3 + i, repeat: Infinity, repeatType: "reverse" },
-              opacity: { duration: 4 + i, repeat: Infinity, repeatType: "reverse" },
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Main title with parallax effect */}
-      <div className="relative z-10 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.2 }}
-          style={{
-            textShadow: "0 0 30px rgba(168, 85, 247, 0.5)",
-          }}
-        >
-          <PixelHeading
-            text="CREATOR"
-            className="text-8xl sm:text-9xl font-black tracking-tighter mb-6 leading-none text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
-            animate
-          />
+          >
+            {Array.from({ length: 144 }).map((_, i) => (
+              <motion.div
+                key={`grid-${i}`}
+                className="border border-purple-500/30"
+                style={{
+                  translateZ: Math.sin(i * 0.1) * 20,
+                }}
+                animate={{
+                  opacity: [0.1, i % 10 === 0 ? 0.5 : 0.2, 0.1],
+                  borderColor: [
+                    "rgba(168, 85, 247, 0.3)",
+                    "rgba(236, 72, 153, 0.3)",
+                    "rgba(168, 85, 247, 0.3)",
+                  ],
+                }}
+                transition={{
+                  duration: 4 + Math.random() * 6,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
+              />
+            ))}
+          </div>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
-          className="relative"
-        >
-          <motion.div
-            className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-pink-500 opacity-75 blur-lg"
-            animate={{
-              opacity: [0.5, 0.8, 0.5],
-            }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
-          <PixelHeading
-            text="THE JOURNEY BEYOND"
-            className="text-3xl sm:text-4xl md:text-5xl mt-2 tracking-wide text-gray-300 relative"
-            animate
-          />
-        </motion.div>
-
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 1.2 }}
-          className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto mt-10 mb-12 font-light"
-        >
-          Create and mint custom 3D cubes or music with realistic textures and animations
-        </motion.p>
-        
-        {/* Decorative elements */}
-        <motion.div 
-          className="flex items-center justify-center gap-4 mt-12"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 1.6 }}
-        >
-          {[1, 2, 3, 4, 5].map((i) => (
+        {/* Animated rings */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          {[100, 200, 300, 400].map((size, i) => (
             <motion.div
-              key={`decoration-${i}`}
-              className="w-3 h-3 bg-purple-500"
+              key={`ring-${i}`}
+              className="absolute border border-purple-500/20 rounded-full"
+              style={{
+                width: size,
+                height: size,
+                borderRadius: "50%",
+              }}
               animate={{
-                scale: [1, i % 2 === 0 ? 1.5 : 0.7, 1],
-                opacity: [0.5, 1, 0.5],
-                backgroundColor: [
-                  "#a855f7",
-                  "#ec4899",
-                  "#a855f7",
-                ],
+                rotate: [0, 360],
+                scale: [1, 1.1, 1],
+                opacity: [0.1, 0.3, 0.1],
               }}
               transition={{
-                duration: 2 + i * 0.5,
-                repeat: Infinity,
-                repeatType: "reverse",
+                rotate: {
+                  duration: 20 + i * 5,
+                  repeat: Infinity,
+                  ease: "linear",
+                },
+                scale: {
+                  duration: 3 + i,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                },
+                opacity: {
+                  duration: 4 + i,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                },
               }}
             />
           ))}
-        </motion.div>
-      </div>
+        </div>
 
-      {/* Scroll indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1, delay: 2 }}
-        className="absolute bottom-10 left-1/2 transform -translate-x-1/2"
-      >
-        <div className="flex flex-col items-center">
-          <p className="text-sm text-gray-400 mb-2 font-pixel">SCROLL TO DISCOVER</p>
-          <motion.div className="relative">
-            <svg width="24" height="40" viewBox="0 0 24 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="0" y="0" width="24" height="40" rx="12" stroke="#a855f7" strokeWidth="2" />
-              <motion.rect
-                animate={{ y: [4, 28, 4] }}
-                transition={{ repeat: Infinity, duration: 1.5 }}
-                x="8"
-                width="8"
-                height="8"
-                rx="4"
-                fill="#ec4899"
-              />
-            </svg>
-            
-            {/* Glow effect */}
-            <motion.div
-              className="absolute -inset-4 bg-purple-500 opacity-20 blur-xl rounded-full"
-              animate={{ opacity: [0.1, 0.3, 0.1] }}
-              transition={{ duration: 2, repeat: Infinity }}
+        {/* Main title with parallax effect */}
+        <div className="relative z-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.2 }}
+            style={{
+              textShadow: "0 0 30px rgba(168, 85, 247, 0.5)",
+            }}
+          >
+            <PixelHeading
+              text="CREATOR"
+              className="text-8xl sm:text-9xl font-black tracking-tighter mb-6 leading-none text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
+              animate
             />
           </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+            className="relative"
+          >
+            <motion.div
+              className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-pink-500 opacity-75 blur-lg"
+              animate={{
+                opacity: [0.5, 0.8, 0.5],
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+            <PixelHeading
+              text="UNIQUE DIGITAL ASSETS"
+              className="text-3xl sm:text-4xl md:text-5xl mt-2 tracking-wide text-gray-300 relative"
+              animate
+            />
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.2 }}
+            className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto mt-10 mb-12 font-light"
+          >
+            Create and mint custom 3D cubes or music with realistic textures and
+            animations
+          </motion.p>
+
+          {/* Decorative elements */}
+          <motion.div
+            className="flex items-center justify-center gap-4 mt-12"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.6 }}
+          >
+            {[1, 2, 3, 4, 5].map((i) => (
+              <motion.div
+                key={`decoration-${i}`}
+                className="w-3 h-3 bg-purple-500"
+                animate={{
+                  scale: [1, i % 2 === 0 ? 1.5 : 0.7, 1],
+                  opacity: [0.5, 1, 0.5],
+                  backgroundColor: ["#a855f7", "#ec4899", "#a855f7"],
+                }}
+                transition={{
+                  duration: 2 + i * 0.5,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
+              />
+            ))}
+          </motion.div>
         </div>
-      </motion.div>
-    </div>
-  )
-}
+
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 2 }}
+          className="absolute bottom-10 left-1/2 transform -translate-x-1/2"
+        >
+          <div className="flex flex-col items-center">
+            <p className="text-sm text-gray-400 mb-2 font-pixel">
+              SCROLL TO DISCOVER
+            </p>
+            <motion.div className="relative">
+              <svg
+                width="24"
+                height="40"
+                viewBox="0 0 24 40"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  x="0"
+                  y="0"
+                  width="24"
+                  height="40"
+                  rx="12"
+                  stroke="#a855f7"
+                  strokeWidth="2"
+                />
+                <motion.rect
+                  animate={{ y: [4, 28, 4] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                  x="8"
+                  width="8"
+                  height="8"
+                  rx="4"
+                  fill="#ec4899"
+                />
+              </svg>
+
+              {/* Glow effect */}
+              <motion.div
+                className="absolute -inset-4 bg-purple-500 opacity-20 blur-xl rounded-full"
+                animate={{ opacity: [0.1, 0.3, 0.1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+            </motion.div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
 
   useEffect(() => {
     // Update wallet status whenever connection state changes
@@ -1173,6 +1201,7 @@ const Creator3DBanner = () => {
       canvas: canvasRef.current,
       alpha: true,
       antialias: true,
+      preserveDrawingBuffer: true,
       precision: "highp",
       powerPreference: "high-performance",
     });
