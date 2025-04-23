@@ -118,7 +118,13 @@ export default function AIPage() {
   });
   const [variantPreviews, setVariantPreviews] = useState<MaterialParams[]>([]);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const { publicKey, connected, signTransaction, signAllTransactions, sendTransaction } = useWallet();
+  const {
+    publicKey,
+    connected,
+    signTransaction,
+    signAllTransactions,
+    sendTransaction,
+  } = useWallet();
   const [walletStatus, setWalletStatus] = useState<{
     exists: boolean;
     isConnected: boolean;
@@ -129,21 +135,320 @@ export default function AIPage() {
     publicKey: null,
   });
 
+  // Floating particles component - add this near the top of your file
+  const FloatingParticles = () => {
+    interface Particle {
+      id: string;
+      width: number;
+      height: number;
+      backgroundColor: string;
+      boxShadow: string;
+      opacity: number;
+      initialX: number;
+      initialY: number;
+      destinationX: number;
+      destinationY: number;
+    }
+
+    const [particles, setParticles] = useState<Particle[]>([]);
+
+    useEffect(() => {
+      // Generate random particles after component mounts
+      const generatedParticles = Array.from({ length: 40 }).map((_, i) => ({
+        id: `particle-${i}`,
+        width: Math.random() * 3 + 1,
+        height: Math.random() * 3 + 1,
+        backgroundColor:
+          i % 3 === 0 ? "#a855f7" : i % 3 === 1 ? "#ec4899" : "#3b82f6",
+        boxShadow: `0 0 ${Math.random() * 3 + 2}px ${
+          i % 3 === 0 ? "#a855f7" : i % 3 === 1 ? "#ec4899" : "#3b82f6"
+        }`,
+        opacity: Math.random() * 0.5 + 0.2,
+        initialX: Math.random() * 100,
+        initialY: Math.random() * 100,
+        destinationX: Math.random() * 100,
+        destinationY: Math.random() * 100,
+      }));
+
+      setParticles(generatedParticles);
+    }, []);
+
+    return (
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {particles.map((particle) => (
+          <motion.div
+            key={particle.id}
+            className="absolute rounded-full"
+            style={{
+              width: `${particle.width}px`,
+              height: `${particle.height}px`,
+              backgroundColor: particle.backgroundColor,
+              boxShadow: particle.boxShadow,
+              opacity: particle.opacity,
+            }}
+            animate={{
+              x: [particle.initialX + "vw", particle.destinationX + "vw"],
+              y: [particle.initialY + "vh", particle.destinationY + "vh"],
+              opacity: [0.2, 0.5, 0.2],
+            }}
+            transition={{
+              duration: Math.random() * 20 + 20,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  // 3D Banner for Creator Page
+  const Creator3DBanner = () => {
+    // Use useRef instead of useState to prevent re-renders on mouse movement
+    const mousePositionRef = useRef({ x: 0, y: 0 });
+
+    // For tracking mouse movement
+    useEffect(() => {
+      const handleMouseMove = (e: { clientX: number; clientY: number }) => {
+        // Calculate mouse position relative to the center of the viewport
+        const x = (e.clientX / window.innerWidth - 0.5) * 2;
+        const y = (e.clientY / window.innerHeight - 0.5) * 2;
+        mousePositionRef.current = { x, y };
+
+        // Apply the transform directly using DOM methods instead of re-rendering
+        const grid = document.querySelector(".creator-grid-3d") as HTMLElement;
+        if (grid) {
+          grid.style.transform = `rotateX(${y * 5}deg) rotateY(${-x * 5}deg)`;
+        }
+      };
+
+      window.addEventListener("mousemove", handleMouseMove);
+
+      return () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+      };
+    }, []);
+
+    return (
+      <div className="relative h-screen w-full flex items-center justify-center overflow-hidden">
+        {/* Background gradient and particles */}
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-black to-black z-0"></div>
+
+        {/* 3D rotating grid */}
+        <motion.div
+          className="absolute inset-0 z-0 opacity-20"
+          style={{
+            perspective: "1000px",
+            transformStyle: "preserve-3d",
+          }}
+        >
+          <div
+            className="creator-grid-3d w-full h-full grid grid-cols-12 grid-rows-12 gap-4"
+            style={{
+              transformStyle: "preserve-3d",
+            }}
+          >
+            {Array.from({ length: 144 }).map((_, i) => (
+              <motion.div
+                key={`grid-${i}`}
+                className="border border-purple-500/30"
+                style={{
+                  translateZ: Math.sin(i * 0.1) * 20,
+                }}
+                animate={{
+                  opacity: [0.1, i % 10 === 0 ? 0.5 : 0.2, 0.1],
+                  borderColor: [
+                    "rgba(168, 85, 247, 0.3)",
+                    "rgba(236, 72, 153, 0.3)",
+                    "rgba(168, 85, 247, 0.3)",
+                  ],
+                }}
+                transition={{
+                  duration: 4 + Math.random() * 6,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
+              />
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Animated rings */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          {[100, 200, 300, 400].map((size, i) => (
+            <motion.div
+              key={`ring-${i}`}
+              className="absolute border border-purple-500/20 rounded-full"
+              style={{
+                width: size,
+                height: size,
+                borderRadius: "50%",
+              }}
+              animate={{
+                rotate: [0, 360],
+                scale: [1, 1.1, 1],
+                opacity: [0.1, 0.3, 0.1],
+              }}
+              transition={{
+                rotate: {
+                  duration: 20 + i * 5,
+                  repeat: Infinity,
+                  ease: "linear",
+                },
+                scale: {
+                  duration: 3 + i,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                },
+                opacity: {
+                  duration: 4 + i,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                },
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Main title with parallax effect */}
+        <div className="relative z-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.2 }}
+            style={{
+              textShadow: "0 0 30px rgba(168, 85, 247, 0.5)",
+            }}
+          >
+            <PixelHeading
+              text="CREATOR"
+              className="text-8xl sm:text-9xl font-black tracking-tighter mb-6 leading-none text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
+              animate
+            />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+            className="relative"
+          >
+            <motion.div
+              className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-pink-500 opacity-75 blur-lg"
+              animate={{
+                opacity: [0.5, 0.8, 0.5],
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+            <PixelHeading
+              text="UNIQUE DIGITAL ASSETS"
+              className="text-3xl sm:text-4xl md:text-5xl mt-2 tracking-wide text-gray-300 relative"
+              animate
+            />
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.2 }}
+            className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto mt-10 mb-12 font-light"
+          >
+            Create and mint custom 3D cubes or music with realistic textures and
+            animations
+          </motion.p>
+
+          {/* Decorative elements */}
+          <motion.div
+            className="flex items-center justify-center gap-4 mt-12"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.6 }}
+          >
+            {[1, 2, 3, 4, 5].map((i) => (
+              <motion.div
+                key={`decoration-${i}`}
+                className="w-3 h-3 bg-purple-500"
+                animate={{
+                  scale: [1, i % 2 === 0 ? 1.5 : 0.7, 1],
+                  opacity: [0.5, 1, 0.5],
+                  backgroundColor: ["#a855f7", "#ec4899", "#a855f7"],
+                }}
+                transition={{
+                  duration: 2 + i * 0.5,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
+              />
+            ))}
+          </motion.div>
+        </div>
+
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 2 }}
+          className="absolute bottom-10 left-1/2 transform -translate-x-1/2"
+        >
+          <div className="flex flex-col items-center">
+            <p className="text-sm text-gray-400 mb-2 font-pixel">
+              SCROLL TO DISCOVER
+            </p>
+            <motion.div className="relative">
+              <svg
+                width="24"
+                height="40"
+                viewBox="0 0 24 40"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  x="0"
+                  y="0"
+                  width="24"
+                  height="40"
+                  rx="12"
+                  stroke="#a855f7"
+                  strokeWidth="2"
+                />
+                <motion.rect
+                  animate={{ y: [4, 28, 4] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                  x="8"
+                  width="8"
+                  height="8"
+                  rx="4"
+                  fill="#ec4899"
+                />
+              </svg>
+
+              {/* Glow effect */}
+              <motion.div
+                className="absolute -inset-4 bg-purple-500 opacity-20 blur-xl rounded-full"
+                animate={{ opacity: [0.1, 0.3, 0.1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+            </motion.div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
+
   useEffect(() => {
     // Update wallet status whenever connection state changes
     setWalletStatus({
       exists: true, // The wallet adapter is always available when using useWallet()
       isConnected: connected,
-      publicKey: publicKey?.toString() || null
+      publicKey: publicKey?.toString() || null,
     });
-    
+
     console.log("Wallet status updated:", {
       exists: true,
       isConnected: connected,
-      publicKey: publicKey?.toString() || undefined
+      publicKey: publicKey?.toString() || undefined,
     });
   }, [connected, publicKey]);
-
 
   useEffect(() => {
     console.log("Current isInstrumental state:", isInstrumental);
@@ -896,6 +1201,7 @@ export default function AIPage() {
       canvas: canvasRef.current,
       alpha: true,
       antialias: true,
+      preserveDrawingBuffer: true,
       precision: "highp",
       powerPreference: "high-performance",
     });
@@ -1817,52 +2123,64 @@ export default function AIPage() {
     if (activeTab === "cube" && materialParams) {
       try {
         setIsGeneratingCube(true);
-        
+
         // Use the wallet adapter instead of window.solana
-        console.log("Wallet status before minting:", { 
+        console.log("Wallet status before minting:", {
           exists: true, // The wallet adapter always exists
           isConnected: connected,
-          publicKey: publicKey?.toString() 
+          publicKey: publicKey?.toString(),
         });
-        
+
         if (!connected || !publicKey) {
           alert("Please connect your wallet first to mint real NFTs");
           throw new Error("Wallet not connected");
         }
-        
+
         // Generate model and image file
         if (!canvasRef.current) {
           throw new Error("Canvas doesn't exist");
         }
-        
+
         // Get name and description for NFT
         const cubeId = Math.floor(Math.random() * 900000 + 100000).toString();
         const nftName = `VOID Cube ${cubeId}`;
-        const nftDescription = materialParams.description ||
-          `A unique cube with ${materialParams.color || "custom"} color and ${materialParams.texturePattern || "special"} texture pattern.`;
-        
+        const nftDescription =
+          materialParams.description ||
+          `A unique cube with ${materialParams.color || "custom"} color and ${
+            materialParams.texturePattern || "special"
+          } texture pattern.`;
+
         // Convert canvas to file
         const imageFile = await convertCubeToFile(canvasRef.current, nftName);
         console.log("Created image file:", imageFile.name, imageFile.size);
-        
+
         // Prepare attributes for NFT
         const attributes = [
           { trait_type: "Type", value: "Cube" },
           { trait_type: "Color", value: materialParams.color || "Custom" },
-          { trait_type: "Texture", value: materialParams.texturePattern || "None" },
-          { trait_type: "Animation", value: materialParams.animationType || "None" }
+          {
+            trait_type: "Texture",
+            value: materialParams.texturePattern || "None",
+          },
+          {
+            trait_type: "Animation",
+            value: materialParams.animationType || "None",
+          },
         ];
-        
+
         // Get color information to create 3D model
-        const colors = materialParams.gradientColors || [materialParams.color || "#FFFFFF"];
-        
+        const colors = materialParams.gradientColors || [
+          materialParams.color || "#FFFFFF",
+        ];
+
         // Create Solana connection
         const connection = new Connection(
-          process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
-          'confirmed'
+          process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
+            "https://api.devnet.solana.com",
+          "confirmed"
         );
         console.log("Solana connection created:", connection.rpcEndpoint);
-        
+
         // Prepare cube NFT metadata with full materialParams
         const cubeMetadata = await getCubeNFTMetadata(
           nftName,
@@ -1874,32 +2192,39 @@ export default function AIPage() {
             // Include full materialParams to preserve all visual properties
             materialParams: materialParams,
             // Also include colors separately for easier access
-            colors: materialParams.gradientColors || [materialParams.color || "#FFFFFF"]
+            colors: materialParams.gradientColors || [
+              materialParams.color || "#FFFFFF",
+            ],
           }
         );
-        
+
         // Try primary minting method
         try {
-          console.log("Starting real NFT minting on Solana with metadata:", cubeMetadata);
-          
+          console.log(
+            "Starting real NFT minting on Solana with metadata:",
+            cubeMetadata
+          );
+
           // Pass the wallet adapter functions instead of the window.solana object
           const mintedAddress = await mintNFT(
-            connection, 
+            connection,
             {
               publicKey,
               signTransaction,
               signAllTransactions,
-              sendTransaction
-            }, 
+              sendTransaction,
+            },
             cubeMetadata
           );
-          
+
           console.log("NFT minted successfully with address:", mintedAddress);
-          alert(`NFT has been minted successfully! Address: ${mintedAddress}. Check your Profile or Phantom wallet.`);
+          alert(
+            `NFT has been minted successfully! Address: ${mintedAddress}. Check your Profile or Phantom wallet.`
+          );
           return; // Exit on success
         } catch (mintError) {
           console.error("Detailed error during Metaplex minting:", mintError);
-          
+
           // Try alternative minting method
           console.log("Falling back to alternative minting method");
           try {
@@ -1909,30 +2234,46 @@ export default function AIPage() {
                 publicKey,
                 signTransaction,
                 signAllTransactions,
-                sendTransaction
+                sendTransaction,
               },
               {
                 name: nftName,
                 description: nftDescription,
                 attributes,
-                colors
+                colors,
               },
               imageFile
             );
-            
-            console.log("NFT minted with alternative method:", alternativeAddress);
-            alert(`NFT has been minted! Check your Profile and Phantom wallet.`);
+
+            console.log(
+              "NFT minted with alternative method:",
+              alternativeAddress
+            );
+            alert(
+              `NFT has been minted! Check your Profile and Phantom wallet.`
+            );
             return; // Exit on success
           } catch (altMintError) {
             console.error("Alternative minting failed:", altMintError);
-            throw new Error(`Both minting methods failed: ${mintError instanceof Error ? mintError.message : String(mintError)}, ${altMintError instanceof Error ? altMintError.message : String(altMintError)}`);
+            throw new Error(
+              `Both minting methods failed: ${
+                mintError instanceof Error
+                  ? mintError.message
+                  : String(mintError)
+              }, ${
+                altMintError instanceof Error
+                  ? altMintError.message
+                  : String(altMintError)
+              }`
+            );
           }
         }
       } catch (error) {
         console.error("Complete error trace for minting:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+        const errorMessage =
+          error instanceof Error ? error.message : "An unknown error occurred";
         alert(`Error minting NFT: ${errorMessage}. Check console for details.`);
-        
+
         // Only store locally if explicitly requested as fallback
         if (confirm("Would you like to store this NFT locally instead?")) {
           // Local storage fallback here...
@@ -1944,7 +2285,7 @@ export default function AIPage() {
       try {
         // Show minting status
         setIsGeneratingMusic(true);
-  
+
         // Create metadata for music NFT
         const nftName = `VOID Music: ${musicTitle || "Untitled"}`;
         const nftDescription = `${musicStyle} music track${
@@ -1954,41 +2295,41 @@ export default function AIPage() {
               }`
             : ""
         }`;
-  
+
         // Prepare attributes
         const attributes = [
           { trait_type: "Type", value: "Music" },
           { trait_type: "Style", value: musicStyle || "Custom" },
           { trait_type: "Instrumental", value: isInstrumental ? "Yes" : "No" },
         ];
-  
+
         // Create display image for music
         const audioName = nftName.replace(/\s+/g, "-").toLowerCase();
-  
+
         // Create display image from empty canvas with music waveform
         const tempCanvas = document.createElement("canvas");
         tempCanvas.width = 800;
         tempCanvas.height = 800;
         const ctx = tempCanvas.getContext("2d");
-  
+
         if (ctx) {
           // Create nice gradient background
           const gradient = ctx.createLinearGradient(0, 0, 800, 800);
           gradient.addColorStop(0, "#5d4fff");
           gradient.addColorStop(0.5, "#c42bb4");
           gradient.addColorStop(1, "#1e58af");
-  
+
           // Draw background
           ctx.fillStyle = gradient;
           ctx.fillRect(0, 0, 800, 800);
-  
+
           // Draw music waveform
           ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
           ctx.lineWidth = 3;
-  
+
           const waveHeight = 200;
           const centerY = 400;
-  
+
           ctx.beginPath();
           for (let i = 0; i < 800; i += 10) {
             const amplitude = Math.random() * waveHeight;
@@ -2000,21 +2341,21 @@ export default function AIPage() {
             }
           }
           ctx.stroke();
-  
+
           // Draw title and info
           ctx.fillStyle = "white";
           ctx.font = "bold 48px Arial";
           ctx.textAlign = "center";
           ctx.fillText(musicTitle || "VOID Music", 400, 300);
-  
+
           ctx.font = "32px Arial";
           ctx.fillText(musicStyle, 400, 350);
-  
+
           // Draw VOID logo
           ctx.font = "bold 24px Arial";
           ctx.fillText("VOID RESONANCE", 400, 720);
         }
-  
+
         // Convert canvas to image file
         const imageBlob = await new Promise<Blob>((resolve) => {
           tempCanvas.toBlob((blob) => {
@@ -2022,29 +2363,30 @@ export default function AIPage() {
             else resolve(new Blob([]));
           }, "image/png");
         });
-  
+
         const imageFile = new File([imageBlob], `${audioName}-cover.png`, {
           type: "image/png",
         });
-  
+
         // Get audio URL
         const audioUrl = musicGeneration.audio_url;
         console.log("Audio URL for minting:", audioUrl);
-  
+
         // Check if wallet is connected
         if (!connected || !publicKey) {
           alert("Please connect your wallet first to mint music NFTs");
           throw new Error("Wallet not connected");
         }
-  
+
         try {
           // Create Solana connection - SAME as in the cube section
           console.log("Creating Solana connection for music NFT");
           const connection = new Connection(
-            process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
-            'confirmed'
+            process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
+              "https://api.devnet.solana.com",
+            "confirmed"
           );
-  
+
           // Get metadata from helper function
           const musicMetadata = await getMusicNFTMetadata(
             nftName,
@@ -2053,7 +2395,7 @@ export default function AIPage() {
             audioUrl,
             attributes
           );
-  
+
           // Mint real NFT on Solana - use the wallet adapter, not window.solana
           console.log("Starting music NFT minting with wallet adapter");
           const mintedAddress = await mintNFT(
@@ -2062,58 +2404,70 @@ export default function AIPage() {
               publicKey,
               signTransaction,
               signAllTransactions,
-              sendTransaction
+              sendTransaction,
             },
             musicMetadata
           );
-  
+
           console.log("Music NFT minted successfully, address:", mintedAddress);
-          alert(`Music NFT has been minted successfully! Address: ${mintedAddress}. Check your Profile or Phantom wallet.`);
+          alert(
+            `Music NFT has been minted successfully! Address: ${mintedAddress}. Check your Profile or Phantom wallet.`
+          );
         } catch (mintingError) {
           console.error("Music NFT minting failed:", mintingError);
-          
+
           // Try alternative minting method
           try {
             console.log("Falling back to alternative music minting method");
             const connection = new Connection(
-              process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
-              'confirmed'
+              process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
+                "https://api.devnet.solana.com",
+              "confirmed"
             );
-            
+
             // Add audio URL as an attribute
             attributes.push({
               trait_type: "Audio URL",
-              value: audioUrl || ""
+              value: audioUrl || "",
             });
-            
+
             // Create a data object that matches the expected type for mintRealNFT
             const mintData = {
               name: nftName,
               description: nftDescription,
               attributes,
-              colors: ["#5d4fff", "#c42bb4", "#1e58af"] // Use the gradient colors from the canvas
+              colors: ["#5d4fff", "#c42bb4", "#1e58af"], // Use the gradient colors from the canvas
             };
-            
+
             const alternativeAddress = await mintRealNFT(
               connection,
               {
                 publicKey,
                 signTransaction,
                 signAllTransactions,
-                sendTransaction
+                sendTransaction,
               },
               mintData,
               imageFile
             );
-            
-            console.log("Music NFT minted with alternative method:", alternativeAddress);
-            alert(`Music NFT has been minted! Check your Profile and Phantom wallet.`);
+
+            console.log(
+              "Music NFT minted with alternative method:",
+              alternativeAddress
+            );
+            alert(
+              `Music NFT has been minted! Check your Profile and Phantom wallet.`
+            );
             return;
           } catch (altMintError) {
             console.error("Alternative music minting failed:", altMintError);
-            
+
             // Only if both methods fail, ask the user if they want to store locally
-            if (confirm("Failed to mint music NFT on the blockchain. Would you like to store it locally instead?")) {
+            if (
+              confirm(
+                "Failed to mint music NFT on the blockchain. Would you like to store it locally instead?"
+              )
+            ) {
               try {
                 // Local storage fallback - create data URL for image
                 const reader = new FileReader();
@@ -2123,7 +2477,7 @@ export default function AIPage() {
                     localStorage.getItem("userNfts") || "[]"
                   );
                   const mockId = `local-music-${Date.now()}`;
-  
+
                   userNfts.push({
                     id: mockId,
                     name: nftName,
@@ -2135,20 +2489,24 @@ export default function AIPage() {
                     type: "music",
                     local: true, // Mark as locally stored NFT
                   });
-  
+
                   localStorage.setItem("userNfts", JSON.stringify(userNfts));
-                  alert("Music NFT has been stored locally. View it in your Profile page.");
+                  alert(
+                    "Music NFT has been stored locally. View it in your Profile page."
+                  );
                 };
               } catch (localError) {
                 console.error("Failed to store NFT locally:", localError);
-                alert("Failed to mint or store music NFT. Please try again later.");
+                alert(
+                  "Failed to mint or store music NFT. Please try again later."
+                );
               }
             } else {
               alert("Music NFT minting was cancelled.");
             }
           }
         }
-  
+
         console.log("Music NFT processing complete");
       } catch (error: any) {
         console.error("Error when minting music NFT:", error);
@@ -2161,6 +2519,7 @@ export default function AIPage() {
 
   return (
     <div className="relative bg-black text-white overflow-hidden font-pixel">
+      {/* Custom cursor */}
       <motion.div
         className="fixed w-8 h-8 pointer-events-none z-[100] hidden md:block"
         animate={{
@@ -2181,73 +2540,27 @@ export default function AIPage() {
           <rect x="28" y="0" width="4" height="4" fill="#a855f7" />
           <rect x="0" y="28" width="4" height="4" fill="#a855f7" />
           <rect x="28" y="28" width="4" height="4" fill="#a855f7" />
-          <rect x="12" y="12" width="8" height="8" fill="#ec4899" />
+          <rect
+            x="12"
+            y="12"
+            width="8"
+            height="8"
+            fill={cursorHover ? "#ec4899" : "#a855f7"}
+          />
         </svg>
       </motion.div>
 
       <Navigation />
 
-      <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden pt-20">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-black to-black"></div>
-        </div>
+      {/* Enhanced 3D Banner */}
+      <Creator3DBanner />
 
-        <div className="container mx-auto px-4 z-10 relative">
-          <div className="max-w-7xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1 }}
-              className="mb-6"
-            >
-              <PixelHeading
-                text="CREATOR"
-                className="text-8xl sm:text-9xl md:text-[12rem] font-black tracking-tighter mb-6 leading-none text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
-                animate
-              />
-              <PixelHeading
-                text="GENERATE UNIQUE DIGITAL ASSETS"
-                className="text-3xl sm:text-4xl md:text-5xl mt-2 tracking-wide text-gray-300"
-                animate
-              />
-            </motion.div>
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 1, delay: 0.6 }}
-              className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto mb-10 font-light"
-            >
-              Create and mint custom 3D cubes or music with realistic textures
-              and animations
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.8 }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-6"
-              onMouseEnter={() => setCursorHover(true)}
-              onMouseLeave={() => setCursorHover(false)}
-            >
-              <Button
-                size="lg"
-                className="bg-transparent border-2 border-purple-500 hover:bg-purple-950/30 text-white rounded-none px-10 py-8 text-xl font-pixel tracking-wide transition-all duration-300"
-                onClick={() =>
-                  document
-                    .getElementById("creator")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
-              >
-                START CREATING
-              </Button>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
+      {/* Creator Section */}
       <section id="creator" className="relative py-20">
-        <div className="container mx-auto px-4">
+        {/* Floating particles background */}
+        <FloatingParticles />
+
+        <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-6xl mx-auto">
             <Tabs
               defaultValue="cube"
@@ -2276,7 +2589,7 @@ export default function AIPage() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                <div className="bg-black border border-purple-900/50 p-8">
+                <div className="bg-gradient-to-br from-purple-900/20 to-black border border-purple-500/50 rounded-lg p-8 shadow-lg shadow-purple-500/10">
                   {activeTab === "cube" ? (
                     <>
                       <PixelHeading

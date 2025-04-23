@@ -1,14 +1,20 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect, useRef } from "react"
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion"
-import Navigation from "@/components/navigation"
-import Footer from "@/components/footer"
-import PixelHeading from "@/components/pixel-heading"
-import AbstractShape from "@/components/abstract-shape"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { ChevronDown, ExternalLink, Sparkles } from "lucide-react"
+import React, { useState, useEffect, useRef } from "react";
+import {
+  motion,
+  AnimatePresence,
+  useMotionValue,
+  useTransform,
+  useSpring,
+} from "framer-motion";
+import Navigation from "@/components/navigation";
+import Footer from "@/components/footer";
+import PixelHeading from "@/components/pixel-heading";
+import AbstractShape from "@/components/abstract-shape";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { ChevronDown, ExternalLink, Sparkles } from "lucide-react";
 
 // Enhanced realms data with more detailed properties for 3D models
 const realms = [
@@ -27,7 +33,11 @@ const realms = [
     particleType: "mirror",
     ambientSound: "/audio/echo-theme.mp3",
     modelType: "mirror-fragments",
-    gameplayElements: ["Memory challenges", "Reflection puzzles", "Temporal distortions"],
+    gameplayElements: [
+      "Memory challenges",
+      "Reflection puzzles",
+      "Temporal distortions",
+    ],
     iconType: "ripple",
   },
   {
@@ -45,7 +55,11 @@ const realms = [
     particleType: "node",
     ambientSound: "/audio/nexus-theme.mp3",
     modelType: "nodal-network",
-    gameplayElements: ["Connection challenges", "Path finding", "Community insights"],
+    gameplayElements: [
+      "Connection challenges",
+      "Path finding",
+      "Community insights",
+    ],
     iconType: "network",
   },
   {
@@ -54,7 +68,7 @@ const realms = [
     poem: "Depths unfathomable,\nDarkness that consumes,\nIn absence, truth emerges,\nFrom void, light blooms.",
     theme: "Emptiness and Discovery",
     description:
-      "A realm of vast emptiness punctuated by moments of intense beauty. Players must navigate through darkness, discovering hidden meanings and uncovering the secrets of the void itself.",
+      "A realm of vast emptiness punctuated by moments of intense beauty. Players navigate through darkness, discovering hidden meanings and uncovering the secrets of the void itself.",
     color: "from-pink-400 to-blue-600",
     brightColor: "from-pink-300 to-blue-400",
     darkColor: "from-pink-950 to-blue-950",
@@ -63,7 +77,11 @@ const realms = [
     particleType: "void",
     ambientSound: "/audio/abyss-theme.mp3",
     modelType: "void-sphere",
-    gameplayElements: ["Darkness navigation", "Light discovery", "Hidden truths"],
+    gameplayElements: [
+      "Darkness navigation",
+      "Light discovery",
+      "Hidden truths",
+    ],
     iconType: "void",
   },
   {
@@ -81,7 +99,11 @@ const realms = [
     particleType: "pulse",
     ambientSound: "/audio/pulse-theme.mp3",
     modelType: "pulse-orb",
-    gameplayElements: ["Rhythm matching", "Harmonic puzzles", "Synchronized movement"],
+    gameplayElements: [
+      "Rhythm matching",
+      "Harmonic puzzles",
+      "Synchronized movement",
+    ],
     iconType: "wave",
   },
   {
@@ -99,7 +121,11 @@ const realms = [
     particleType: "symbol",
     ambientSound: "/audio/cipher-theme.mp3",
     modelType: "glyph-cube",
-    gameplayElements: ["Code breaking", "Pattern recognition", "Symbol translation"],
+    gameplayElements: [
+      "Code breaking",
+      "Pattern recognition",
+      "Symbol translation",
+    ],
     iconType: "glyph",
   },
   {
@@ -112,16 +138,42 @@ const realms = [
     color: "from-green-400 to-blue-600",
     brightColor: "from-green-300 to-blue-400",
     darkColor: "from-green-900 to-blue-950",
-    shapeType: "square" as "square", 
+    shapeType: "square" as "square",
     particleCount: 140,
     particleType: "block",
     ambientSound: "/audio/cryptic-theme.mp3",
     modelType: "tetris-blocks",
-    gameplayElements: ["Pattern matching", "Spatial reasoning", "Block manipulation"],
+    gameplayElements: [
+      "Pattern matching",
+      "Spatial reasoning",
+      "Block manipulation",
+    ],
     iconType: "block",
   },
   {
     id: "vortex",
+    name: "VORTEX",
+    poem: "Prismatic pixels dancing,\nCanvas of infinite hue,\nCreation from fragments,\nVisions made new.",
+    theme: "Creativity and Expression",
+    description:
+      "A mesmerizing realm where players manifest their imagination through pixel art creation. Craft intricate digital masterpieces that come alive within the canvas, with each colored block resonating its own frequency in the harmonic tapestry of the VOID.",
+    color: "from-amber-400 to-red-600",
+    brightColor: "from-amber-300 to-red-400",
+    darkColor: "from-amber-950 to-red-950",
+    shapeType: "square" as "square",
+    particleCount: 160,
+    particleType: "pixel",
+    ambientSound: "/audio/vortex-theme.mp3",
+    modelType: "pixel-canvas",
+    gameplayElements: [
+      "Pixel art creation",
+      "Color palette mastery",
+      "Animation frames",
+    ],
+    iconType: "pixel",
+  },
+  {
+    id: "enigma",
     name: "???",
     poem: "Between dimensions,\nFractal paths unfold,\nBeyond perception's grasp,\nCosmic secrets told.",
     theme: "Unknown Dimensions",
@@ -133,12 +185,16 @@ const realms = [
     shapeType: "complex" as "complex",
     particleCount: 160,
     particleType: "fractal",
-    ambientSound: "/audio/vortex-theme.mp3",
+    ambientSound: "/audio/enigma-theme.mp3",
     modelType: "fractal-vortex",
-    gameplayElements: ["Dimensional shifting", "Reality manipulation", "Perception challenges"],
+    gameplayElements: [
+      "Dimensional shifting",
+      "Reality manipulation",
+      "Perception challenges",
+    ],
     iconType: "vortex",
   },
-]
+];
 
 // Custom 3D model components for each realm
 interface Realm {
@@ -150,7 +206,17 @@ interface Realm {
   color: string;
   brightColor: string;
   darkColor: string;
-  shapeType: "circle" | "square" | "triangle" | "complex" | "wave" | "grid" | "dots" | "noise" | "loading" | "gamepad";
+  shapeType:
+    | "circle"
+    | "square"
+    | "triangle"
+    | "complex"
+    | "wave"
+    | "grid"
+    | "dots"
+    | "noise"
+    | "loading"
+    | "gamepad";
   particleCount: number;
   particleType: string;
   ambientSound: string;
@@ -159,18 +225,26 @@ interface Realm {
   iconType: string;
 }
 
-const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mouseY: any }) => {
+const RealmModel = ({
+  realm,
+  mouseX,
+  mouseY,
+}: {
+  realm: Realm;
+  mouseX: any;
+  mouseY: any;
+}) => {
   // FIXED: Use React's useEffect to safely access window
   const [dimensions, setDimensions] = useState({ width: 1000, height: 800 });
-  
+
   useEffect(() => {
     // Only access window when component is mounted in the browser
     setDimensions({
       width: window.innerWidth,
-      height: window.innerHeight
+      height: window.innerHeight,
     });
   }, []);
-  
+
   // Set up rotation based on mouse position
   const rotateX = useTransform(mouseY, [0, dimensions.height], [15, -15]);
   const rotateY = useTransform(mouseX, [0, dimensions.width], [-15, 15]);
@@ -183,7 +257,11 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
     return (
       <motion.div
         className="w-full h-full relative"
-        style={{ rotateX: springRotateX, rotateY: springRotateY, perspective: 1000 }}
+        style={{
+          rotateX: springRotateX,
+          rotateY: springRotateY,
+          perspective: 1000,
+        }}
       >
         <div className="transform-style-preserve-3d relative w-full h-full">
           {/* Echo realm - Fragmented mirrors that reflect and ripple */}
@@ -198,32 +276,36 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
                 rotateX: Math.sin(i) * 45,
                 rotateY: Math.cos(i) * 45,
                 scale: [1, 1.05, 0.95, 1],
-                opacity: [0.7, 0.8, 0.7]
+                opacity: [0.7, 0.8, 0.7],
               }}
               transition={{
                 duration: 6 + i * 0.5,
                 repeat: Infinity,
                 repeatType: "reverse",
-                ease: "easeInOut"
+                ease: "easeInOut",
               }}
               style={{
                 transformOrigin: "center center",
                 transformStyle: "preserve-3d",
                 boxShadow: "0 0 20px rgba(148, 0, 255, 0.4)",
-                border: "1px solid rgba(255, 255, 255, 0.2)"
+                border: "1px solid rgba(255, 255, 255, 0.2)",
               }}
             />
           ))}
         </div>
       </motion.div>
-    )
+    );
   }
-  
+
   if (realm.modelType === "nodal-network") {
     return (
       <motion.div
         className="w-full h-full relative"
-        style={{ rotateX: springRotateX, rotateY: springRotateY, perspective: 1200 }}
+        style={{
+          rotateX: springRotateX,
+          rotateY: springRotateY,
+          perspective: 1200,
+        }}
       >
         <div className="transform-style-preserve-3d relative w-full h-full">
           {/* Nexus realm - Interconnected network of nodes */}
@@ -232,102 +314,119 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               <motion.div
                 className="absolute w-6 h-6 rounded-full bg-gradient-to-r from-purple-400 to-pink-600"
                 animate={{
-                  x: Math.sin(i * Math.PI / 6) * 150,
-                  y: Math.cos(i * Math.PI / 6) * 150,
+                  x: Math.sin((i * Math.PI) / 6) * 150,
+                  y: Math.cos((i * Math.PI) / 6) * 150,
                   z: Math.sin(i * 1.2) * 60,
-                  scale: [1, 1.2, 1]
+                  scale: [1, 1.2, 1],
                 }}
                 transition={{
                   duration: 8,
                   repeat: Infinity,
                   repeatType: "reverse",
                   ease: "easeInOut",
-                  delay: i * 0.2
+                  delay: i * 0.2,
                 }}
                 style={{
-                  boxShadow: "0 0 15px rgba(236, 72, 153, 0.6)"
+                  boxShadow: "0 0 15px rgba(236, 72, 153, 0.6)",
                 }}
               />
               {/* Connection lines between nodes */}
               {Array.from({ length: 3 }).map((_, j) => {
-                const connectedNodeIndex = (i + j + 1) % 12
+                const connectedNodeIndex = (i + j + 1) % 12;
                 return (
                   <motion.div
                     key={`nexus-connection-${i}-${j}`}
                     className="absolute h-px bg-gradient-to-r from-purple-500/60 to-pink-500/60 origin-left"
                     animate={{
-                      opacity: [0.3, 0.6, 0.3]
+                      opacity: [0.3, 0.6, 0.3],
                     }}
                     transition={{
                       duration: 4,
                       repeat: Infinity,
                       repeatType: "reverse",
-                      ease: "easeInOut"
+                      ease: "easeInOut",
                     }}
                     style={{
                       width: "150px",
                       transformStyle: "preserve-3d",
-                      left: `calc(50% + ${Math.sin(i * Math.PI / 6) * 150}px)`,
-                      top: `calc(50% + ${Math.cos(i * Math.PI / 6) * 150}px)`,
-                      transform: `rotateZ(${Math.atan2(
-                        Math.cos(connectedNodeIndex * Math.PI / 6) - Math.cos(i * Math.PI / 6),
-                        Math.sin(connectedNodeIndex * Math.PI / 6) - Math.sin(i * Math.PI / 6)
-                      ) * 180 / Math.PI}deg)`,
-                      boxShadow: "0 0 10px rgba(236, 72, 153, 0.4)"
+                      left: `calc(50% + ${
+                        Math.sin((i * Math.PI) / 6) * 150
+                      }px)`,
+                      top: `calc(50% + ${Math.cos((i * Math.PI) / 6) * 150}px)`,
+                      transform: `rotateZ(${
+                        (Math.atan2(
+                          Math.cos((connectedNodeIndex * Math.PI) / 6) -
+                            Math.cos((i * Math.PI) / 6),
+                          Math.sin((connectedNodeIndex * Math.PI) / 6) -
+                            Math.sin((i * Math.PI) / 6)
+                        ) *
+                          180) /
+                        Math.PI
+                      }deg)`,
+                      boxShadow: "0 0 10px rgba(236, 72, 153, 0.4)",
                     }}
                   />
-                )
+                );
               })}
             </React.Fragment>
           ))}
         </div>
       </motion.div>
-    )
+    );
   }
-  
+
   if (realm.modelType === "void-sphere") {
     return (
       <motion.div
         className="w-full h-full relative"
-        style={{ rotateX: springRotateX, rotateY: springRotateY, perspective: 1000 }}
+        style={{
+          rotateX: springRotateX,
+          rotateY: springRotateY,
+          perspective: 1000,
+        }}
       >
         <div className="transform-style-preserve-3d relative w-full h-full">
           {/* Abyss realm - Deep void sphere with emerging light particles */}
-          <motion.div 
+          <motion.div
             className="absolute top-1/2 left-1/2 w-64 h-64 rounded-full bg-black"
             style={{
               transform: "translate(-50%, -50%)",
-              boxShadow: "inset 0 0 50px rgba(219, 39, 119, 0.3), 0 0 100px rgba(37, 99, 235, 0.3)",
-              border: "1px solid rgba(219, 39, 119, 0.3)"
+              boxShadow:
+                "inset 0 0 50px rgba(219, 39, 119, 0.3), 0 0 100px rgba(37, 99, 235, 0.3)",
+              border: "1px solid rgba(219, 39, 119, 0.3)",
             }}
           />
-          
+
           {/* Light particles emerging from the void */}
           {Array.from({ length: 20 }).map((_, i) => (
             <motion.div
               key={`abyss-particle-${i}`}
               className="absolute w-1 h-1 rounded-full bg-white"
               animate={{
-                x: [0, Math.sin(i * Math.PI / 10) * 200],
-                y: [0, Math.cos(i * Math.PI / 10) * 200],
+                x: [0, Math.sin((i * Math.PI) / 10) * 200],
+                y: [0, Math.cos((i * Math.PI) / 10) * 200],
                 opacity: [0, 0.8, 0],
-                scale: [0, 1.5, 0]
+                scale: [0, 1.5, 0],
               }}
               transition={{
                 duration: 6 + Math.random() * 4,
                 repeat: Infinity,
                 delay: i * 0.3,
-                ease: "easeOut"
+                ease: "easeOut",
               }}
               style={{
                 left: "50%",
                 top: "50%",
-                boxShadow: `0 0 8px ${i % 2 === 0 ? "rgba(219, 39, 119, 0.8)" : "rgba(37, 99, 235, 0.8)"}`,
-                zIndex: 10
+                boxShadow: `0 0 8px ${
+                  i % 2 === 0
+                    ? "rgba(219, 39, 119, 0.8)"
+                    : "rgba(37, 99, 235, 0.8)"
+                }`,
+                zIndex: 10,
               }}
             />
           ))}
-          
+
           {/* Deep space stars background */}
           {Array.from({ length: 50 }).map((_, i) => (
             <motion.div
@@ -335,51 +434,55 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               className="absolute w-px h-px rounded-full bg-white"
               animate={{
                 opacity: [0.3, 0.8, 0.3],
-                scale: [1, 1.5, 1]
+                scale: [1, 1.5, 1],
               }}
               transition={{
                 duration: 2 + Math.random() * 3,
                 repeat: Infinity,
                 delay: i * 0.1,
-                ease: "easeInOut"
+                ease: "easeInOut",
               }}
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
-                boxShadow: "0 0 3px rgba(255, 255, 255, 0.8)"
+                boxShadow: "0 0 3px rgba(255, 255, 255, 0.8)",
               }}
             />
           ))}
         </div>
       </motion.div>
-    )
+    );
   }
-  
+
   if (realm.modelType === "pulse-orb") {
     return (
       <motion.div
         className="w-full h-full relative"
-        style={{ rotateX: springRotateX, rotateY: springRotateY, perspective: 1000 }}
+        style={{
+          rotateX: springRotateX,
+          rotateY: springRotateY,
+          perspective: 1000,
+        }}
       >
         <div className="transform-style-preserve-3d relative w-full h-full">
           {/* Pulse realm - Pulsating orb with rhythm waves */}
           <motion.div
             className="absolute top-1/2 left-1/2 w-40 h-40 rounded-full bg-gradient-to-r from-blue-400 to-pink-600"
             animate={{
-              scale: [1, 1.15, 1]
+              scale: [1, 1.15, 1],
             }}
             transition={{
               duration: 2,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
             style={{
               transform: "translate(-50%, -50%)",
               boxShadow: "0 0 60px rgba(59, 130, 246, 0.5)",
-              zIndex: 10
+              zIndex: 10,
             }}
           />
-          
+
           {/* Orbital rings */}
           {Array.from({ length: 3 }).map((_, i) => (
             <motion.div
@@ -388,22 +491,28 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               style={{
                 width: `${180 + i * 60}px`,
                 height: `${180 + i * 60}px`,
-                borderColor: i % 2 === 0 ? "rgba(59, 130, 246, 0.4)" : "rgba(236, 72, 153, 0.4)",
+                borderColor:
+                  i % 2 === 0
+                    ? "rgba(59, 130, 246, 0.4)"
+                    : "rgba(236, 72, 153, 0.4)",
                 borderWidth: "2px",
                 transform: "translate(-50%, -50%) rotateX(70deg)",
-                boxShadow: i % 2 === 0 ? "0 0 15px rgba(59, 130, 246, 0.3)" : "0 0 15px rgba(236, 72, 153, 0.3)"
+                boxShadow:
+                  i % 2 === 0
+                    ? "0 0 15px rgba(59, 130, 246, 0.3)"
+                    : "0 0 15px rgba(236, 72, 153, 0.3)",
               }}
               animate={{
-                rotate: [0, 360]
+                rotate: [0, 360],
               }}
               transition={{
                 duration: 15 + i * 5,
                 repeat: Infinity,
-                ease: "linear"
+                ease: "linear",
               }}
             />
           ))}
-          
+
           {/* Pulse wave particles */}
           {Array.from({ length: 12 }).map((_, i) => (
             <motion.div
@@ -411,41 +520,45 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               className="absolute w-3 h-3 rounded-full bg-white"
               animate={{
                 x: [
-                  Math.cos(i * Math.PI / 6) * 100,
-                  Math.cos(i * Math.PI / 6) * 130,
-                  Math.cos(i * Math.PI / 6) * 100
+                  Math.cos((i * Math.PI) / 6) * 100,
+                  Math.cos((i * Math.PI) / 6) * 130,
+                  Math.cos((i * Math.PI) / 6) * 100,
                 ],
                 y: [
-                  Math.sin(i * Math.PI / 6) * 100,
-                  Math.sin(i * Math.PI / 6) * 130,
-                  Math.sin(i * Math.PI / 6) * 100
+                  Math.sin((i * Math.PI) / 6) * 100,
+                  Math.sin((i * Math.PI) / 6) * 130,
+                  Math.sin((i * Math.PI) / 6) * 100,
                 ],
-                opacity: [0.5, 1, 0.5]
+                opacity: [0.5, 1, 0.5],
               }}
               transition={{
                 duration: 2,
                 repeat: Infinity,
                 delay: i * 0.15,
-                ease: "easeInOut"
+                ease: "easeInOut",
               }}
               style={{
                 left: "50%",
                 top: "50%",
                 backgroundImage: `linear-gradient(to right, #60a5fa, #db2777)`,
-                boxShadow: "0 0 10px rgba(255, 255, 255, 0.8)"
+                boxShadow: "0 0 10px rgba(255, 255, 255, 0.8)",
               }}
             />
           ))}
         </div>
       </motion.div>
-    )
+    );
   }
-  
+
   if (realm.modelType === "glyph-cube") {
     return (
       <motion.div
         className="w-full h-full relative"
-        style={{ rotateX: springRotateX, rotateY: springRotateY, perspective: 1200 }}
+        style={{
+          rotateX: springRotateX,
+          rotateY: springRotateY,
+          perspective: 1200,
+        }}
       >
         <div className="transform-style-preserve-3d relative w-full h-full">
           {/* Cipher realm - Cube with glyphs and symbols */}
@@ -457,27 +570,27 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               "rotateY(90deg) translateZ(80px)",
               "rotateY(-90deg) translateZ(80px)",
               "rotateX(90deg) translateZ(80px)",
-              "rotateX(-90deg) translateZ(80px)"
-            ]
-            
+              "rotateX(-90deg) translateZ(80px)",
+            ];
+
             return (
               <motion.div
                 key={`cipher-face-${face}`}
                 className="absolute top-0 left-0 w-40 h-40 bg-gradient-to-br from-purple-900/80 to-blue-900/80 border border-purple-500/50"
                 animate={{
-                  opacity: [0.7, 0.9, 0.7]
+                  opacity: [0.7, 0.9, 0.7],
                 }}
                 transition={{
                   duration: 3,
                   repeat: Infinity,
                   delay: face * 0.5,
-                  ease: "easeInOut"
+                  ease: "easeInOut",
                 }}
                 style={{
                   transform: `${transforms[face]}`,
                   transformStyle: "preserve-3d",
                   backfaceVisibility: "hidden",
-                  boxShadow: "0 0 20px rgba(91, 33, 182, 0.4)"
+                  boxShadow: "0 0 20px rgba(91, 33, 182, 0.4)",
                 }}
               >
                 {/* Glyphs/Symbols */}
@@ -487,54 +600,54 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
                     className="absolute"
                     animate={{
                       opacity: [0.5, 1, 0.5],
-                      scale: [1, 1.2, 1]
+                      scale: [1, 1.2, 1],
                     }}
                     transition={{
                       duration: 4,
                       repeat: Infinity,
                       delay: i * 0.5,
-                      ease: "easeInOut"
+                      ease: "easeInOut",
                     }}
                     style={{
                       left: `${25 + i * 20}%`,
                       top: `${25 + (i % 3) * 20}%`,
-                      width: "20px", 
+                      width: "20px",
                       height: "20px",
                       fontFamily: "sans-serif",
                       fontSize: "18px",
                       color: "#a78bfa",
-                      textShadow: "0 0 8px rgba(167, 139, 250, 0.8)"
+                      textShadow: "0 0 8px rgba(167, 139, 250, 0.8)",
                     }}
                   >
                     {["⌘", "⧗", "⏣", "⏢", "⌬", "⎔", "⍟", "⌖", "⌗"][face + i]}
                   </motion.div>
                 ))}
               </motion.div>
-            )
+            );
           })}
-          
+
           {/* Floating symbols around the cube */}
           {Array.from({ length: 8 }).map((_, i) => (
             <motion.div
               key={`floating-symbol-${i}`}
               className="absolute text-purple-400 text-2xl font-bold"
               animate={{
-                x: Math.sin(i * Math.PI / 4) * 150,
-                y: Math.cos(i * Math.PI / 4) * 150,
+                x: Math.sin((i * Math.PI) / 4) * 150,
+                y: Math.cos((i * Math.PI) / 4) * 150,
                 z: Math.sin(i * 0.8) * 50,
                 opacity: [0.4, 0.8, 0.4],
-                scale: [0.8, 1.2, 0.8]
+                scale: [0.8, 1.2, 0.8],
               }}
               transition={{
                 duration: 5 + i * 0.3,
                 repeat: Infinity,
                 ease: "easeInOut",
-                delay: i * 0.2
+                delay: i * 0.2,
               }}
               style={{
                 left: "50%",
                 top: "50%",
-                textShadow: "0 0 8px rgba(167, 139, 250, 0.8)"
+                textShadow: "0 0 8px rgba(167, 139, 250, 0.8)",
               }}
             >
               {["¤", "Ω", "Δ", "∑", "∞", "≠", "±", "⊕"][i]}
@@ -542,14 +655,18 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
           ))}
         </div>
       </motion.div>
-    )
+    );
   }
 
   if (realm.modelType === "tetris-blocks") {
     return (
       <motion.div
         className="w-full h-full relative"
-        style={{ rotateX: springRotateX, rotateY: springRotateY, perspective: 1000 }}
+        style={{
+          rotateX: springRotateX,
+          rotateY: springRotateY,
+          perspective: 1000,
+        }}
       >
         <div className="transform-style-preserve-3d relative w-full h-full">
           {/* Tetris Game Board - Central Element */}
@@ -559,28 +676,32 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               transform: "translate(-50%, -50%)",
               backgroundColor: "rgba(0, 0, 0, 0.7)",
               boxShadow: "0 0 30px rgba(16, 185, 129, 0.3)",
-              zIndex: 1
+              zIndex: 1,
             }}
             animate={{
-              borderColor: ["rgba(16, 185, 129, 0.3)", "rgba(37, 99, 235, 0.3)", "rgba(16, 185, 129, 0.3)"]
+              borderColor: [
+                "rgba(16, 185, 129, 0.3)",
+                "rgba(37, 99, 235, 0.3)",
+                "rgba(16, 185, 129, 0.3)",
+              ],
             }}
             transition={{
               duration: 4,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
           >
             {/* Game board grid lines */}
             <div className="w-full h-full grid grid-cols-10 grid-rows-20">
               {Array.from({ length: 200 }).map((_, i) => (
-                <div 
-                  key={`grid-cell-${i}`} 
+                <div
+                  key={`grid-cell-${i}`}
                   className="border border-green-500/10"
                 />
               ))}
             </div>
           </motion.div>
-          
+
           {/* Tetris blocks falling and rotating */}
           {/* T-Block */}
           <motion.div
@@ -589,30 +710,38 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               width: "60px",
               height: "45px",
               transformStyle: "preserve-3d",
-              zIndex: 5
+              zIndex: 5,
             }}
             animate={{
               x: [0, -60, -30, 0, 30, 60, 30, 0],
               y: [-150, -50, 50, 150, 50, -50, -150],
               rotateZ: [0, 90, 180, 270, 360],
-              z: [50, 0, -50, 0, 50]
+              z: [50, 0, -50, 0, 50],
             }}
             transition={{
               duration: 12,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
           >
             <div className="grid grid-cols-3 grid-rows-2 gap-0">
               <div className="w-full h-full"></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
               <div className="w-full h-full"></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
             </div>
           </motion.div>
-          
+
           {/* L-Block */}
           <motion.div
             className="absolute"
@@ -620,30 +749,38 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               width: "45px",
               height: "60px",
               transformStyle: "preserve-3d",
-              zIndex: 5
+              zIndex: 5,
             }}
             animate={{
               x: [80, 40, 0, -40, -80, -40, 0, 40, 80],
               y: [100, 0, -100, 0, 100],
               rotateZ: [90, 180, 270, 360, 450],
-              z: [-50, 0, 50, 0, -50]
+              z: [-50, 0, 50, 0, -50],
             }}
             transition={{
               duration: 15,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
           >
             <div className="grid grid-cols-2 grid-rows-3 gap-0">
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
               <div className="w-full h-full"></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
               <div className="w-full h-full"></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
             </div>
           </motion.div>
-          
+
           {/* Z-Block */}
           <motion.div
             className="absolute"
@@ -651,30 +788,38 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               width: "60px",
               height: "45px",
               transformStyle: "preserve-3d",
-              zIndex: 5
+              zIndex: 5,
             }}
             animate={{
               x: [-90, -45, 0, 45, 90, 45, 0, -45, -90],
               y: [-80, 0, 80, 0, -80],
               rotateZ: [0, 90, 180, 270, 360],
-              z: [30, -30, 30]
+              z: [30, -30, 30],
             }}
             transition={{
               duration: 18,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
           >
             <div className="grid grid-cols-3 grid-rows-2 gap-0">
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
               <div className="w-full h-full"></div>
               <div className="w-full h-full"></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
             </div>
           </motion.div>
-          
+
           {/* Square Block */}
           <motion.div
             className="absolute"
@@ -682,28 +827,36 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               width: "45px",
               height: "45px",
               transformStyle: "preserve-3d",
-              zIndex: 5
+              zIndex: 5,
             }}
             animate={{
               x: [0, 100, 0, -100, 0],
               y: [-120, -60, 60, -60, -120],
               scale: [1, 1.2, 1, 0.8, 1],
-              z: [40, 0, -40, 0, 40]
+              z: [40, 0, -40, 0, 40],
             }}
             transition={{
               duration: 10,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
           >
             <div className="grid grid-cols-2 grid-rows-2 gap-0">
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
             </div>
           </motion.div>
-          
+
           {/* I-Block */}
           <motion.div
             className="absolute"
@@ -711,28 +864,36 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               width: "30px",
               height: "120px",
               transformStyle: "preserve-3d",
-              zIndex: 5
+              zIndex: 5,
             }}
             animate={{
               x: [110, 55, 0, -55, -110, -55, 0, 55, 110],
               y: [0, 80, 0, -80, 0],
               rotateZ: [0, 90, 180, 270, 360],
-              z: [-20, 30, -20]
+              z: [-20, 30, -20],
             }}
             transition={{
               duration: 20,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
           >
             <div className="grid grid-cols-1 grid-rows-4 gap-0">
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
-              <div className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
+              <div
+                className={`w-full h-full bg-gradient-to-br ${realm.brightColor}`}
+              ></div>
             </div>
           </motion.div>
-          
+
           {/* Floating tetris blocks in the background */}
           {Array.from({ length: 20 }).map((_, i) => {
             const size = 8 + Math.random() * 12;
@@ -741,7 +902,7 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
             const xPos = Math.cos(angle) * distance;
             const yPos = Math.sin(angle) * distance;
             const zPos = -100 + Math.random() * 200;
-            
+
             return (
               <motion.div
                 key={`bg-tetris-${i}`}
@@ -753,22 +914,22 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
                   top: `calc(50% + ${yPos}px)`,
                   transform: `translateZ(${zPos}px)`,
                   boxShadow: "0 0 15px rgba(16, 185, 129, 0.5)",
-                  zIndex: zPos > 0 ? 2 : 0
+                  zIndex: zPos > 0 ? 2 : 0,
                 }}
                 animate={{
                   rotate: [0, 90, 180, 270, 360],
                   scale: [1, 1.2, 0.9, 1.1, 1],
-                  opacity: [0.3, 0.5, 0.3]
+                  opacity: [0.3, 0.5, 0.3],
                 }}
                 transition={{
                   duration: 15 + Math.random() * 10,
                   repeat: Infinity,
-                  ease: "linear"
+                  ease: "linear",
                 }}
               />
             );
           })}
-          
+
           {/* Glowing tetris lines */}
           {Array.from({ length: 8 }).map((_, i) => {
             const width = 80 + Math.random() * 100;
@@ -777,7 +938,7 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
             const distance = 120;
             const xPos = Math.cos(angle) * distance;
             const yPos = Math.sin(angle) * distance;
-            
+
             return (
               <motion.div
                 key={`tetris-line-${i}`}
@@ -787,36 +948,39 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
                   height: `${height}px`,
                   left: `calc(50% + ${xPos}px)`,
                   top: `calc(50% + ${yPos}px)`,
-                  backgroundImage: `linear-gradient(to right, transparent, ${realm.brightColor.split(' ')[1]}, transparent)`,
+                  backgroundImage: `linear-gradient(to right, transparent, ${
+                    realm.brightColor.split(" ")[1]
+                  }, transparent)`,
                   transform: `rotate(${angle * (180 / Math.PI)}deg)`,
                   transformOrigin: "center left",
-                  boxShadow: `0 0 10px ${realm.brightColor.split(' ')[1]}`,
-                  zIndex: 3
+                  boxShadow: `0 0 10px ${realm.brightColor.split(" ")[1]}`,
+                  zIndex: 3,
                 }}
                 animate={{
                   opacity: [0.3, 0.7, 0.3],
-                  width: [width, width * 1.2, width]
+                  width: [width, width * 1.2, width],
                 }}
                 transition={{
                   duration: 5 + i,
                   repeat: Infinity,
-                  ease: "easeInOut"
+                  ease: "easeInOut",
                 }}
               />
             );
           })}
-          
+
           {/* Grid pattern overlay */}
           <div
             className="absolute top-0 left-0 w-full h-full"
             style={{
-              background: "radial-gradient(circle, transparent 20%, rgba(0, 0, 0, 0.8) 70%)",
+              background:
+                "radial-gradient(circle, transparent 20%, rgba(0, 0, 0, 0.8) 70%)",
               backgroundSize: "8px 8px",
               pointerEvents: "none",
-              zIndex: 10
+              zIndex: 10,
             }}
           />
-          
+
           {/* Binary/code particles */}
           {Array.from({ length: 30 }).map((_, i) => {
             const symbols = ["0", "1", "#", "[]", "{}", "()"];
@@ -826,7 +990,7 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
             const angle = Math.random() * Math.PI * 2;
             const xPos = Math.cos(angle) * distance;
             const yPos = Math.sin(angle) * distance;
-            
+
             return (
               <motion.div
                 key={`code-particle-${i}`}
@@ -838,18 +1002,18 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
                   left: `calc(50% + ${xPos}px)`,
                   top: `calc(50% + ${yPos}px)`,
                   textShadow: "0 0 8px rgba(16, 185, 129, 0.8)",
-                  zIndex: 4
+                  zIndex: 4,
                 }}
                 animate={{
                   opacity: [0, 0.8, 0],
                   y: [yPos, yPos + (Math.random() > 0.5 ? 100 : -100)],
-                  scale: [1, 1.2, 0]
+                  scale: [1, 1.2, 0],
                 }}
                 transition={{
                   duration: 4 + Math.random() * 6,
                   repeat: Infinity,
                   repeatDelay: Math.random() * 5,
-                  ease: "easeInOut"
+                  ease: "easeInOut",
                 }}
               >
                 {symbol}
@@ -860,20 +1024,362 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
       </motion.div>
     );
   }
+
+  if (realm.modelType === "pixel-canvas") {
+    return (
+      <div className="w-full h-full relative overflow-visible">
+        {/* Rainbow Pixel Blocks - First Ring */}
+        {Array.from({ length: 8 }).map((_, i) => {
+          // Calculate position in orbit
+          const angle = (i / 8) * Math.PI * 2;
+          const radius = 140;
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+          
+          // Size based on position
+          const size = 25 + Math.sin(i * 0.8) * 5;
+          
+          // Rainbow colors
+          const colors = [
+            '#f87171', // red
+            '#fb923c', // orange
+            '#fbbf24', // yellow
+            '#4ade80', // green
+            '#22d3ee', // cyan
+            '#60a5fa', // blue
+            '#a78bfa', // indigo
+            '#f472b6'  // pink
+          ];
+          
+          return (
+            <motion.div
+              key={`pixel-block-${i}`}
+              className="absolute rounded-sm"
+              style={{
+                width: `${size}px`,
+                height: `${size}px`,
+                left: '50%',
+                top: '50%',
+                backgroundColor: colors[i],
+                boxShadow: `0 0 20px ${colors[i]}`,
+                zIndex: 5,
+              }}
+              animate={{
+                x: [x, x + Math.cos(angle) * 15],
+                y: [y, y + Math.sin(angle) * 15],
+                rotate: [0, 90, 180, 270, 360],
+                scale: [1, 1.15, 1],
+              }}
+              transition={{
+                x: {
+                  duration: 3 + i * 0.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+                y: {
+                  duration: 3 + i * 0.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+                rotate: {
+                  duration: 8 + i,
+                  repeat: Infinity,
+                  ease: "linear",
+                },
+                scale: {
+                  duration: 2 + i * 0.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+              }}
+            />
+          );
+        })}
   
+        {/* Smaller Pixel Cubes - Second Ring */}
+        {Array.from({ length: 12 }).map((_, i) => {
+          // Calculate position in second orbit
+          const angle = (i / 12) * Math.PI * 2 + Math.PI / 24;
+          const radius = 210;
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+          
+          // Size based on position
+          const size = 15 + Math.sin(i * 1.2) * 3;
+          
+          // Colors with more variety
+          const hue = (i / 12) * 360;
+          const color = `hsl(${hue}, 80%, 60%)`;
+          
+          return (
+            <motion.div
+              key={`small-pixel-${i}`}
+              className="absolute rounded-sm"
+              style={{
+                width: `${size}px`,
+                height: `${size}px`,
+                left: '50%',
+                top: '50%',
+                backgroundColor: color,
+                boxShadow: `0 0 15px ${color}`,
+                zIndex: 4,
+              }}
+              animate={{
+                x: [x, x + Math.cos(angle + Math.PI) * 10],
+                y: [y, y + Math.sin(angle + Math.PI) * 10],
+                rotate: [0, 180, 360],
+                scale: [1, 1.15, 1],
+              }}
+              transition={{
+                x: {
+                  duration: 3 + i * 0.15,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+                y: {
+                  duration: 3 + i * 0.15,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+                rotate: {
+                  duration: 10 - i * 0.3,
+                  repeat: Infinity,
+                  ease: "linear",
+                },
+                scale: {
+                  duration: 2.5 + i * 0.1,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+              }}
+            />
+          );
+        })}
+  
+        {/* Tiny Pixel Particles - Outer Ring */}
+        {Array.from({ length: 24 }).map((_, i) => {
+          // Calculate position in outer orbit
+          const angle = (i / 24) * Math.PI * 2 + Math.PI / 48;
+          const radius = 280;
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+          
+          // Tiny size
+          const size = 5 + Math.sin(i * 2) * 2;
+          
+          // Dynamic colors
+          const hue = (i / 24) * 360;
+          const color = `hsl(${hue}, 90%, 70%)`;
+          
+          return (
+            <motion.div
+              key={`tiny-pixel-${i}`}
+              className="absolute rounded-sm"
+              style={{
+                width: `${size}px`,
+                height: `${size}px`,
+                left: '50%',
+                top: '50%',
+                backgroundColor: color,
+                boxShadow: `0 0 10px ${color}`,
+                zIndex: 3,
+              }}
+              animate={{
+                x: [x, x + Math.cos(angle) * 5],
+                y: [y, y + Math.sin(angle) * 5],
+                opacity: [0.6, 1, 0.6],
+                scale: [1, 1.3, 1],
+              }}
+              transition={{
+                x: {
+                  duration: 2 + i * 0.08,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+                y: {
+                  duration: 2 + i * 0.08,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+                opacity: {
+                  duration: 1.5 + i * 0.05,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+                scale: {
+                  duration: 1.5 + i * 0.05,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse",
+                },
+              }}
+            />
+          );
+        })}
+        
+        {/* Central Pixel Cluster */}
+        {Array.from({ length: 7 }).map((_, i) => {
+          // Arrange in a flower-like pattern
+          const angle = (i / 7) * Math.PI * 2;
+          const radius = i === 0 ? 0 : 25; // First at center, others around
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+          
+          // Size based on position
+          const size = i === 0 ? 22 : 16;
+          
+          // Colors
+          const colors = [
+            '#f472b6',  // center - pink
+            '#f87171', // red
+            '#fb923c', // orange
+            '#fbbf24', // yellow
+            '#4ade80', // green
+            '#60a5fa', // blue
+            '#a78bfa', // indigo
+          ];
+          
+          return (
+            <motion.div
+              key={`center-pixel-${i}`}
+              className="absolute rounded-sm"
+              style={{
+                width: `${size}px`,
+                height: `${size}px`,
+                left: '50%',
+                top: '50%',
+                backgroundColor: colors[i],
+                boxShadow: `0 0 15px ${colors[i]}`,
+                zIndex: 6
+              }}
+              animate={{
+                x: [x, x + (Math.random() - 0.5) * 6],
+                y: [y, y + (Math.random() - 0.5) * 6],
+                rotate: [0, 45, 0, -45, 0],
+                scale: [1, 1.15, 0.95, 1.1, 1]
+              }}
+              transition={{
+                x: {
+                  duration: 2 + i * 0.3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse"
+                },
+                y: {
+                  duration: 2 + i * 0.3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatType: "reverse"
+                },
+                rotate: {
+                  duration: 5 + i * 0.5,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                },
+                scale: {
+                  duration: 3 + i * 0.2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }
+              }}
+            />
+          );
+        })}
+        
+        {/* Spectacular Pixel Dust */}
+        {Array.from({ length: 40 }).map((_, i) => {
+          // Random starting positions
+          const startAngle = Math.random() * Math.PI * 2;
+          const startRadius = 80 + Math.random() * 220;
+          const startX = Math.cos(startAngle) * startRadius;
+          const startY = Math.sin(startAngle) * startRadius;
+          
+          // Random sizes
+          const size = 1 + Math.random() * 3;
+          
+          // Dynamic colors
+          const hue = (i / 40) * 360;
+          const color = `hsl(${hue}, 90%, 70%)`;
+          
+          // Generate a curved path using bezier-like animation
+          const mid1X = startX * 0.8 + (Math.random() - 0.5) * 40;
+          const mid1Y = startY * 0.8 + (Math.random() - 0.5) * 40;
+          const mid2X = startX * 0.5 + (Math.random() - 0.5) * 80; 
+          const mid2Y = startY * 0.5 + (Math.random() - 0.5) * 80;
+          const endX = startX * 0.2;
+          const endY = startY * 0.2;
+  
+          return (
+            <motion.div
+              key={`pixel-flow-${i}`}
+              className="absolute rounded-full"
+              style={{
+                width: `${size}px`,
+                height: `${size}px`,
+                left: "50%",
+                top: "50%",
+                backgroundColor: color,
+                boxShadow: `0 0 ${size*2}px ${color}`,
+                zIndex: 6,
+              }}
+              animate={{
+                x: [startX, mid1X, mid2X, endX, startX],
+                y: [startY, mid1Y, mid2Y, endY, startY],
+                opacity: [0.4, 0.9, 0.9, 0.4, 0.4],
+                scale: [1, 1.5, 1.5, 1, 1],
+              }}
+              transition={{
+                duration: 8 + Math.random() * 7,
+                repeat: Infinity,
+                ease: "easeInOut",
+                times: [0, 0.25, 0.5, 0.75, 1],
+              }}
+            />
+          );
+        })}
+        
+        {/* Subtle Scanline Effect - very subtle */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: "linear-gradient(transparent 50%, rgba(0, 0, 0, 0.03) 50%)",
+            backgroundSize: "100% 4px",
+            zIndex: 20,
+            opacity: 0.1,
+            mixBlendMode: "overlay"
+          }}
+        />
+      </div>
+    );
+  }
+
   // For the fractal-vortex model type:
   if (realm.modelType === "fractal-vortex") {
     return (
       <motion.div
         className="w-full h-full relative flex items-center justify-center"
-        style={{ rotateX: springRotateX, rotateY: springRotateY, perspective: 1500 }}
+        style={{
+          rotateX: springRotateX,
+          rotateY: springRotateY,
+          perspective: 1500,
+        }}
       >
         <div className="transform-style-preserve-3d relative w-full h-full flex items-center justify-center">
           {/* Black hole center - Centered in container */}
           <motion.div
             className="absolute w-40 h-40 rounded-full"
             style={{
-              background: "radial-gradient(circle, rgba(0, 0, 0, 0.8) 30%, rgba(8, 8, 24, 0.9) 70%, rgba(20, 20, 35, 0.7) 85%, transparent 100%)",
+              background:
+                "radial-gradient(circle, rgba(0, 0, 0, 0.8) 30%, rgba(8, 8, 24, 0.9) 70%, rgba(20, 20, 35, 0.7) 85%, transparent 100%)",
               boxShadow: "0 0 60px 10px rgba(56, 189, 248, 0.15)",
               zIndex: 5,
             }}
@@ -886,12 +1392,13 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               ease: "easeInOut",
             }}
           />
-          
+
           {/* Accretion disk glow effect - Centered */}
           <motion.div
             className="absolute w-64 h-16 rounded-full opacity-60"
             style={{
-              background: "linear-gradient(90deg, rgba(14, 165, 233, 0.2), rgba(167, 139, 250, 0.4), rgba(236, 72, 153, 0.3), rgba(14, 165, 233, 0.2))",
+              background:
+                "linear-gradient(90deg, rgba(14, 165, 233, 0.2), rgba(167, 139, 250, 0.4), rgba(236, 72, 153, 0.3), rgba(14, 165, 233, 0.2))",
               transform: "rotateX(75deg)",
               boxShadow: "0 0 20px rgba(139, 92, 246, 0.4)",
               zIndex: 3,
@@ -905,7 +1412,7 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               ease: "linear",
             }}
           />
-          
+
           {/* Mirror fragments orbiting the black hole - Centered */}
           <motion.div
             className="absolute w-full h-full flex items-center justify-center"
@@ -929,14 +1436,14 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               const x = Math.cos(angle) * radius;
               const y = Math.sin(angle) * radius;
               const zOffset = Math.cos(i * 2.1) * 30;
-              
+
               // Fragment size and rotation
               const width = 15 + Math.random() * 20;
               const height = 15 + Math.random() * 20;
               const rotateX = Math.random() * 360;
               const rotateY = Math.random() * 360;
               const rotateZ = Math.random() * 360;
-              
+
               return (
                 <motion.div
                   key={`inner-fragment-${i}`}
@@ -964,13 +1471,16 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
                   <div
                     className="w-full h-full backdrop-blur-sm"
                     style={{
-                      background: "linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1))",
+                      background:
+                        "linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1))",
                       border: "1px solid rgba(255, 255, 255, 0.2)",
                       boxShadow: "0 0 10px rgba(139, 92, 246, 0.2)",
                       clipPath: `polygon(
                         ${Math.random() * 20}% ${Math.random() * 20}%, 
                         ${80 + Math.random() * 20}% ${Math.random() * 20}%, 
-                        ${80 + Math.random() * 20}% ${80 + Math.random() * 20}%, 
+                        ${80 + Math.random() * 20}% ${
+                        80 + Math.random() * 20
+                      }%, 
                         ${Math.random() * 20}% ${80 + Math.random() * 20}%
                       )`,
                     }}
@@ -978,7 +1488,7 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
                 </motion.div>
               );
             })}
-            
+
             {/* Outer orbit mirror fragments */}
             {Array.from({ length: 12 }).map((_, i) => {
               // Calculate position in circular orbit
@@ -987,14 +1497,14 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               const x = Math.cos(angle) * radius;
               const y = Math.sin(angle) * radius;
               const zOffset = Math.cos(i * 1.5) * 50;
-              
+
               // Fragment size and rotation
               const width = 20 + Math.random() * 25;
               const height = 20 + Math.random() * 25;
               const rotateX = Math.random() * 360;
               const rotateY = Math.random() * 360;
               const rotateZ = Math.random() * 360;
-              
+
               return (
                 <motion.div
                   key={`outer-fragment-${i}`}
@@ -1022,13 +1532,16 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
                   <div
                     className="w-full h-full backdrop-blur-sm"
                     style={{
-                      background: "linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.05))",
+                      background:
+                        "linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.05))",
                       border: "1px solid rgba(255, 255, 255, 0.15)",
                       boxShadow: "0 0 10px rgba(139, 92, 246, 0.15)",
                       clipPath: `polygon(
                         ${Math.random() * 30}% ${Math.random() * 30}%, 
                         ${70 + Math.random() * 30}% ${Math.random() * 30}%, 
-                        ${70 + Math.random() * 30}% ${70 + Math.random() * 30}%, 
+                        ${70 + Math.random() * 30}% ${
+                        70 + Math.random() * 30
+                      }%, 
                         ${Math.random() * 30}% ${70 + Math.random() * 30}%
                       )`,
                     }}
@@ -1037,7 +1550,7 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               );
             })}
           </motion.div>
-          
+
           {/* Gravitational lensing light effects - Centered */}
           {Array.from({ length: 15 }).map((_, i) => {
             const size = 1 + Math.random() * 3;
@@ -1045,7 +1558,7 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
             const distance = 30 + Math.random() * 50;
             const x = Math.cos(angle) * distance;
             const y = Math.sin(angle) * distance;
-            
+
             return (
               <motion.div
                 key={`lensing-light-${i}`}
@@ -1055,7 +1568,9 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
                   height: `${size}px`,
                   left: `calc(50% + ${x}px)`,
                   top: `calc(50% + ${y}px)`,
-                  boxShadow: `0 0 ${size * 2}px ${size / 2}px rgba(255, 255, 255, 0.8)`,
+                  boxShadow: `0 0 ${size * 2}px ${
+                    size / 2
+                  }px rgba(255, 255, 255, 0.8)`,
                   zIndex: 6,
                 }}
                 animate={{
@@ -1071,7 +1586,7 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
               />
             );
           })}
-          
+
           {/* Distant stars in space */}
           {Array.from({ length: 30 }).map((_, i) => (
             <motion.div
@@ -1099,36 +1614,48 @@ const RealmModel = ({ realm, mouseX, mouseY }: { realm: Realm; mouseX: any; mous
       </motion.div>
     );
   }
-  
+
   // Default case - should never reach here since all realms have a model type
   return (
-    <motion.div 
+    <motion.div
       className="w-full h-full flex items-center justify-center"
       style={{ rotateX: springRotateX, rotateY: springRotateY }}
     >
-      <AbstractShape 
+      <AbstractShape
         className={`w-64 h-64 text-transparent bg-clip-text bg-gradient-to-r ${realm.color}`}
-        type={realm.shapeType as "circle" | "square" | "triangle" | "complex" | "wave" | "grid" | "dots" | "noise" | "loading" | "gamepad"}
+        type={
+          realm.shapeType as
+            | "circle"
+            | "square"
+            | "triangle"
+            | "complex"
+            | "wave"
+            | "grid"
+            | "dots"
+            | "noise"
+            | "loading"
+            | "gamepad"
+        }
         animate
       />
     </motion.div>
-  )
-}
+  );
+};
 
 // Particle background that changes based on selected realm
 const ParticleBackground = ({ realm }: { realm: Realm }) => {
   // FIXED: Use state to store dimensions
   const [dimensions, setDimensions] = useState({ width: 1000, height: 800 });
-  
+
   // FIXED: Use effect to safely access window
   useEffect(() => {
     // Only run in browser
     setDimensions({
       width: window.innerWidth,
-      height: window.innerHeight
+      height: window.innerHeight,
     });
   }, []);
-  
+
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {Array.from({ length: realm.particleCount }).map((_, i) => (
@@ -1138,40 +1665,45 @@ const ParticleBackground = ({ realm }: { realm: Realm }) => {
           animate={{
             x: [
               Math.random() * dimensions.width,
-              Math.random() * dimensions.width
+              Math.random() * dimensions.width,
             ],
             y: [
               Math.random() * dimensions.height,
-              Math.random() * dimensions.height
+              Math.random() * dimensions.height,
             ],
-            scale: [
-              Math.random() * 0.5 + 0.5,
-              Math.random() * 0.5 + 0.5
-            ],
-            opacity: [0.1, 0.3, 0.1]
+            scale: [Math.random() * 0.5 + 0.5, Math.random() * 0.5 + 0.5],
+            opacity: [0.1, 0.3, 0.1],
           }}
           transition={{
             duration: Math.random() * 20 + 10,
             repeat: Infinity,
-            ease: "linear"
+            ease: "linear",
           }}
           style={{
             width: `${Math.random() * 4 + 1}px`,
             height: `${Math.random() * 4 + 1}px`,
-            boxShadow: `0 0 ${Math.random() * 5 + 2}px currentColor`
+            boxShadow: `0 0 ${Math.random() * 5 + 2}px currentColor`,
           }}
         />
       ))}
     </div>
-  )
-}
+  );
+};
 
 // Realm icon component for navigation buttons
-const RealmIcon = ({ realm, isSelected }: { realm: Realm; isSelected: boolean }) => {
+const RealmIcon = ({
+  realm,
+  isSelected,
+}: {
+  realm: Realm;
+  isSelected: boolean;
+}) => {
   if (realm.iconType === "ripple") {
     return (
       <div className="relative w-6 h-6">
-        <div className={`absolute inset-0 rounded-full bg-gradient-to-r ${realm.color} opacity-80`}></div>
+        <div
+          className={`absolute inset-0 rounded-full bg-gradient-to-r ${realm.color} opacity-80`}
+        ></div>
         {isSelected && (
           <motion.div
             className={`absolute inset-0 rounded-full border border-white/30 opacity-60`}
@@ -1180,26 +1712,32 @@ const RealmIcon = ({ realm, isSelected }: { realm: Realm; isSelected: boolean })
           ></motion.div>
         )}
       </div>
-    )
+    );
   }
-  
+
   if (realm.iconType === "network") {
     return (
       <div className="relative w-6 h-6">
-        <div className={`absolute top-1/2 left-1/2 w-2 h-2 rounded-full bg-gradient-to-r ${realm.color} transform -translate-x-1/2 -translate-y-1/2`}></div>
+        <div
+          className={`absolute top-1/2 left-1/2 w-2 h-2 rounded-full bg-gradient-to-r ${realm.color} transform -translate-x-1/2 -translate-y-1/2`}
+        ></div>
         {[0, 1, 2].map((i) => (
           <motion.div
             key={`network-ring-${i}`}
             className={`absolute top-1/2 left-1/2 border rounded-full border-current text-white/40 transform -translate-x-1/2 -translate-y-1/2`}
             animate={{ rotate: 360 }}
-            transition={{ duration: 10 + i * 2, repeat: Infinity, ease: "linear" }}
-            style={{ width: `${(i+1)*4}px`, height: `${(i+1)*4}px` }}
+            transition={{
+              duration: 10 + i * 2,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+            style={{ width: `${(i + 1) * 4}px`, height: `${(i + 1) * 4}px` }}
           ></motion.div>
         ))}
       </div>
-    )
+    );
   }
-  
+
   if (realm.iconType === "void") {
     return (
       <div className="relative w-6 h-6">
@@ -1210,64 +1748,70 @@ const RealmIcon = ({ realm, isSelected }: { realm: Realm; isSelected: boolean })
               <motion.div
                 key={`void-particle-${i}`}
                 className={`absolute w-px h-px rounded-full bg-gradient-to-r ${realm.color}`}
-                animate={{ 
-                  x: [0, Math.cos(i * Math.PI / 4) * 10],
-                  y: [0, Math.sin(i * Math.PI / 4) * 10],
+                animate={{
+                  x: [0, Math.cos((i * Math.PI) / 4) * 10],
+                  y: [0, Math.sin((i * Math.PI) / 4) * 10],
                   opacity: [0, 0.8, 0],
-                  scale: [0, 1.5, 0]
+                  scale: [0, 1.5, 0],
                 }}
                 transition={{ duration: 2, repeat: Infinity, delay: i * 0.5 }}
-                style={{ left: "50%", top: "50%", boxShadow: "0 0 3px currentColor" }}
+                style={{
+                  left: "50%",
+                  top: "50%",
+                  boxShadow: "0 0 3px currentColor",
+                }}
               ></motion.div>
             ))}
           </>
         )}
       </div>
-    )
+    );
   }
-  
+
   if (realm.iconType === "wave") {
     return (
       <div className="relative w-6 h-6 flex items-center justify-center">
         {[0, 1, 2].map((i) => (
           <motion.div
             key={`wave-${i}`}
-            className={`absolute h-${i+1} bg-gradient-to-r ${realm.color} rounded-full`}
-            style={{ width: `${(i+1) * 2}px` }}
-            animate={{ 
+            className={`absolute h-${i + 1} bg-gradient-to-r ${
+              realm.color
+            } rounded-full`}
+            style={{ width: `${(i + 1) * 2}px` }}
+            animate={{
               height: [2, 4, 2],
-              opacity: [0.5, 1, 0.5] 
+              opacity: [0.5, 1, 0.5],
             }}
-            transition={{ 
-              duration: 0.5 + (i * 0.2), 
-              repeat: Infinity, 
-              repeatType: "reverse", 
-              delay: i * 0.2 
+            transition={{
+              duration: 0.5 + i * 0.2,
+              repeat: Infinity,
+              repeatType: "reverse",
+              delay: i * 0.2,
             }}
           ></motion.div>
         ))}
       </div>
-    )
+    );
   }
-  
+
   if (realm.iconType === "glyph") {
     return (
       <div className="relative w-6 h-6 flex items-center justify-center">
-        <motion.div 
+        <motion.div
           className={`text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r ${realm.color}`}
-          animate={{ 
+          animate={{
             rotate: isSelected ? [0, 180, 360] : 0,
-            scale: isSelected ? [1, 1.2, 1] : 1
+            scale: isSelected ? [1, 1.2, 1] : 1,
           }}
-          transition={{ 
-            duration: 4, 
-            repeat: isSelected ? Infinity : 0
+          transition={{
+            duration: 4,
+            repeat: isSelected ? Infinity : 0,
           }}
         >
           ⎔
         </motion.div>
       </div>
-    )
+    );
   }
 
   if (realm.iconType === "block") {
@@ -1276,129 +1820,192 @@ const RealmIcon = ({ realm, isSelected }: { realm: Realm; isSelected: boolean })
         <motion.div
           className="relative w-4 h-4"
           animate={{
-            rotate: isSelected ? [0, 90, 180, 270, 360] : 0
+            rotate: isSelected ? [0, 90, 180, 270, 360] : 0,
           }}
           transition={{
             duration: 3,
             repeat: isSelected ? Infinity : 0,
-            ease: "linear"
+            ease: "linear",
           }}
         >
           {/* Tetris-like L shape */}
           <div className="absolute grid grid-cols-2 grid-rows-2 w-full h-full">
-            <div className={`w-full h-full bg-gradient-to-br ${realm.color}`}></div>
+            <div
+              className={`w-full h-full bg-gradient-to-br ${realm.color}`}
+            ></div>
             <div className="w-full h-full"></div>
-            <div className={`w-full h-full bg-gradient-to-br ${realm.color}`}></div>
-            <div className={`w-full h-full bg-gradient-to-br ${realm.color}`}></div>
+            <div
+              className={`w-full h-full bg-gradient-to-br ${realm.color}`}
+            ></div>
+            <div
+              className={`w-full h-full bg-gradient-to-br ${realm.color}`}
+            ></div>
           </div>
         </motion.div>
-        
+
         {isSelected && (
           <motion.div
             className="absolute inset-0 rounded-sm border border-white/30"
             animate={{
               scale: [1, 1.2, 1],
-              opacity: [0.6, 0.3, 0.6]
+              opacity: [0.6, 0.3, 0.6],
             }}
             transition={{
               duration: 2,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
           />
         )}
       </div>
-    )
+    );
   }
-  
+
+  if (realm.iconType === "pixel") {
+    return (
+      <div className="relative w-6 h-6 flex items-center justify-center">
+        <motion.div
+          className="w-5 h-5 grid grid-cols-4 grid-rows-4 gap-0.5"
+          animate={{
+            rotate: isSelected ? [0, 0, 0, 5, -5, 0] : 0,
+            scale: isSelected ? [1, 1.1, 1] : 1,
+          }}
+          transition={{
+            duration: 2,
+            repeat: isSelected ? Infinity : 0,
+            ease: "easeInOut",
+          }}
+        >
+          {/* Pixel art brush icon - 4x4 grid */}
+          {Array.from({ length: 16 }).map((_, i) => {
+            // Create a simple pixel brush pattern
+            const isColored = [0, 3, 4, 5, 6, 9, 12, 15].includes(i);
+            return (
+              <div
+                key={`pixel-${i}`}
+                className={`w-full h-full ${
+                  isColored
+                    ? `bg-gradient-to-br ${realm.color}`
+                    : "bg-transparent"
+                }`}
+              />
+            );
+          })}
+        </motion.div>
+
+        {isSelected && (
+          <motion.div
+            className="absolute inset-0 rounded-sm border border-white/30"
+            animate={{
+              scale: [1, 1.2, 1],
+              opacity: [0.6, 0.3, 0.6],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
   if (realm.iconType === "vortex") {
     return (
       <div className="relative w-6 h-6 flex items-center justify-center">
-        <motion.div 
+        <motion.div
           className={`absolute inset-0 opacity-80 rounded-full bg-gradient-to-r ${realm.color}`}
-          animate={{ 
+          animate={{
             rotate: isSelected ? [0, 360] : 0,
           }}
-          transition={{ 
-            duration: 8, 
+          transition={{
+            duration: 8,
             repeat: isSelected ? Infinity : 0,
-            ease: "linear"
+            ease: "linear",
           }}
         >
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-xs text-white font-bold">?</div>
           </div>
         </motion.div>
-        
+
         {isSelected && (
           <motion.div
             className="absolute inset-0 rounded-full border border-white/30"
             animate={{
               scale: [1, 0.6, 1],
               opacity: [0.6, 1, 0.6],
-              rotate: [0, 180, 360]
+              rotate: [0, 180, 360],
             }}
             transition={{
               duration: 4,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
           />
         )}
       </div>
-    )
+    );
   }
-  
+
   // Default icon
   return (
-    <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${realm.color}`}></div>
-  )
-}
+    <div
+      className={`w-3 h-3 rounded-full bg-gradient-to-r ${realm.color}`}
+    ></div>
+  );
+};
 
 export default function RealmPage() {
-  const [selectedRealm, setSelectedRealm] = useState<Realm>(realms[0])
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  
+  const [selectedRealm, setSelectedRealm] = useState<Realm>(realms[0]);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
   // Mouse position for 3D effect
-  const mouseX = useMotionValue(0)
-  const mouseY = useMotionValue(0)
-  
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
   // Handle mouse movement for 3D effect
   useEffect(() => {
     // FIXED: Only run in browser
-    if (typeof window === 'undefined') return;
-    
+    if (typeof window === "undefined") return;
+
     const handleMouseMove = (e: { clientX: number; clientY: number }) => {
       if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect()
-        const centerX = rect.left + rect.width / 2
-        const centerY = rect.top + rect.height / 2
-        mouseX.set(e.clientX - centerX)
-        mouseY.set(e.clientY - centerY)
+        const rect = containerRef.current.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        mouseX.set(e.clientX - centerX);
+        mouseY.set(e.clientY - centerY);
       }
-    }
-    
-    window.addEventListener("mousemove", handleMouseMove)
-    return () => window.removeEventListener("mousemove", handleMouseMove)
-  }, [mouseX, mouseY])
-  
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, [mouseX, mouseY]);
+
   // Smooth transition when changing realms
   const changeRealm = (realm: Realm) => {
-    setSelectedRealm(realm)
-    setIsDetailsOpen(false)
-  }
+    setSelectedRealm(realm);
+    setIsDetailsOpen(false);
+  };
 
   return (
-    <div className="relative min-h-screen bg-black text-white font-pixel overflow-hidden" ref={containerRef}>
+    <div
+      className="relative min-h-screen bg-black text-white font-pixel overflow-hidden"
+      ref={containerRef}
+    >
       <Navigation />
-      
+
       {/* Animated particle background */}
       <ParticleBackground realm={selectedRealm} />
-      
+
       {/* Gradient background specific to realm */}
       <div className="absolute inset-0 z-0">
-        <div className={`absolute inset-0 bg-gradient-to-b ${selectedRealm.darkColor} via-black to-black opacity-70`}></div>
+        <div
+          className={`absolute inset-0 bg-gradient-to-b ${selectedRealm.darkColor} via-black to-black opacity-70`}
+        ></div>
       </div>
 
       {/* Hero Section with improved layout */}
@@ -1416,20 +2023,20 @@ export default function RealmPage() {
                 text="REALMS OF VOID"
                 className="text-6xl md:text-7xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
               />
-              <motion.p 
+              <motion.p
                 className="text-xl text-gray-300 max-w-3xl mx-auto"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3, duration: 0.8 }}
               >
-                Explore the different dimensions that make up the VOID universe. Each realm has its own story, theme,
-                and secrets to discover.
+                Explore the different dimensions that make up the VOID universe.
+                Each realm has its own story, theme, and secrets to discover.
               </motion.p>
             </motion.div>
 
             {/* Realm Navigation - Horizontal Scrolling Menu */}
             <div className="flex justify-center mb-16">
-              <motion.div 
+              <motion.div
                 className="flex gap-2 md:gap-4 py-2 px-4 bg-black/40 backdrop-blur-md border border-purple-500/20 rounded-full"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1448,13 +2055,20 @@ export default function RealmPage() {
                         : "bg-transparent hover:bg-purple-950/30 text-gray-400 hover:text-white"
                     )}
                   >
-                    <RealmIcon realm={realm} isSelected={selectedRealm.id === realm.id} />
+                    <RealmIcon
+                      realm={realm}
+                      isSelected={selectedRealm.id === realm.id}
+                    />
                     <span className="hidden sm:inline">{realm.name}</span>
                     {selectedRealm.id === realm.id && (
                       <motion.div
                         className="absolute inset-0 rounded-full border-2 border-purple-500/50"
                         layoutId="selected-realm"
-                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                        transition={{
+                          type: "spring",
+                          bounce: 0.2,
+                          duration: 0.6,
+                        }}
                       />
                     )}
                   </motion.button>
@@ -1465,7 +2079,7 @@ export default function RealmPage() {
             {/* Main Content Area */}
             <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               <AnimatePresence mode="wait">
-                <motion.div 
+                <motion.div
                   key={`realm-content-${selectedRealm.id}`}
                   initial={{ opacity: 0, x: -50 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -1483,13 +2097,15 @@ export default function RealmPage() {
                       text={selectedRealm.name}
                       className={`text-6xl md:text-7xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r ${selectedRealm.color}`}
                     />
-                    <p className={`text-transparent bg-clip-text bg-gradient-to-r ${selectedRealm.brightColor} text-xl mb-8`}>
+                    <p
+                      className={`text-transparent bg-clip-text bg-gradient-to-r ${selectedRealm.brightColor} text-xl mb-8`}
+                    >
                       {selectedRealm.theme}
                     </p>
                   </motion.div>
-                  
+
                   {/* Poem Section */}
-                  <motion.div 
+                  <motion.div
                     className="mb-8 p-6 bg-black/50 backdrop-blur-md border border-purple-900/50 relative overflow-hidden group"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1497,8 +2113,14 @@ export default function RealmPage() {
                   >
                     <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
                     <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
-                    <h3 className={`text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${selectedRealm.brightColor} mb-4`}>THE POEM</h3>
-                    <p className="text-gray-300 whitespace-pre-line font-pixel leading-relaxed">{selectedRealm.poem}</p>
+                    <h3
+                      className={`text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${selectedRealm.brightColor} mb-4`}
+                    >
+                      THE POEM
+                    </h3>
+                    <p className="text-gray-300 whitespace-pre-line font-pixel leading-relaxed">
+                      {selectedRealm.poem}
+                    </p>
                     <motion.div
                       className={`absolute -bottom-1 -right-1 w-20 h-20 bg-gradient-to-tl ${selectedRealm.color} opacity-20 rounded-tl-full`}
                       initial={{ scale: 0 }}
@@ -1506,9 +2128,9 @@ export default function RealmPage() {
                       transition={{ delay: 0.5, duration: 1 }}
                     />
                   </motion.div>
-                  
+
                   {/* Collapsible Description Section */}
-                  <motion.div 
+                  <motion.div
                     className="relative"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1518,7 +2140,9 @@ export default function RealmPage() {
                       onClick={() => setIsDetailsOpen(!isDetailsOpen)}
                       className={`w-full flex items-center justify-between p-4 bg-gradient-to-r from-purple-900/30 to-black border border-purple-500/30 mb-4 group`}
                     >
-                      <span className={`text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${selectedRealm.brightColor}`}>
+                      <span
+                        className={`text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${selectedRealm.brightColor}`}
+                      >
                         REALM DETAILS
                       </span>
                       <motion.div
@@ -1528,7 +2152,7 @@ export default function RealmPage() {
                         <ChevronDown className="text-purple-400 group-hover:text-white transition-colors" />
                       </motion.div>
                     </Button>
-                    
+
                     <AnimatePresence>
                       {isDetailsOpen && (
                         <motion.div
@@ -1539,26 +2163,49 @@ export default function RealmPage() {
                           className="overflow-hidden"
                         >
                           <div className="p-6 bg-black/50 backdrop-blur-md border border-purple-900/50 mb-6">
-                            <h3 className={`text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${selectedRealm.brightColor} mb-4`}>LORE</h3>
-                            <p className="text-gray-300 leading-relaxed mb-6">{selectedRealm.description}</p>
-                            
-                            <h3 className={`text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${selectedRealm.brightColor} mb-4`}>GAMEPLAY</h3>
+                            <h3
+                              className={`text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${selectedRealm.brightColor} mb-4`}
+                            >
+                              LORE
+                            </h3>
+                            <p className="text-gray-300 leading-relaxed mb-6">
+                              {selectedRealm.description}
+                            </p>
+
+                            <h3
+                              className={`text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${selectedRealm.brightColor} mb-4`}
+                            >
+                              GAMEPLAY
+                            </h3>
                             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              {selectedRealm.gameplayElements.map((element, index) => (
-                                <li key={index} className="flex items-center gap-2">
-                                  <Sparkles size={16} className="text-purple-400" />
-                                  <span className="text-gray-300">{element}</span>
-                                </li>
-                              ))}
+                              {selectedRealm.gameplayElements.map(
+                                (element, index) => (
+                                  <li
+                                    key={index}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <Sparkles
+                                      size={16}
+                                      className="text-purple-400"
+                                    />
+                                    <span className="text-gray-300">
+                                      {element}
+                                    </span>
+                                  </li>
+                                )
+                              )}
                             </ul>
                           </div>
-                          
+
                           <div className="p-6 bg-gradient-to-br from-purple-900/20 to-black border border-purple-500/30 flex flex-col sm:flex-row justify-between items-center gap-4">
                             <div>
-                              <h3 className="text-lg font-bold text-purple-300 mb-2">NFT CONNECTION</h3>
+                              <h3 className="text-lg font-bold text-purple-300 mb-2">
+                                NFT CONNECTION
+                              </h3>
                               <p className="text-gray-400 text-sm">
-                                Artifacts discovered in this realm become unique NFTs, carrying a piece of
-                                the {selectedRealm.name} essence.
+                                Artifacts discovered in this realm become unique
+                                NFTs, carrying a piece of the{" "}
+                                {selectedRealm.name} essence.
                               </p>
                             </div>
                             <Button
@@ -1566,7 +2213,10 @@ export default function RealmPage() {
                               className="border-purple-500 bg-purple-950/30 hover:bg-purple-900/50 text-purple-300 group flex items-center gap-2"
                             >
                               <span>EXPLORE NFTs</span>
-                              <ExternalLink size={14} className="transition-transform group-hover:translate-x-1" />
+                              <ExternalLink
+                                size={14}
+                                className="transition-transform group-hover:translate-x-1"
+                              />
                             </Button>
                           </div>
                         </motion.div>
@@ -1574,7 +2224,7 @@ export default function RealmPage() {
                     </AnimatePresence>
                   </motion.div>
                 </motion.div>
-                
+
                 {/* 3D Model Visualization */}
                 <motion.div
                   key={`realm-model-${selectedRealm.id}`}
@@ -1585,7 +2235,11 @@ export default function RealmPage() {
                   className="order-1 md:order-2 aspect-square relative"
                 >
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <RealmModel realm={selectedRealm} mouseX={mouseX} mouseY={mouseY} />
+                    <RealmModel
+                      realm={selectedRealm}
+                      mouseX={mouseX}
+                      mouseY={mouseY}
+                    />
                   </div>
                 </motion.div>
               </AnimatePresence>
@@ -1603,5 +2257,5 @@ export default function RealmPage() {
 
       <Footer />
     </div>
-  )
+  );
 }

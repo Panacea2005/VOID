@@ -58,6 +58,13 @@ export const audioTracks = {
     artist: "VOID",
     duration: 190,
     cover: "/vortex-cover.jpg"
+  },
+  enigma: {
+    path: "/audio/enigma-theme.mp3",
+    title: "Enigma",
+    artist: "VOID",
+    duration: 190,
+    cover: "/enigma-cover.jpg"
   }
 };
 

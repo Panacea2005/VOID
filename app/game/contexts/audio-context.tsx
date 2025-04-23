@@ -78,6 +78,13 @@ export const DEFAULT_AUDIO_TRACKS: Record<string, AudioTrack> = {
     duration: 190,
     cover: "/vortex-cover.jpg",
   },
+  enigma: {
+    path: "/audio/enigma-theme.mp3",
+    title: "Enigma",
+    artist: "VOID",
+    duration: 190,
+    cover: "/enigma-cover.jpg"
+  }
 };
 
 // Format time in MM:SS
@@ -1104,7 +1111,7 @@ export const AudioController: React.FC<AudioControllerProps> = ({
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     // Fallback if image fails to load
-                    e.currentTarget.src = "/images/default-cover.jpg";
+                    e.currentTarget.src = "/default-cover.jpg";
                   }}
                 />
                 {/* NFT badge */}
@@ -1375,7 +1382,7 @@ export const AudioController: React.FC<AudioControllerProps> = ({
                                   className="w-full h-full object-cover"
                                   onError={(e) => {
                                     e.currentTarget.src =
-                                      "/images/default-cover.jpg";
+                                      "/default-cover.jpg";
                                   }}
                                 />
                               </div>
@@ -1473,7 +1480,7 @@ export const AudioController: React.FC<AudioControllerProps> = ({
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
                                       e.currentTarget.src =
-                                        "/images/default-cover.jpg";
+                                        "/default-cover.jpg";
                                     }}
                                   />
                                 </div>

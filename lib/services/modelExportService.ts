@@ -1,88 +1,137 @@
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 
-// Tạo một cube 3D đơn giản với các màu đã cho
-export async function createCube(colors: string[]): Promise<ArrayBuffer> {
-    console.log("Creating 3D model with colors:", colors);
+// Modify the createCube function to accept full material parameters
+export async function createCube(colors: string[], materialParams?: any): Promise<ArrayBuffer> {
+    console.log("Creating 3D model with colors and materials:", colors, materialParams);
     
     // Ensure we have 6 colors (one for each face)
     const faceColors = [...colors];
     while (faceColors.length < 6) {
-        // If not enough colors provided, repeat the last one
         faceColors.push(faceColors[faceColors.length - 1] || "#FFFFFF");
     }
     
-    // Create scene
+    // Create scene with better configuration
     const scene = new THREE.Scene();
-
-    // Create cube geometry
-    const geometry = new THREE.BoxGeometry(2, 2, 2);
+    
+    // Use higher quality geometry
+    const geometry = new THREE.BoxGeometry(2, 2, 2, 32, 32, 32);
     
     // Create an array of materials, one for each face
     const materials = faceColors.map((color, index) => {
-        return new THREE.MeshStandardMaterial({
+        // Use material parameters if provided, otherwise use defaults
+        const material = new THREE.MeshPhysicalMaterial({
             color: new THREE.Color(color),
-            roughness: 0.5,
-            metalness: 0.3,
-            emissive: new THREE.Color(color).multiplyScalar(0.2),
+            roughness: materialParams?.roughness ?? 0.5,
+            metalness: materialParams?.metalness ?? 0.3,
             name: `cube_material_${index}`
         });
+        
+        // Apply emissive properties if specified
+        if (materialParams?.emissiveIntensity > 0) {
+            material.emissive = new THREE.Color(materialParams.emissive || color);
+            material.emissiveIntensity = materialParams.emissiveIntensity;
+        } else {
+            material.emissive = new THREE.Color(color).multiplyScalar(0.2);
+            material.emissiveIntensity = 0.2;
+        }
+        
+        // Apply additional material properties if available
+        if (materialParams?.transparent) {
+            material.transparent = true;
+            material.opacity = materialParams.opacity ?? 1.0;
+        }
+        
+        if (materialParams?.clearcoat) {
+            material.clearcoat = materialParams.clearcoat;
+            material.clearcoatRoughness = materialParams.clearcoatRoughness ?? 0.1;
+        }
+        
+        return material;
     });
     
     // Create a mesh with per-face materials
     const cube = new THREE.Mesh(geometry, materials);
     
-    // Store color information in userData for easier retrieval later
+    // Store ALL material information in userData for easier retrieval later
     cube.userData = {
         colors: faceColors,
-        primaryColor: faceColors[0]
+        primaryColor: faceColors[0],
+        materialParams: materialParams ? JSON.parse(JSON.stringify(materialParams)) : null,
+        // Add texture and animation data if available
+        texture: materialParams?.texturePattern || 'default',
+        animation: materialParams?.animationType || 'none'
     };
     
     scene.add(cube);
 
-    // Add lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    // Add better lighting for more visible results
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
+    
+    // Add point light to highlight cube
+    const pointLight = new THREE.PointLight(0xffffff, 1.0);
+    pointLight.position.set(-3, 2, 5);
+    scene.add(pointLight);
 
-    // Export with proper error handling
+    // Export with proper error handling and explicit timeout
     return new Promise((resolve, reject) => {
         try {
             const exporter = new GLTFExporter();
+            
+            // Set a timeout to avoid hanging
+            const timeoutId = setTimeout(() => {
+                reject(new Error("GLB export timeout - took too long"));
+            }, 15000);
+            
             exporter.parse(
                 scene,
                 (result) => {
+                    clearTimeout(timeoutId);
+                    
                     if (result instanceof ArrayBuffer) {
-                        console.log(`Exported GLB binary with size: ${result.byteLength} bytes`);
+                        const size = result.byteLength;
+                        console.log(`Exported GLB binary with size: ${size} bytes`);
+                        
+                        if (size < 100) {
+                            console.error("Exported GLB is too small, likely invalid");
+                            reject(new Error("Exported GLB is too small (< 100 bytes)"));
+                            return;
+                        }
+                        
                         resolve(result);
                     } else {
-                        // Handle JSON result (rare case)
                         console.log("Received JSON output instead of binary, converting...");
+                        // Handle JSON result (should be rare)
                         const output = JSON.stringify(result);
                         const blob = new Blob([output], { type: 'application/json' });
                         const reader = new FileReader();
                         reader.readAsArrayBuffer(blob);
                         reader.onloadend = () => {
+                            clearTimeout(timeoutId);
                             if (reader.result) {
-                                console.log(`Converted JSON to ArrayBuffer with size: ${(reader.result as ArrayBuffer).byteLength} bytes`);
                                 resolve(reader.result as ArrayBuffer);
                             } else {
                                 reject(new Error("Failed to convert to ArrayBuffer"));
                             }
                         };
-                        reader.onerror = (error) => reject(error);
+                        reader.onerror = (error) => {
+                            clearTimeout(timeoutId);
+                            reject(error);
+                        };
                     }
                 },
                 (error) => {
+                    clearTimeout(timeoutId);
                     console.error("GLTFExporter parse error:", error);
                     reject(error);
                 },
                 {
                     binary: true,
-                    // Include metadata in the exported file
                     animations: [],
                     onlyVisible: true,
                     embedImages: true,
@@ -96,34 +145,34 @@ export async function createCube(colors: string[]): Promise<ArrayBuffer> {
     });
 }
 
-// Chuyển đổi mảng các màu thành file GLB
-export async function convertGLBToFile(colors: string[], name: string): Promise<File> {
+// Update convertGLBToFile to accept full material parameters
+export async function convertGLBToFile(colors: string[], name: string, materialParams?: any): Promise<File> {
     try {
-        console.log("Bắt đầu tạo mô hình 3D GLB với màu:", colors);
+        console.log("Starting to create 3D GLB model with colors and materials:", colors, materialParams);
 
-        // Tạo cube với các màu đã chỉ định
-        const glbData = await createCube(colors);
+        // Create cube with the specified colors AND material parameters
+        const glbData = await createCube(colors, materialParams);
 
-        // Kiểm tra kích thước dữ liệu
-        console.log(`Kích thước dữ liệu GLB: ${glbData.byteLength} bytes`);
+        // Check data size
+        console.log(`GLB data size: ${glbData.byteLength} bytes`);
 
         if (glbData.byteLength <= 0) {
             throw new Error("Invalid or empty GLB data");
         }
 
-        // Chuyển đổi ArrayBuffer thành Blob với MIME type đúng
+        // Convert ArrayBuffer to Blob with correct MIME type
         const blob = new Blob([glbData], { type: 'model/gltf-binary' });
 
-        // Tạo tên file an toàn cho URL
+        // Create safe filename for URL
         const safeFileName = name
             .replace(/\s+/g, '-')
             .toLowerCase()
             .replace(/[^a-z0-9-]/g, '')
-            .substring(0, 50); // giới hạn độ dài
+            .substring(0, 50);
 
         const fileName = `${safeFileName}-3d-model.glb`;
 
-        // Tạo File object với metadata đầy đủ
+        // Create File object with full metadata
         const file = new File([blob], fileName, {
             type: 'model/gltf-binary',
             lastModified: Date.now()
@@ -133,7 +182,7 @@ export async function convertGLBToFile(colors: string[], name: string): Promise<
         return file;
     } catch (error) {
         console.error("Error creating GLB file:", error);
-        // Tạo 1 cube đơn giản trong trường hợp lỗi
+        // Create a simple cube in case of error
         const simpleGLB = await createSimpleCube();
         const blob = new Blob([simpleGLB], { type: 'model/gltf-binary' });
         const fileName = `${name.replace(/\s+/g, '-').toLowerCase()}-fallback.glb`;

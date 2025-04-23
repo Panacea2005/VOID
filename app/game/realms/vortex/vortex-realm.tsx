@@ -24,7 +24,7 @@ interface Template {
 
 const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) => {
   // Grid dimensions
-  const [gridSize, setGridSize] = useState({ width: 12, height: 12 });
+  const [gridSize, setGridSize] = useState({ width: 16, height: 16 });
   
   // The art grid
   const [grid, setGrid] = useState<Cell[][]>([]);
@@ -52,8 +52,8 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
     perspective: 1200,
     rotateX: 25, // Tilt angle for 3D effect
     rotateY: 5,
-    translateZ: -80,
-    scale: 0.85,
+    translateZ: -100,
+    scale: 0.9,
   });
   
   // Animation controls
@@ -129,18 +129,22 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
       name: 'Simple Cube',
       icon: '🧊',
       grid: [
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
-        [0, 0, 0, 0, 1, 2, 2, 1, 0, 0, 0, 0],
-        [0, 0, 0, 0, 1, 2, 2, 1, 0, 0, 0, 0],
-        [0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
-        [0, 0, 0, 1, 1, 3, 3, 1, 1, 0, 0, 0],
-        [0, 0, 0, 1, 3, 3, 3, 3, 1, 0, 0, 0],
-        [0, 0, 0, 1, 3, 3, 3, 3, 1, 0, 0, 0],
-        [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 3, 3, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 3, 3, 3, 3, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 3, 3, 3, 3, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
       ]
     },
     {
@@ -148,18 +152,22 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
       name: 'Heart',
       icon: '❤️',
       grid: [
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0],
-        [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-        [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-        [0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
       ]
     },
     {
@@ -167,18 +175,114 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
       name: 'Star',
       icon: '⭐',
       grid: [
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-        [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-        [0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0],
-        [0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0],
-        [0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      ]
+    },
+    {
+      id: 'spaceship',
+      name: 'Spaceship',
+      icon: '🚀',
+      grid: [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 1, 2, 2, 1, 1, 1, 2, 2, 1, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      ]
+    },
+    {
+      id: 'mushroom',
+      name: 'Mushroom',
+      icon: '🍄',
+      grid: [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 2, 2, 1, 1, 1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 2, 2, 2, 2, 1, 1, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      ]
+    },
+    {
+      id: 'sword',
+      name: 'Sword',
+      icon: '⚔️',
+      grid: [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      ]
+    },
+    {
+      id: 'skull',
+      name: 'Skull',
+      icon: '💀',
+      grid: [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
       ]
     }
   ];
@@ -404,118 +508,12 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
     }
   };
   
-  // Render color palette
-  const renderColorPalette = () => {
-    return (
-      <div className="flex flex-wrap gap-2 justify-center">
-        {colorPalette.map((color, index) => (
-          <button
-            key={`color-${index}`}
-            className={`w-10 h-10 rounded-md transition-all ${selectedColorIndex === index ? 'ring-2 ring-white scale-110' : 'hover:scale-105'}`}
-            style={{
-              backgroundColor: color,
-              border: color === 'transparent' ? '2px dashed #666' : 'none',
-              transform: selectedColorIndex === index ? 'scale(1.1)' : 'scale(1)'
-            }}
-            onClick={() => {
-              setSelectedColorIndex(index);
-              setIsErasing(false);
-            }}
-          >
-            {index === 0 && <span className="text-gray-400">🧹</span>}
-          </button>
-        ))}
-      </div>
-    );
-  };
-  
-  // Render templates
-  const renderTemplates = () => {
-    return (
-      <div className="flex gap-3 justify-center">
-        {templates.map((template) => (
-          <button
-            key={template.id}
-            className="w-12 h-12 bg-gray-800/60 rounded-md flex items-center justify-center text-2xl hover:bg-gray-700/60 transition-all"
-            onClick={() => applyTemplate(template)}
-          >
-            {template.icon}
-          </button>
-        ))}
-      </div>
-    );
-  };
-  
-  // Render toolbar
-  const renderToolbar = () => {
-    return (
-      <div className="flex gap-3 justify-center">
-        <button
-          className={`px-4 py-2 rounded-md text-white text-sm transition-all ${isErasing ? 'bg-red-600/70' : 'bg-gray-800/60 hover:bg-gray-700/60'}`}
-          onClick={() => {
-            setIsErasing(!isErasing);
-            if (!isErasing) {
-              setSelectedColorIndex(0);
-            }
-          }}
-        >
-          {isErasing ? '✏️ Draw' : '🧹 Erase'}
-        </button>
-        
-        <button
-          className="px-4 py-2 rounded-md bg-gray-800/60 hover:bg-gray-700/60 text-white text-sm transition-all"
-          onClick={handleClearCanvas}
-        >
-          🗑️ Clear
-        </button>
-        
-        <button
-          className="px-4 py-2 rounded-md bg-blue-600/70 hover:bg-blue-500/70 text-white text-sm transition-all"
-          onClick={handleExport}
-        >
-          💾 Save
-        </button>
-      </div>
-    );
-  };
-  
-  // Render background particles for visual effect
-  const renderParticles = () => {
-    return Array.from({ length: 30 }).map((_, i) => (
-      <motion.div
-        key={`particle-${i}`}
-        className="absolute rounded-full bg-gradient-to-r from-blue-300/20 to-purple-400/20"
-        animate={{
-          x: [
-            Math.random() * window.innerWidth,
-            Math.random() * window.innerWidth
-          ],
-          y: [
-            Math.random() * window.innerHeight,
-            Math.random() * window.innerHeight
-          ],
-          opacity: [0.1, 0.2, 0.1]
-        }}
-        transition={{
-          duration: Math.random() * 20 + 15,
-          repeat: Infinity,
-          ease: "linear"
-        }}
-        style={{
-          width: `${Math.random() * 3 + 1}px`,
-          height: `${Math.random() * 3 + 1}px`,
-          boxShadow: `0 0 ${Math.random() * 5 + 2}px ${mainColor}`
-        }}
-      />
-    ));
-  };
-  
   // Render 3D cube for the cell - exactly like Cryptic Realm Tetris
   const render3DCube = (color: string, x: number, y: number, z: number = 4) => {
     if (color === 'transparent') return null;
     
-    const cubeSize = 28;
-    const cellSize = 30;
+    const cubeSize = 25;
+    const cellSize = 28;
     const gapSize = 1;
     
     // Calculate position
@@ -697,23 +695,47 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
   return (
     <div
       ref={containerRef}
-      className="relative min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden bg-gradient-to-b from-purple-900/30 via-black to-black"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-purple-900/30 via-black to-black"
     >
-      {/* Background particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {renderParticles()}
-      </div>
-
-      {/* Gradient background with dynamic lighting */}
+      {/* Retro grid background */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-900/30 via-black to-black opacity-70"></div>
-
+        <div 
+          className="absolute inset-0" 
+          style={{
+            backgroundImage: "linear-gradient(rgba(30, 30, 60, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(30, 30, 60, 0.3) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+            backgroundPosition: "-1px -1px",
+            perspective: "1000px",
+            transformStyle: "preserve-3d"
+          }}
+        ></div>
+        
+        {/* Glow line horizontal */}
+        <div 
+          className="absolute left-0 right-0 h-px top-1/2 transform -translate-y-1/2"
+          style={{
+            background: `linear-gradient(90deg, transparent, ${mainColor}, transparent)`,
+            boxShadow: `0 0 15px 0 ${mainColor}`,
+            opacity: 0.5
+          }}
+        ></div>
+        
+        {/* Glow line vertical */}
+        <div 
+          className="absolute top-0 bottom-0 w-px left-1/2 transform -translate-x-1/2"
+          style={{
+            background: `linear-gradient(0deg, transparent, ${mainColor}, transparent)`,
+            boxShadow: `0 0 15px 0 ${mainColor}`,
+            opacity: 0.5
+          }}
+        ></div>
+        
         {/* Dynamic ambient light that follows mouse */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
             background: `radial-gradient(circle at ${ambientLightPosition.x}% ${ambientLightPosition.y}%, ${mainColor}20 0%, transparent 70%)`,
-            filter: "blur(40px)",
+            filter: "blur(60px)",
           }}
         />
       </div>
@@ -723,7 +745,7 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="text-center mb-6 z-10"
+        className="absolute top-4 left-0 right-0 text-center z-10"
       >
         <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600 mb-1 font-pixel tracking-wider">
           CUBE VOXEL ART
@@ -738,41 +760,69 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
         </div>
       </motion.div>
       
-      {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center gap-6 w-full max-w-2xl">
-        {/* 3D Grid */}
-        <div className="flex flex-col">
-          {/* Floating 3D Game grid - removing border box */}
-          <div className="relative flex justify-center">
-            <div 
-              className="glow-effect"
-              style={{
-                position: "absolute",
-                width: "100%",
-                height: "110%",
-                top: "-5%",
-                left: "0",
-                background: `radial-gradient(70% 50% at center, ${mainColor}10, transparent)`,
-                pointerEvents: "none",
-                zIndex: 1
-              }}
-            />
-            
-            {/* 3D Grid with perspective */}
-            <motion.div
-              ref={gridRef}
-              className="relative overflow-hidden game-grid-3d"
-              style={{
-                width: gridSize.width * 30, // Match cell size
-                height: gridSize.height * 30,
-                perspective: `${viewSettings.perspective}px`,
-                transformStyle: "preserve-3d", 
-              }}
-              animate={gridControls}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onTouchEnd={handleTouchEnd}
-            >
+      {/* Main layout with side panels */}
+      <div className="relative z-10 flex justify-center items-center h-full w-full max-w-7xl">
+        {/* Left Panel - Tools */}
+        <div className="absolute left-1 top-1/2 transform -translate-y-1/2">
+          <div className="pixel-border p-1 bg-gray-900/80">
+            <div className="flex flex-col gap-1">
+              <button
+                className={`pixel-button w-full p-2 text-center ${isErasing ? 'bg-pink-900/80' : 'bg-blue-900/80'}`}
+                onClick={() => {
+                  setIsErasing(!isErasing);
+                  if (!isErasing) {
+                    setSelectedColorIndex(0);
+                  }
+                }}
+              >
+                <span className="block mb-1">{isErasing ? '✏️' : '🧹'}</span>
+                <span className="block text-xs font-pixel">{isErasing ? 'DRAW' : 'ERASE'}</span>
+              </button>
+              
+              <button
+                className="pixel-button w-full p-2 text-center bg-blue-900/80"
+                onClick={handleClearCanvas}
+              >
+                <span className="block mb-1">🗑️</span>
+                <span className="block text-xs font-pixel">CLEAR</span>
+              </button>
+              
+              <button
+                className="pixel-button w-full p-2 text-center bg-blue-900/80"
+                onClick={handleExport}
+              >
+                <span className="block mb-1">💾</span>
+                <span className="block text-xs font-pixel">SAVE</span>
+              </button>
+              
+              <button
+                onClick={onReturn}
+                className="pixel-button w-full p-2 text-center bg-indigo-900/80 mt-1"
+              >
+                <span className="block mb-1">⬅️</span>
+                <span className="block text-xs font-pixel">RETURN</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Center Panel - Canvas */}
+        <div className="flex flex-col items-center justify-center">
+          {/* 3D Grid with perspective - No border */}
+          <motion.div
+            ref={gridRef}
+            className="relative overflow-visible game-grid-3d"
+            style={{
+              width: gridSize.width * 30,
+              height: gridSize.height * 30,
+              perspective: `${viewSettings.perspective}px`,
+              transformStyle: "preserve-3d", 
+            }}
+            animate={gridControls}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchEnd={handleTouchEnd}
+          >
               {/* 3D Playfield with perspective */}
               <div
                 className="absolute inset-0 transform-gpu"
@@ -854,8 +904,12 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
 
                 {/* Interactive grid cells */}
                 <div 
-                  className="absolute inset-0 grid grid-cols-12 gap-0 z-10"
-                  style={{ pointerEvents: "all" }}
+                  className="absolute inset-0 grid"
+                  style={{ 
+                    pointerEvents: "all",
+                    gridTemplateColumns: `repeat(${gridSize.width}, 1fr)`,
+                    gridTemplateRows: `repeat(${gridSize.height}, 1fr)`
+                  }}
                 >
                   {grid.map((row, rowIndex) => (
                     <React.Fragment key={`row-${rowIndex}`}>
@@ -886,54 +940,53 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
                   </React.Fragment>
                 ))}
               </div>
-            </motion.div>
-          </div>
+          </motion.div>
         </div>
         
-        {/* Color palette */}
-        <motion.div 
-          className="bg-black/50 border border-gray-700/50 p-4 rounded-md w-full"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          <h2 className="text-white text-center mb-3">Colors</h2>
-          {renderColorPalette()}
-        </motion.div>
-        
-        {/* Templates */}
-        <motion.div 
-          className="bg-black/50 border border-gray-700/50 p-4 rounded-md w-full"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <h2 className="text-white text-center mb-3">Templates</h2>
-          {renderTemplates()}
-        </motion.div>
-        
-        {/* Tools */}
-        <motion.div 
-          className="bg-black/50 border border-gray-700/50 p-4 rounded-md w-full"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-        >
-          {renderToolbar()}
-        </motion.div>
-        
-        {/* Return button */}
-        <motion.button 
-          onClick={onReturn}
-          className="px-6 py-3 bg-black/50 hover:bg-purple-900/30 rounded-md transition-all duration-200 text-white"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          Return to Hub
-        </motion.button>
+        {/* Right Panel - Colors and Templates */}
+        <div className="absolute right-1 top-1/2 transform -translate-y-1/2">
+          <div className="flex flex-col gap-2">
+            {/* Colors Panel */}
+            <div className="pixel-border p-1 bg-gray-900/80">
+              <h2 className="text-center text-xs font-pixel mb-1 text-white">COLORS</h2>
+              <div className="grid grid-cols-4 gap-1">
+                {colorPalette.slice(0, 24).map((color, index) => (
+                  <button
+                    key={`color-${index}`}
+                    className={`w-7 h-7 transition-all ${selectedColorIndex === index ? 'ring-2 ring-white' : 'hover:scale-105'}`}
+                    style={{
+                      backgroundColor: color,
+                      border: color === 'transparent' ? '1px dashed #666' : '1px solid rgba(255,255,255,0.1)',
+                    }}
+                    onClick={() => {
+                      setSelectedColorIndex(index);
+                      setIsErasing(false);
+                    }}
+                  >
+                    {index === 0 && <span className="text-xs">🧹</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Templates Panel */}
+            <div className="pixel-border p-1 bg-gray-900/80">
+              <h2 className="text-center text-xs font-pixel mb-1 text-white">TEMPLATES</h2>
+              <div className="grid grid-cols-4 gap-1">
+                {templates.map((template) => (
+                  <button
+                    key={template.id}
+                    className="w-7 h-7 bg-blue-900/60 flex items-center justify-center text-sm hover:bg-blue-800/60 transition-all"
+                    onClick={() => applyTemplate(template)}
+                    title={template.name}
+                  >
+                    {template.icon}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       
       {/* Export message */}
@@ -943,9 +996,9 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-10 left-1/2 transform -translate-x-1/2 px-6 py-3 bg-green-600/70 backdrop-blur-sm rounded-lg text-white z-50"
+            className="fixed top-10 left-1/2 transform -translate-x-1/2 px-3 py-2 bg-green-600/70 backdrop-blur-sm text-white z-50 pixel-border"
           >
-            Image saved successfully!
+            <span className="font-pixel text-sm">Image saved successfully!</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -960,6 +1013,39 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
         .font-pixel {
           font-family: "Press Start 2P", monospace;
           letter-spacing: 0.05em;
+        }
+        
+        .pixel-border {
+          position: relative;
+          box-shadow: 
+            0 0 0 1px rgba(120, 120, 255, 0.5),
+            0 0 0 2px rgba(0, 0, 0, 0.9),
+            0 0 15px 0 rgba(100, 100, 255, 0.3);
+        }
+        
+        .pixel-button {
+          color: white;
+          font-weight: bold;
+          background-color: rgba(30, 30, 90, 0.6);
+          border: 1px solid rgba(120, 120, 255, 0.5);
+          box-shadow:
+            0 0 0 1px rgba(0, 0, 0, 0.9),
+            inset 0 0 8px rgba(80, 80, 255, 0.3);
+          transition: all 0.1s;
+        }
+        
+        .pixel-button:hover {
+          transform: scale(1.02);
+          box-shadow:
+            0 0 0 1px rgba(0, 0, 0, 0.9),
+            inset 0 0 12px rgba(100, 100, 255, 0.4);
+        }
+        
+        .pixel-button:active {
+          transform: scale(0.98);
+          box-shadow:
+            0 0 0 1px rgba(0, 0, 0, 0.9),
+            inset 0 0 8px rgba(60, 60, 255, 0.5);
         }
         
         .cube-scene {
@@ -983,18 +1069,30 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
         
         .game-grid-3d {
           transform-style: preserve-3d;
-          box-shadow: 0 20px 80px rgba(0, 0, 0, 0.5);
-        }
-
-        .glow-effect {
-          animation: pulse 4s infinite ease-in-out;
         }
 
         @keyframes pulse {
           0%, 100% { opacity: 0.5; }
           50% { opacity: 1; }
         }
+        
+        @keyframes scan-line {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(100%); }
+        }
+        
+        .scan-line {
+          animation: scan-line 8s linear infinite;
+        }
       `}</style>
+      
+      {/* Animated scan line effect */}
+      <div 
+        className="absolute left-0 right-0 h-40 pointer-events-none z-30 opacity-10 scan-line"
+        style={{
+          background: `linear-gradient(0deg, transparent, ${mainColor}40, transparent)`,
+        }}
+      ></div>
     </div>
   );
 };

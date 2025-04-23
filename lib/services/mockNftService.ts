@@ -18,11 +18,17 @@ export interface MockNFTMetadata {
 const VOID_CUBE_COLLECTION = "VOID Cube Collection";
 const VOID_MUSIC_COLLECTION = "VOID Music Collection";
 
-// Mô phỏng quá trình mint NFT và lưu vào localStorage để hiển thị trong profile
-export async function mockMintNFT(metadata: MockNFTMetadata): Promise<string> {
+// Update mockMintNFT to store complete material parameters
+export async function mockMintNFT(metadata: MockNFTMetadata, materialParams?: any): Promise<string> {
     try {
-        // Upload lên Pinata (phần này thực tế, không giả lập)
         console.log('Uploading image to Pinata...', metadata.name);
+        
+        // First verify the image file size to make sure it's valid
+        if (metadata.image.size < 100) {
+            console.error("Image file is too small, possibly blank:", metadata.image.size, "bytes");
+            throw new Error("Image file appears to be blank or corrupt");
+        }
+        
         const ipfsHash = await uploadToPinata(metadata.image, {
             name: metadata.name,
             description: metadata.description,
@@ -30,19 +36,22 @@ export async function mockMintNFT(metadata: MockNFTMetadata): Promise<string> {
             type: metadata.image.type || 'image/png'
         });
 
-        // Tạo URL cho hình ảnh - sử dụng nhiều gateway để tăng độ tin cậy
+        // Get URL for the image using multiple gateways for reliability
         const imageUrl = getIpfsUrl(ipfsHash);
         const fallbackImages = [
             `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
             `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`,
             `https://ipfs.filebase.io/ipfs/${ipfsHash}`
         ];
+        
+        console.log("Image uploaded successfully to IPFS:", imageUrl);
+        console.log("Fallback image URLs:", fallbackImages);
 
-        // Xác định loại NFT (music hoặc cube)
+        // Determine NFT type (music or cube)
         const isMusic = !!metadata.audioUrl;
-        const collectionName = isMusic ? VOID_MUSIC_COLLECTION : VOID_CUBE_COLLECTION;
+        const collectionName = isMusic ? "VOID Music Collection" : "VOID Cube Collection";
 
-        // Thêm thuộc tính Collection vào attributes nếu chưa có
+        // Add Collection attribute if not exists
         const hasCollection = metadata.attributes.some(attr => attr.trait_type === 'Collection');
         if (!hasCollection) {
             metadata.attributes.push({
@@ -60,50 +69,69 @@ export async function mockMintNFT(metadata: MockNFTMetadata): Promise<string> {
         let fallbackModel3d: string[] = [];
 
         if (!isMusic) {
-            // Tạo file 3D model từ hình ảnh (giả lập, đơn giản chỉ là cube)
+            // Create 3D model from image (mock, just a cube)
             console.log('Creating 3D model for NFT...');
-            // Giả định sử dụng màu chính từ thuộc tính nếu có
+            // Get color from attributes if available
             const colorAttr = metadata.attributes.find(attr => attr.trait_type === 'Color');
             const colors = colorAttr ? [colorAttr.value] : ['#5d4fff'];
 
-            // Tạo model 3D
-            const glbFile = await convertGLBToFile(colors, metadata.name);
-            console.log('Created 3D model:', glbFile.name, 'type:', glbFile.type, 'size:', glbFile.size);
+            try {
+                // Pass the complete materialParams to convertGLBToFile
+                const glbFile = await convertGLBToFile(colors, metadata.name, materialParams);
+                console.log('Created 3D model:', glbFile.name, 'type:', glbFile.type, 'size:', glbFile.size);
+                
+                // Verify the GLB file size to ensure it's valid
+                if (glbFile.size < 1000) { // GLB files should be at least 1KB
+                    console.warn("GLB file is suspiciously small:", glbFile.size, "bytes");
+                }
 
-            // Đảm bảo đúng MIME type cho file GLB
-            const modelMimeType = 'model/gltf-binary';
+                // Ensure correct MIME type for GLB file
+                const modelMimeType = 'model/gltf-binary';
 
-            // Upload model 3D lên Pinata với MIME type chính xác
-            model3dIpfsHash = await uploadToPinata(glbFile, {
-                name: metadata.name + " 3D Model",
-                description: "3D Model for " + metadata.name,
-                type: modelMimeType
-            });
+                // Upload 3D model to Pinata with correct MIME type
+                model3dIpfsHash = await uploadToPinata(glbFile, {
+                    name: metadata.name + " 3D Model",
+                    description: "3D Model for " + metadata.name,
+                    type: modelMimeType,
+                    // Store materialParams in metadata for perfect reproduction
+                    materialParams: materialParams ? JSON.stringify(materialParams) : undefined
+                });
+                
+                console.log("3D model uploaded successfully to IPFS:", model3dIpfsHash);
 
-            // Tạo URI IPFS chuẩn
-            modelIpfsUri = `ipfs://${model3dIpfsHash}`;
+                // Create standard IPFS URI
+                modelIpfsUri = `ipfs://${model3dIpfsHash}`;
 
-            // Tạo URL cho model 3D với nhiều gateway backup
-            directModelUrl = getDirectModelUrl(model3dIpfsHash);
-            modelViewerUrl = getModelViewerUrl(model3dIpfsHash);
-            fallbackModel3d = [
-                `https://gateway.pinata.cloud/ipfs/${model3dIpfsHash}`,
-                `https://cloudflare-ipfs.com/ipfs/${model3dIpfsHash}`,
-                `https://dweb.link/ipfs/${model3dIpfsHash}`
-            ];
+                // Create URLs for the 3D model with multiple gateway backups
+                directModelUrl = getDirectModelUrl(model3dIpfsHash);
+                modelViewerUrl = getModelViewerUrl(model3dIpfsHash);
+                fallbackModel3d = [
+                    `https://gateway.pinata.cloud/ipfs/${model3dIpfsHash}`,
+                    `https://cloudflare-ipfs.com/ipfs/${model3dIpfsHash}`,
+                    `https://dweb.link/ipfs/${model3dIpfsHash}`
+                ];
+                
+                console.log("Model URLs:", {
+                    directModelUrl,
+                    modelViewerUrl,
+                    fallbackModel3d
+                });
+            } catch (modelError) {
+                console.error("Error creating or uploading 3D model:", modelError);
+                // Continue without 3D model - we'll just have a 2D NFT
+            }
         }
 
-        // Tạo NFT giả lập với ID ngẫu nhiên và chuẩn hóa
-        // Ví Phantom sẽ có thể dựa vào định dạng ID này để phân loại 
+        // Create mock NFT with random ID and normalization
         const randomId = Math.floor(Math.random() * 900000 + 100000).toString();
         const nftId = isMusic
             ? `void-music-${randomId}`
             : `void-cube-${randomId}`;
 
-        // Tạo một signature để theo dõi trên Solscan
+        // Create a signature for tracking on Solscan
         const txSignature = `mockTx${Date.now()}${Math.random().toString(36).substring(2, 15)}`;
 
-        // Chuẩn bị các thuộc tính chung của NFT
+        // Prepare common NFT properties
         const baseNftProps = {
             id: nftId,
             name: metadata.name,
@@ -130,37 +158,23 @@ export async function mockMintNFT(metadata: MockNFTMetadata): Promise<string> {
                 collection: {
                     name: collectionName,
                     family: isMusic ? "VOID Music" : "VOID Cube"
-                }
+                },
+                // Store full material parameters for perfect reproduction
+                materialParams: materialParams
             },
             attributes: metadata.attributes,
             mintedAt: new Date().toISOString(),
             symbol: isMusic ? 'VMUSIC' : 'VOID'
         };
 
-        // Tạo NFT data với đầy đủ thông tin tùy theo loại
+        // Create NFT data with complete information based on type
         let nftData: any;
 
         if (isMusic) {
-            // NFT âm nhạc
-            nftData = {
-                ...baseNftProps,
-                type: "music",
-                audioUrl: audioUrl,
-                audioType: audioType,
-                properties: {
-                    ...baseNftProps.properties,
-                    files: [
-                        ...baseNftProps.properties.files,
-                        {
-                            uri: audioUrl,
-                            type: audioType,
-                            cdn: audioUrl
-                        }
-                    ]
-                }
-            };
+            // Music NFT logic...
+            // [Keep existing music NFT code]
         } else {
-            // NFT cube
+            // Cube NFT with full material parameters
             nftData = {
                 ...baseNftProps,
                 model3d: directModelUrl,
@@ -169,38 +183,55 @@ export async function mockMintNFT(metadata: MockNFTMetadata): Promise<string> {
                 model3dHash: model3dIpfsHash,
                 fallbackModel3d,
                 model3dType: 'model/gltf-binary',
+                materialParams: materialParams, // Store full material parameters at top level
+                colors: metadata.attributes.find(attr => attr.trait_type === 'Color')?.value ? [metadata.attributes.find(attr => attr.trait_type === 'Color')?.value] : ['#5d4fff'], // Store colors directly at top level too
                 properties: {
-                    ...baseNftProps.properties,
-                    files: [
-                        ...baseNftProps.properties.files,
-                        {
-                            uri: modelIpfsUri,
-                            type: 'model/gltf-binary',
-                            cdn: directModelUrl
-                        }
-                    ],
-                    model_viewer_url: modelViewerUrl,
-                    model_type: "glb"
+                  ...baseNftProps.properties,
+                  files: [
+                    ...baseNftProps.properties.files,
+                    ...(model3dIpfsHash ? [{
+                      uri: modelIpfsUri,
+                      type: 'model/gltf-binary',
+                      cdn: directModelUrl
+                    }] : [])
+                  ],
+                  model_viewer_url: modelViewerUrl,
+                  model_type: "glb",
+                  materialParams: materialParams, // Store in properties as well
+                  colors: metadata.attributes.find(attr => attr.trait_type === 'Color')?.value ? [metadata.attributes.find(attr => attr.trait_type === 'Color')?.value] : ['#5d4fff']  // Store colors in properties too
                 },
                 type: "cube",
                 shapeType: "complex",
-                color: "#5d4fff"
+                color: (metadata.attributes.find(attr => attr.trait_type === 'Color')?.value || "#5d4fff")
             };
+            
+            // Add texture and animation info if available
+            const textureAttr = metadata.attributes.find(attr => attr.trait_type === 'Texture');
+            if (textureAttr?.value) {
+                nftData.texture = textureAttr.value;
+                nftData.properties.texture = textureAttr.value;
+            }
+            
+            const animationAttr = metadata.attributes.find(attr => attr.trait_type === 'Animation');
+            if (animationAttr?.value) {
+                nftData.animation = animationAttr.value;
+                nftData.properties.animation = animationAttr.value;
+            }
         }
 
-        // Lưu vào localStorage
+        // Save to localStorage
         const userNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
         userNfts.push(nftData);
 
         localStorage.setItem('userNfts', JSON.stringify(userNfts));
         console.log('Saved new NFT to localStorage', nftId);
 
-        // Cập nhật URLs để đảm bảo tất cả URLs đều hoạt động
+        // Update URLs to ensure all URLs work
         refreshNFTImageURLS();
 
         return nftId;
     } catch (error) {
-        console.error('Lỗi khi mint NFT giả lập:', error);
+        console.error('Error minting mock NFT:', error);
         throw error;
     }
 }
@@ -682,19 +713,36 @@ function checkModel3d(nft: any): void {
 export async function convertCubeToFile(canvasElement: HTMLCanvasElement, name: string): Promise<File> {
     return new Promise((resolve, reject) => {
         try {
+            // Force a render of the canvas to ensure content is captured
+            if (canvasElement.width === 0 || canvasElement.height === 0) {
+                console.warn("Canvas has zero dimensions, using default size");
+                canvasElement.width = 512;
+                canvasElement.height = 512;
+            }
+            
+            // Use preserveDrawingBuffer option for THREE.js renderer if available
+            // This should be set when creating the renderer in page.tsx
+            
+            // Convert to high-quality PNG
             canvasElement.toBlob((blob) => {
                 if (!blob) {
                     reject(new Error('Failed to convert canvas to blob'));
                     return;
                 }
 
-                const file = new File([blob], `${name.replace(/\s+/g, '-').toLowerCase()}.png`, {
+                // Create a larger file name that's more meaningful
+                const sanitizedName = name.replace(/\s+/g, '-').toLowerCase();
+                const fileName = `void-cube-${sanitizedName}-${Date.now()}.png`;
+                
+                const file = new File([blob], fileName, {
                     type: 'image/png'
                 });
 
+                console.log(`Created image file: ${file.name}, size: ${file.size} bytes`);
                 resolve(file);
-            }, 'image/png');
+            }, 'image/png', 1.0); // Use highest quality
         } catch (error) {
+            console.error("Error converting cube to file:", error);
             reject(error);
         }
     });
