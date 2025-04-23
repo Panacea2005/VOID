@@ -359,7 +359,7 @@ export default function Footer() {
                 { name: "AI", path: "/ai" },
                 { name: "MARKET", path: "/market" },
                 { name: "GALLERY", path: "/gallery" },
-                { name: "GACHA", path: "/gacha" },
+                { name: "ART", path: "/art" },
               ].map((link, index) => (
                 <FooterLink key={link.path} href={link.path} index={index}>
                   {link.name}

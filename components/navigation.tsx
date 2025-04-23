@@ -65,7 +65,7 @@ export default function Navigation() {
     { name: "ABOUT", path: "/about" },
     { name: "GALLERY", path: "/gallery" },
     { name: "REALM", path: "/realm" },
-    { name: "GACHA", path: "/gacha" },
+    { name: "ART", path: "//art" },
     { name: "AI", path: "/ai" },
     { name: "MARKET", path: "/market" },
   ]
