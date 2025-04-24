@@ -21,19 +21,11 @@ import {
   NFTData,
 } from "@/lib/services/walletService";
 import {
-  getUserNFTs,
-  refreshNFTImageURLS,
-  isValidBlobURL,
-  preloadImages,
-  validateAndFixModelURL,
-} from "@/lib/services/mockNftService";
-import {
   getModelViewerUrl,
   getDirectModelUrl,
   getGoogleModelViewerUrl,
 } from "@/lib/services/pinataService";
-import IPFSViewer from "@/components/ipfs-viewer";
-import SolscanViewer from "@/components/solscan-viewer";
+import ModelViewer from "@/components/model-viewer";
 import NFTCard from "@/components/nft-card";
 import {
   LineChart,
@@ -53,6 +45,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ProfileEditModal from "@/components/profile-edit-modal";
 import { ProfileData } from "@/lib/supabase/profileService";
 import { supabase } from "@/lib/supabase/supabaseClient";
+import { cubeCssStyles } from "@/components/nft-card";
+import { PublicKey } from "@solana/web3.js";
 
 export default function ProfilePage() {
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
@@ -90,6 +84,9 @@ export default function ProfilePage() {
   // New state for profile editing
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  const [fallbackModelUrls, setFallbackModelUrls] = useState<string[]>([]);
+  const [currentNftForViewer, setCurrentNftForViewer] = useState<any>(null);
+
   // Use the Auth context
   const auth = useAuth();
 
@@ -114,70 +111,450 @@ export default function ProfilePage() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
-  // Load wallet data from blockchain
   useEffect(() => {
-    async function loadWalletData() {
-      if (!publicKey) {
-        // Redirect user to home if no publicKey
-        router.push("/");
-        return;
-      }
-
-      if (dataLoadAttempted) {
-        return; // Prevent reloading data if already attempted
-      }
-
-      try {
-        setLoading(true);
+    const loadWalletData = async () => {
+      if (publicKey && !dataLoadAttempted) {
         setIsLoading(true);
         setDataLoadAttempted(true);
 
-        // Get wallet info
-        const walletData = await getWalletInfo(publicKey);
-        setUserData(walletData);
+        try {
+          // Get wallet info
+          const walletData = await getWalletInfo(publicKey);
+          setUserData(walletData);
 
-        // Get NFTs from blockchain only
-        const nftData = await getNFTs(publicKey);
+          // Load NFTs using your improved function
+          const nftData = await loadNFTsFromWallet(publicKey);
+          setOwnedNFTs(nftData.ownedNFTs);
+          setMintedNFTs(nftData.mintedNFTs);
+          setListedNFTs(nftData.listedNFTs);
 
-        // Only use blockchain NFTs, ignore any local NFTs
-        setOwnedNFTs(nftData.ownedNFTs);
-        setMintedNFTs(nftData.mintedNFTs);
-        setListedNFTs(nftData.listedNFTs);
+          // Process NFTs for cube rendering
+          const processedNFTs = preprocessNFTsForCubeRendering(
+            nftData.ownedNFTs
+          );
+          setOwnedNFTs(processedNFTs);
 
-        // Use only the blockchain NFTs for the userNFTs state as well
-        setUserNFTs(nftData.ownedNFTs);
+          // Get transaction history
+          const txHistory = await getTransactionHistory(publicKey);
 
-        // Get transaction history
-        const txHistory = await getTransactionHistory(publicKey);
+          // Format transaction history for UI
+          const recentActivityData = txHistory.map((tx) => ({
+            event: tx.type,
+            item: `Transaction ${tx.signature.slice(0, 6)}...`,
+            price: tx.amount,
+            date: tx.blockTime,
+            fullSignature: tx.fullSignature,
+          }));
 
-        const formattedTxHistory = txHistory.map((tx) => ({
-          event: tx.type,
-          item: `Transaction ${shortenAddress(tx.signature, 6)}`,
-          price: tx.amount,
-          date: tx.blockTime,
-          fullSignature: tx.fullSignature,
-        }));
+          setRecentActivity(recentActivityData);
 
-        setRecentActivity(formattedTxHistory);
-
-        // Generate portfolio value history based on transactions
-        generatePortfolioValueHistory(formattedTxHistory);
-
-        // Generate collection distribution data - use only blockchain NFTs
-        generateCollectionDistribution(nftData.ownedNFTs);
-
-        // Generate transaction type data
-        generateTransactionTypeData(txHistory);
-      } catch (error) {
-        console.error("Error loading wallet data:", error);
-      } finally {
-        setLoading(false);
-        setIsLoading(false);
+          // Generate data for analytics charts
+          generatePortfolioValueHistory(recentActivityData);
+          generateCollectionDistribution(nftData.ownedNFTs);
+          generateTransactionTypeData(txHistory);
+        } catch (error) {
+          console.error("Error loading wallet data:", error);
+        } finally {
+          setIsLoading(false);
+          setLoading(false);
+        }
       }
-    }
+    };
 
     loadWalletData();
-  }, [publicKey, router, dataLoadAttempted]);
+  }, [publicKey, dataLoadAttempted]);
+
+  async function loadNFTsFromWallet(publicKey: PublicKey) {
+    console.log(`Loading NFTs for wallet: ${publicKey.toString()}`);
+
+    // List of reliable IPFS gateways to try
+    const IPFS_GATEWAYS = [
+      "https://gateway.pinata.cloud/ipfs/",
+      "https://ipfs.io/ipfs/",
+      "https://cloudflare-ipfs.com/ipfs/",
+      "https://dweb.link/ipfs/",
+      "https://gateway.ipfs.io/ipfs/",
+      "https://ipfs.fleek.co/ipfs/",
+    ];
+
+    // Helper function to convert IPFS URI to HTTP URL
+    const ipfsToHttpUrl = (ipfsUri: string, gatewayIndex = 0): string => {
+      if (!ipfsUri) return "";
+
+      // Use Pinata as first choice since it worked in your logs
+      const gateway = IPFS_GATEWAYS[gatewayIndex];
+
+      // Handle ipfs:// protocol
+      if (ipfsUri.startsWith("ipfs://")) {
+        const hash = ipfsUri.replace("ipfs://", "");
+        return `${gateway}${hash}`;
+      }
+
+      // Handle /ipfs/ paths
+      if (ipfsUri.includes("/ipfs/")) {
+        const hash = ipfsUri.split("/ipfs/")[1];
+        return `${gateway}${hash}`;
+      }
+
+      // If it's already an HTTP URL, return as is
+      if (ipfsUri.startsWith("http")) {
+        return ipfsUri;
+      }
+
+      // Assume it's a direct hash
+      return `${gateway}${ipfsUri}`;
+    };
+
+    // Function to fetch metadata with multiple gateway fallbacks
+    const fetchMetadataWithFallbacks = async (
+      metadataUri: string
+    ): Promise<any> => {
+      console.log(`Attempting to fetch metadata from: ${metadataUri}`);
+
+      // If not an IPFS URI, try direct fetch
+      if (
+        !metadataUri.startsWith("ipfs://") &&
+        !metadataUri.includes("/ipfs/")
+      ) {
+        try {
+          const response = await fetch(metadataUri);
+          if (response.ok) {
+            const metadata = await response.json();
+            console.log(
+              `Successfully fetched metadata from direct URL: ${metadataUri}`
+            );
+            return metadata;
+          }
+        } catch (error) {
+          console.error(
+            `Error fetching from primary URL: ${metadataUri}`,
+            error
+          );
+        }
+      }
+
+      // For IPFS URIs or failed HTTP requests, try multiple gateways
+      console.log(
+        `Primary URL failed, trying alternative gateways for: ${metadataUri}`
+      );
+
+      for (let i = 0; i < IPFS_GATEWAYS.length; i++) {
+        try {
+          const gatewayUrl = ipfsToHttpUrl(metadataUri, i);
+          console.log(`Trying alternative IPFS gateway: ${gatewayUrl}`);
+
+          const response = await fetch(gatewayUrl);
+          if (response.ok) {
+            const metadata = await response.json();
+            console.log(
+              `Successfully fetched metadata from alternative gateway: ${gatewayUrl}`
+            );
+            return metadata;
+          }
+        } catch (error) {
+          console.error(
+            `Alternative gateway failed: ${IPFS_GATEWAYS[i]}`,
+            error
+          );
+        }
+      }
+
+      throw new Error(
+        `Failed to fetch metadata from all sources: ${metadataUri}`
+      );
+    };
+
+    try {
+      // First get wallet NFTs using your existing service
+      const nftData = await getNFTs(publicKey);
+
+      // Process each NFT to ensure proper metadata extraction
+      const processedNFTs = await Promise.all(
+        nftData.ownedNFTs.map(async (nft) => {
+          console.log(`Processing NFT: ${nft.name || nft.id}`);
+
+          // Create a deep copy to avoid modifying the original
+          const processedNft: NFTData & { imageHash?: string } = { ...nft };
+
+          // Try to get metadata URI from the NFT
+          let metadataUri = null;
+
+          // Check direct uri field
+          if ("uri" in nft && nft.uri) {
+            metadataUri = nft.uri;
+            console.log(
+              `Found metadata URI in direct uri field: ${metadataUri}`
+            );
+          }
+          // Check properties.metadata field
+          else if (nft.properties?.metadata) {
+            metadataUri = nft.properties.metadata;
+            console.log(
+              `Found metadata URI in properties.metadata: ${metadataUri}`
+            );
+          }
+
+          // If we have a metadata URI, fetch the actual metadata
+          if (metadataUri) {
+            try {
+              // Fetch metadata with gateway fallbacks
+              const metadata = await fetchMetadataWithFallbacks(metadataUri);
+              console.log(
+                `Successfully fetched metadata for ${nft.name || nft.id}`
+              );
+
+              // Apply the real metadata properties to our NFT object
+              processedNft.name = metadata.name || processedNft.name;
+              processedNft.description =
+                metadata.description || processedNft.description;
+
+              // Get the actual image from metadata
+              if (metadata.image) {
+                let imageUrl = metadata.image;
+
+                // Convert IPFS URI to HTTP if needed
+                if (imageUrl.startsWith("ipfs://")) {
+                  imageUrl = ipfsToHttpUrl(imageUrl);
+                  console.log(`Converted IPFS image URL: ${imageUrl}`);
+                }
+
+                processedNft.image = imageUrl;
+                console.log(`Set image URL: ${imageUrl}`);
+
+                // Set fallback images with multiple gateways
+                if (metadata.image.startsWith("ipfs://")) {
+                  const ipfsHash = metadata.image.replace("ipfs://", "");
+                  processedNft.imageHash = ipfsHash;
+                  processedNft.fallbackImages = IPFS_GATEWAYS.map(
+                    (gateway) => `${gateway}${ipfsHash}`
+                  );
+                }
+              }
+
+              // Extract 3D model URL from metadata
+              if (metadata.animation_url || metadata.model) {
+                let modelUrl = metadata.animation_url || metadata.model;
+
+                // Convert IPFS URI to HTTP
+                if (modelUrl.startsWith("ipfs://")) {
+                  const ipfsHash = modelUrl.replace("ipfs://", "");
+                  processedNft.model3dHash = ipfsHash;
+                  modelUrl = ipfsToHttpUrl(modelUrl);
+                }
+
+                processedNft.model3d = modelUrl;
+                console.log(`Set 3D model URL: ${modelUrl}`);
+
+                // Set fallback model URLs with multiple gateways
+                if (
+                  (metadata.animation_url || metadata.model).startsWith(
+                    "ipfs://"
+                  )
+                ) {
+                  const ipfsHash = (
+                    metadata.animation_url || metadata.model
+                  ).replace("ipfs://", "");
+                  (processedNft as any).fallbackModel3d = IPFS_GATEWAYS.map(
+                    (gateway) => `${gateway}${ipfsHash}`
+                  );
+                }
+
+                // Create model viewer URL
+                processedNft.modelViewerUrl = `https://modelviewer.dev/viewer.html#src=${encodeURIComponent(
+                  modelUrl
+                )}&ar=true&autoplay=true&autoRotate=true&cameraControls=true`;
+              }
+
+              // Extract attributes directly from the metadata
+              if (metadata.attributes && metadata.attributes.length > 0) {
+                processedNft.attributes = metadata.attributes;
+
+                // Extract specific properties for display
+                const colorAttr = metadata.attributes.find(
+                  (attr: { trait_type: string }) =>
+                    attr.trait_type === "Color" ||
+                    attr.trait_type?.toLowerCase() === "color"
+                );
+
+                if (colorAttr?.value) {
+                  processedNft.color = colorAttr.value;
+                  console.log(`Found color attribute: ${processedNft.color}`);
+                }
+
+                const textureAttr = metadata.attributes.find(
+                  (attr: { trait_type: string }) =>
+                    attr.trait_type === "Texture"
+                );
+
+                if (textureAttr?.value) {
+                  // Define texture property with type assertion
+                  (processedNft as any).texture = textureAttr.value;
+                  console.log(
+                    `Found texture attribute: ${(processedNft as any).texture}`
+                  );
+                }
+
+                const animationAttr = metadata.attributes.find(
+                  (attr: { trait_type: string }) =>
+                    attr.trait_type === "Animation"
+                );
+
+                if (animationAttr?.value) {
+                  (processedNft as any).animation = animationAttr.value;
+                  console.log(
+                    `Found animation attribute: ${
+                      (processedNft as any).animation
+                    }`
+                  );
+                }
+
+                const collectionAttr = metadata.attributes.find(
+                  (attr: { trait_type: string }) =>
+                    attr.trait_type === "Collection"
+                );
+
+                if (collectionAttr?.value) {
+                  processedNft.collection = collectionAttr.value;
+                  console.log(
+                    `Found collection attribute: ${processedNft.collection}`
+                  );
+                }
+              }
+
+              // Get material params from properties if available
+              if (metadata.properties?.materialParams) {
+                (processedNft as any).materialParams =
+                  metadata.properties.materialParams;
+                console.log("Found material parameters in metadata");
+
+                // Extract color from material params if not found in attributes
+                if (
+                  !processedNft.color &&
+                  (processedNft as any).materialParams?.color
+                ) {
+                  processedNft.color = (
+                    processedNft as any
+                  ).materialParams.color;
+                  console.log(
+                    `Got color from materialParams: ${processedNft.color}`
+                  );
+                }
+
+                // Check for gradient colors
+                if ((processedNft as any).materialParams?.gradientColors) {
+                  (processedNft as any).colors = (
+                    processedNft as any
+                  ).materialParams.gradientColors;
+                  console.log(
+                    `Got gradient colors from materialParams: ${(
+                      processedNft as any
+                    ).colors.join(", ")}`
+                  );
+                }
+              }
+
+              // Check for 3D model in properties.files
+              if (
+                metadata.properties?.files &&
+                Array.isArray(metadata.properties.files)
+              ) {
+                for (const file of metadata.properties.files) {
+                  // Skip if we already have a model
+                  if (processedNft.model3d) break;
+
+                  const fileUri =
+                    typeof file === "string" ? file : file?.uri || file?.url;
+                  const fileType =
+                    typeof file === "object" ? file.type || "" : "";
+
+                  const isLikelyModel =
+                    fileUri?.includes(".glb") ||
+                    fileUri?.includes(".gltf") ||
+                    fileType.includes("model") ||
+                    fileType.includes("glb") ||
+                    fileType.includes("gltf");
+
+                  if (fileUri && isLikelyModel) {
+                    // Convert IPFS URI to HTTP if needed
+                    if (fileUri.startsWith("ipfs://")) {
+                      const ipfsHash = fileUri.replace("ipfs://", "");
+                      processedNft.model3dHash = ipfsHash;
+                      processedNft.model3d = ipfsToHttpUrl(fileUri);
+                    } else {
+                      processedNft.model3d = fileUri;
+                    }
+
+                    console.log(
+                      `Found 3D model in files array: ${processedNft.model3d}`
+                    );
+
+                    // Create model viewer URL
+                    // Create model viewer URL - with fallback value
+                    processedNft.modelViewerUrl = `https://modelviewer.dev/viewer.html#src=${encodeURIComponent(
+                      processedNft.model3d || "" // Provide empty string as fallback
+                    )}&ar=true&autoplay=true&autoRotate=true&cameraControls=true`;
+                  }
+                }
+              }
+
+              // Ensure the NFT type is set based on the metadata
+              if (!processedNft.type) {
+                // Check if it's a cube based on attributes or properties
+                const isCube = processedNft.attributes?.some(
+                  (attr: any) =>
+                    (attr.trait_type === "Type" && attr.value === "Cube") ||
+                    processedNft.name?.toLowerCase().includes("cube")
+                );
+
+                if (isCube) {
+                  processedNft.type = "cube";
+                  console.log(
+                    `Set type to 'cube' based on metadata attributes`
+                  );
+                }
+              }
+            } catch (error) {
+              console.error(
+                `Error fetching metadata for NFT ${nft.name || nft.id}:`,
+                error
+              );
+            }
+          }
+
+          // Ensure we have real colors array for cube rendering if we have a color
+          if (
+            processedNft.type === "cube" &&
+            processedNft.color &&
+            !(processedNft as any).colors
+          ) {
+            // Use type assertion to tell TypeScript that colors property can exist
+            (processedNft as any).colors = generateColorShades(
+              processedNft.color
+            );
+            console.log(
+              `Generated color shades from base color: ${processedNft.color}`
+            );
+          }
+
+          return processedNft;
+        })
+      );
+
+      console.log(`Processed ${processedNFTs.length} NFTs`);
+      return {
+        ownedNFTs: processedNFTs,
+        mintedNFTs: nftData.mintedNFTs,
+        listedNFTs: nftData.listedNFTs,
+      };
+    } catch (error) {
+      console.error("Error loading NFTs from wallet:", error);
+      return {
+        ownedNFTs: [],
+        mintedNFTs: [],
+        listedNFTs: [],
+      };
+    }
+  }
 
   // Handle profile data from localStorage - separated from blockchain data loading
   useEffect(() => {
@@ -185,12 +562,12 @@ export default function ProfilePage() {
       try {
         const storageKey = `profile-${publicKey.toString()}`;
         const savedProfile = localStorage.getItem(storageKey);
-        
+
         if (savedProfile) {
           const parsedProfile = JSON.parse(savedProfile);
-          
+
           if (parsedProfile.username) {
-            setUserData(prevData => {
+            setUserData((prevData) => {
               if (!prevData) return prevData;
               return {
                 ...prevData,
@@ -199,7 +576,7 @@ export default function ProfilePage() {
             });
           }
         }
-        
+
         setHasLoadedProfile(true);
       } catch (err) {
         console.error("Error loading profile from localStorage:", err);
@@ -216,6 +593,466 @@ export default function ProfilePage() {
       setHasLoadedProfile(false);
     }
   }, [publicKey]);
+
+  const preprocessNFTsForCubeRendering = (nfts: any[]) => {
+    console.log(`Processing ${nfts.length} NFTs for display`);
+
+    return nfts.map((nft) => {
+      // Create a deep copy to avoid modifying the original
+      const processedNft = { ...nft };
+
+      console.log(`Processing NFT: ${processedNft.name} (${processedNft.id})`);
+
+      // IMPROVED DETECTION LOGIC FOR NFT TYPES
+      // 1. Detect music NFTs first
+      const isMusicNFT =
+        processedNft.type === "music" ||
+        (processedNft.audioUrl && !processedNft.type?.includes("cube")) ||
+        (processedNft.name &&
+          processedNft.name.toLowerCase().includes("music") &&
+          !processedNft.name.toLowerCase().includes("cube")) ||
+        (processedNft.attributes &&
+          processedNft.attributes.some(
+            (attr: any) => attr.trait_type === "Type" && attr.value === "Music"
+          ));
+
+      // 2. Then check for cubes
+      const isCubeNFT =
+        !isMusicNFT &&
+        (processedNft.type === "cube" ||
+          (processedNft.name &&
+            processedNft.name.toLowerCase().includes("cube")) ||
+          (processedNft.attributes &&
+            processedNft.attributes.some(
+              (attr: any) =>
+                (attr.trait_type === "Type" && attr.value === "Cube") ||
+                (attr.trait_type === "Collection" &&
+                  typeof attr.value === "string" &&
+                  attr.value.includes("VOID Cube"))
+            )));
+
+      // Set type if needed
+      if (isMusicNFT && !processedNft.type) {
+        processedNft.type = "music";
+        console.log(`Set type to 'music'`);
+      } else if (isCubeNFT && !processedNft.type) {
+        processedNft.type = "cube";
+        console.log(`Set type to 'cube'`);
+      }
+
+      // For music NFTs, always use pink
+      if (isMusicNFT) {
+        processedNft.color = "#ec4899"; // Pink for music
+        processedNft.colors = []; // NFTCard will generate shades from color
+        console.log(`Set music NFT color to pink: ${processedNft.color}`);
+        return processedNft;
+      }
+
+      // For cube NFTs, process all the model information
+      if (isCubeNFT) {
+        console.log(
+          `Converting NFT for cube rendering: ${
+            processedNft.name || processedNft.id
+          }`
+        );
+
+        // --------- EXTRACT 3D MODEL INFORMATION ---------
+        // NEW SECTION: Extract 3D model info from properties
+        if (processedNft.properties) {
+          // Look for model URI in properties
+          if (
+            processedNft.properties.model &&
+            typeof processedNft.properties.model === "string"
+          ) {
+            console.log(
+              `Found model URI in properties: ${processedNft.properties.model}`
+            );
+
+            // Check if it's an IPFS URI
+            if (processedNft.properties.model.startsWith("ipfs://")) {
+              const ipfsHash = processedNft.properties.model.replace(
+                "ipfs://",
+                ""
+              );
+              processedNft.model3dHash = ipfsHash;
+              processedNft.model3d = convertIpfsToHttpUrl(ipfsHash);
+              console.log(
+                `Converted IPFS model URI to HTTP: ${processedNft.model3d}`
+              );
+            } else {
+              processedNft.model3d = processedNft.properties.model;
+            }
+          }
+
+          // Also check for animation_url which is often used for 3D models
+          if (!processedNft.model3d && processedNft.properties.animation_url) {
+            console.log(
+              `Found animation_url in properties: ${processedNft.properties.animation_url}`
+            );
+
+            if (processedNft.properties.animation_url.startsWith("ipfs://")) {
+              const ipfsHash = processedNft.properties.animation_url.replace(
+                "ipfs://",
+                ""
+              );
+              processedNft.model3dHash = ipfsHash;
+              processedNft.model3d = convertIpfsToHttpUrl(ipfsHash);
+            } else {
+              processedNft.model3d = processedNft.properties.animation_url;
+            }
+          }
+
+          // Check in files array for 3D model
+          if (
+            !processedNft.model3d &&
+            processedNft.properties.files &&
+            Array.isArray(processedNft.properties.files)
+          ) {
+            const modelFile = processedNft.properties.files.find(
+              (file: any) =>
+                file.type === "model/gltf-binary" ||
+                file.type === "model/gltf+json" ||
+                (file.uri && file.uri.includes(".glb"))
+            );
+
+            if (modelFile && modelFile.uri) {
+              console.log(`Found model in properties.files: ${modelFile.uri}`);
+
+              if (modelFile.uri.startsWith("ipfs://")) {
+                const ipfsHash = modelFile.uri.replace("ipfs://", "");
+                processedNft.model3dHash = ipfsHash;
+                processedNft.model3d = convertIpfsToHttpUrl(ipfsHash);
+              } else {
+                processedNft.model3d = modelFile.uri;
+              }
+            }
+          }
+
+          // Extract material params from properties if available
+          if (processedNft.properties.materialParams) {
+            console.log(`Found material params in properties`);
+            processedNft.materialParams =
+              processedNft.properties.materialParams;
+          }
+        }
+
+        // If we still don't have a model URL but we have a model3dHash, create the URL
+        if (!processedNft.model3d && processedNft.model3dHash) {
+          processedNft.model3d = convertIpfsToHttpUrl(processedNft.model3dHash);
+          console.log(`Created model URL from hash: ${processedNft.model3d}`);
+        }
+
+        // Set modelViewerUrl if we have a model3d URL
+        if (processedNft.model3d && !processedNft.modelViewerUrl) {
+          processedNft.modelViewerUrl = getModelViewerUrl(processedNft.model3d);
+          console.log(
+            `Created model viewer URL: ${processedNft.modelViewerUrl}`
+          );
+        }
+
+        // EXTRACT COLORS - IDENTICAL TO REALM CUBE COMPONENT
+        let colors = null;
+
+        // 1. First try to extract from attributes (for VOID Cubes)
+        const colorAttr = processedNft.attributes?.find(
+          (attr: any) =>
+            attr.trait_type === "Color" ||
+            attr.trait_type?.toLowerCase() === "color"
+        );
+
+        if (colorAttr?.value) {
+          console.log(`Extracted color from attributes: ${colorAttr.value}`);
+          const primaryColor = colorAttr.value;
+
+          // Generate color array from primary color
+          processedNft.color = primaryColor;
+          colors = generateColorShades(primaryColor);
+        }
+
+        // 2. If no colors yet, try to extract from metadata.materialParams
+        if (
+          !colors &&
+          (processedNft.metadata?.materialParams?.color ||
+            processedNft.materialParams?.color)
+        ) {
+          const color =
+            processedNft.metadata?.materialParams?.color ||
+            processedNft.materialParams?.color;
+          console.log(`Found color in materialParams: ${color}`);
+          processedNft.color = color;
+          colors = generateColorShades(color);
+        }
+
+        // 3. Check for gradient colors in metadata
+        if (
+          !colors &&
+          (processedNft.metadata?.materialParams?.gradientColors ||
+            processedNft.materialParams?.gradientColors)
+        ) {
+          const gradientColors =
+            processedNft.metadata?.materialParams?.gradientColors ||
+            processedNft.materialParams?.gradientColors;
+          if (Array.isArray(gradientColors) && gradientColors.length > 0) {
+            console.log(`Found gradient colors: ${gradientColors.join(", ")}`);
+            processedNft.color = gradientColors[0]; // Use first color as primary
+            colors = gradientColors;
+
+            // Ensure we have 6 colors
+            while (colors.length < 6) {
+              colors.push(
+                adjustColorBrightness(colors[0], -0.1 * colors.length)
+              );
+            }
+          }
+        }
+
+        // 4. If still no colors, extract from name
+        if (!colors && processedNft.name) {
+          const colorFromName = extractColorFromName(processedNft.name);
+          if (colorFromName) {
+            console.log(`Extracted color from name: ${colorFromName}`);
+            processedNft.color = colorFromName;
+            colors = generateColorShades(colorFromName);
+          }
+        }
+
+        // 5. If still no colors, use deterministic fallback based on NFT ID
+        if (!colors || colors.length === 0) {
+          // Hash the ID in the same way as RealmCube
+          const hash = processedNft.id
+            .split("")
+            .reduce((a: number, b: string) => a + b.charCodeAt(0), 0);
+
+          // Use RealmCube's exact default colors array
+          const defaultColors = [
+            "#8b5cf6", // Cosmic Void (purple)
+            "#0ea5e9", // Crystal Blue
+            "#22c55e", // Emerald Matrix
+            "#fbbf24", // Golden Relic
+            "#ff00ff", // Pink Neon
+            "#18181b", // Obsidian Void
+          ];
+
+          const primaryColor = defaultColors[hash % defaultColors.length];
+          console.log(
+            `Using deterministic fallback color from ID hash: ${primaryColor}`
+          );
+          processedNft.color = primaryColor;
+          colors = generateColorShades(primaryColor);
+        }
+
+        // Set color array to NFT
+        processedNft.colors = colors;
+
+        // Get accent color from first color
+        const accentColor = colors[0];
+
+        // Create border color and glow effect (exactly like RealmCube)
+        const borderColor = `rgba(${hexToRgb(accentColor)}, 0.5)`;
+        const glow = `0 0 25px rgba(${hexToRgb(accentColor)}, 0.7)`;
+
+        // Add these properties to match RealmCube's cube object format
+        processedNft.accentColor = accentColor;
+        processedNft.borderColor = borderColor;
+        processedNft.glow = glow;
+
+        // Extract texture information for display
+        const textureAttr = processedNft.attributes?.find(
+          (attr: any) => attr.trait_type === "Texture"
+        );
+        const texture = textureAttr?.value || "";
+        processedNft.texture = texture;
+
+        // Extract animation for special effects
+        const animationAttr = processedNft.attributes?.find(
+          (attr: any) => attr.trait_type === "Animation"
+        );
+        const animation = animationAttr?.value || "";
+        processedNft.animation = animation;
+
+        // Assign rarity based on attributes or default to rare for NFTs
+        if (!processedNft.rarity) {
+          let rarity = "rare";
+          const rarityAttr = processedNft.attributes?.find(
+            (attr: any) => attr.trait_type === "Rarity"
+          );
+          if (rarityAttr?.value) {
+            rarity = rarityAttr.value.toLowerCase();
+          }
+          processedNft.rarity = rarity;
+        }
+
+        // Mark as cube NFT
+        processedNft.isNFT = true;
+
+        console.log(`Final cube NFT colors:`, processedNft.colors);
+      }
+
+      return processedNft;
+    });
+  };
+
+  // Convert IPFS hash to HTTP URL
+  function convertIpfsToHttpUrl(ipfsHash: string): string {
+    // Use multiple gateways for reliability
+    const gateway = "https://ipfs.io/ipfs/";
+    return `${gateway}${ipfsHash}`;
+  }
+
+  // Create modelViewerUrl for 3D model viewing
+  function getModelViewerUrl(modelUrl: string): string {
+    // If it's already a viewer URL, return it
+    if (
+      modelUrl.includes("modelviewer.dev") ||
+      modelUrl.includes("viewer.html")
+    ) {
+      return modelUrl;
+    }
+
+    // Otherwise create a new modelviewer URL
+    return `https://modelviewer.dev/viewer.html#src=${encodeURIComponent(
+      modelUrl
+    )}&ar=true&autoplay=true&autoRotate=true&cameraControls=true`;
+  }
+
+  // Extract color from name - IDENTICAL to realm-cube.tsx
+  function extractColorFromName(name: string): string | null {
+    // Expanded color map with more variations
+    const colorMap: Record<string, string> = {
+      red: "#ff0000",
+      ruby: "#e0115f",
+      crimson: "#dc143c",
+      scarlet: "#ff2400",
+
+      blue: "#0000ff",
+      sapphire: "#0f52ba",
+      azure: "#007fff",
+      navy: "#000080",
+      cyan: "#00ffff",
+      teal: "#008080",
+
+      green: "#00ff00",
+      emerald: "#50c878",
+      lime: "#32cd32",
+      forest: "#228b22",
+      jade: "#00a86b",
+
+      yellow: "#ffff00",
+      gold: "#ffd700",
+      amber: "#ffbf00",
+      lemon: "#fff44f",
+
+      purple: "#8b5cf6",
+      violet: "#8b5cf6",
+      lavender: "#b57edc",
+      magenta: "#ff00ff",
+      mauve: "#e0b0ff",
+
+      pink: "#ff00ff",
+      rose: "#ff007f",
+      fuchsia: "#ff77ff",
+
+      orange: "#ffa500",
+      coral: "#ff7f50",
+      salmon: "#fa8072",
+
+      brown: "#964b00",
+      chocolate: "#7b3f00",
+      tan: "#d2b48c",
+
+      white: "#ffffff",
+      silver: "#c0c0c0",
+      gray: "#808080",
+      black: "#000000",
+
+      // Special VOID colors
+      cosmic: "#8b5cf6",
+      void: "#8b5cf6",
+      neon: "#39ff14",
+      crystal: "#a5f2f3",
+      obsidian: "#18181b",
+      holographic: "#f0abfc",
+    };
+
+    const nameLower = name.toLowerCase();
+
+    // Check for exact matches first
+    for (const [colorName, colorHex] of Object.entries(colorMap)) {
+      // Check for the color name as a whole word
+      const regex = new RegExp(`\\b${colorName}\\b`, "i");
+      if (regex.test(nameLower)) {
+        console.log(`Found color name "${colorName}" in name`);
+        return colorHex;
+      }
+    }
+
+    // Check for partial matches if no exact match
+    for (const [colorName, colorHex] of Object.entries(colorMap)) {
+      if (nameLower.includes(colorName)) {
+        console.log(`Found partial color match "${colorName}" in name`);
+        return colorHex;
+      }
+    }
+
+    // No match found
+    return null;
+  }
+
+  // Generate color shades - IDENTICAL to realm-cube.tsx
+  const generateColorShades = (baseColor: string): string[] => {
+    // Ensure base color is in correct format
+    if (!baseColor.startsWith("#")) {
+      baseColor = `#${baseColor}`;
+    }
+
+    // If it's still not a valid hex color, use a default
+    if (!/^#[0-9A-F]{6}$/i.test(baseColor)) {
+      baseColor = "#8b5cf6"; // Default purple
+    }
+
+    // Generate shades with better contrast
+    return [
+      baseColor,
+      adjustColorBrightness(baseColor, -0.1),
+      adjustColorBrightness(baseColor, -0.2),
+      adjustColorBrightness(baseColor, -0.3),
+      adjustColorBrightness(baseColor, -0.4),
+      adjustColorBrightness(baseColor, -0.5),
+    ];
+  };
+
+  // Convert hex to rgb - IDENTICAL to realm-cube.tsx
+  const hexToRgb = (hex: string): string => {
+    // Remove # if present
+    hex = hex.replace(/^#/, "");
+
+    // Parse hex values
+    const bigint = parseInt(hex, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+
+    return `${r}, ${g}, ${b}`;
+  };
+
+  // Adjust color brightness - IDENTICAL to realm-cube.tsx
+  const adjustColorBrightness = (hexColor: string, factor: number): string => {
+    // Remove # if present
+    hexColor = hexColor.replace(/^#/, "");
+
+    // Parse hex values
+    let r = parseInt(hexColor.substring(0, 2), 16);
+    let g = parseInt(hexColor.substring(2, 4), 16);
+    let b = parseInt(hexColor.substring(4, 6), 16);
+
+    // Adjust brightness
+    r = Math.min(255, Math.max(0, Math.round(r + factor * 255)));
+    g = Math.min(255, Math.max(0, Math.round(g + factor * 255)));
+    b = Math.min(255, Math.max(0, Math.round(b + factor * 255)));
+
+    // Convert back to hex
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+  };
 
   // Generate portfolio value history
   const generatePortfolioValueHistory = (transactions: string | any[]) => {
@@ -461,122 +1298,123 @@ export default function ProfilePage() {
   };
 
   // Handle update of profile
-  // Handle update of profile
-const handleProfileUpdate = async (updatedProfile: {
-  username: string;
-  avatar_url?: string;
-}) => {
-  try {
-    // Update UI state immediately for responsive UX
-    if (userData) {
-      setUserData({
-        ...userData,
-        displayName: updatedProfile.username,
-      });
-    }
-  
-    if (publicKey) {
-      // Store in localStorage as backup
-      const storageKey = `profile-${publicKey.toString()}`;
-      localStorage.setItem(storageKey, JSON.stringify(updatedProfile));
-      
-      // Direct Supabase operation
-      console.log("Attempting direct Supabase update with:", {
-        walletAddress: publicKey.toString(),
-        username: updatedProfile.username,
-        avatarUrl: updatedProfile.avatar_url
-      });
-      
-      try {
-        // Check if profile exists
-        const { data: existingProfile, error: fetchError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('wallet_address', publicKey.toString())
-          .single();
-        
-        if (fetchError && fetchError.code !== 'PGRST116') {
-          console.error("Error checking for existing profile:", fetchError);
-        }
-        
-        if (existingProfile) {
-          // Update existing profile
-          const { data, error } = await supabase
-            .from('profiles')
-            .update({
-              username: updatedProfile.username,
-              avatar_url: updatedProfile.avatar_url,
-              updated_at: new Date().toISOString()
-            })
-            .eq('wallet_address', publicKey.toString());
-          
-          if (error) {
-            console.error("Error updating profile:", error);
-          } else {
-            console.log("Profile updated successfully via direct Supabase call");
+  const handleProfileUpdate = async (updatedProfile: {
+    username: string;
+    avatar_url?: string;
+  }) => {
+    try {
+      // Update UI state immediately for responsive UX
+      if (userData) {
+        setUserData({
+          ...userData,
+          displayName: updatedProfile.username,
+        });
+      }
+
+      if (publicKey) {
+        // Store in localStorage as backup
+        const storageKey = `profile-${publicKey.toString()}`;
+        localStorage.setItem(storageKey, JSON.stringify(updatedProfile));
+
+        // Direct Supabase operation
+        console.log("Attempting direct Supabase update with:", {
+          walletAddress: publicKey.toString(),
+          username: updatedProfile.username,
+          avatarUrl: updatedProfile.avatar_url,
+        });
+
+        try {
+          // Check if profile exists
+          const { data: existingProfile, error: fetchError } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("wallet_address", publicKey.toString())
+            .single();
+
+          if (fetchError && fetchError.code !== "PGRST116") {
+            console.error("Error checking for existing profile:", fetchError);
           }
-        } else {
-          // Insert new profile
-          const { data, error } = await supabase
-            .from('profiles')
-            .insert([
+
+          if (existingProfile) {
+            // Update existing profile
+            const { data, error } = await supabase
+              .from("profiles")
+              .update({
+                username: updatedProfile.username,
+                avatar_url: updatedProfile.avatar_url,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("wallet_address", publicKey.toString());
+
+            if (error) {
+              console.error("Error updating profile:", error);
+            } else {
+              console.log(
+                "Profile updated successfully via direct Supabase call"
+              );
+            }
+          } else {
+            // Insert new profile
+            const { data, error } = await supabase.from("profiles").insert([
               {
                 wallet_address: publicKey.toString(),
                 username: updatedProfile.username,
                 avatar_url: updatedProfile.avatar_url,
                 created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
+                updated_at: new Date().toISOString(),
+              },
             ]);
-          
-          if (error) {
-            console.error("Error creating profile:", error);
-          } else {
-            console.log("Profile created successfully via direct Supabase call");
+
+            if (error) {
+              console.error("Error creating profile:", error);
+            } else {
+              console.log(
+                "Profile created successfully via direct Supabase call"
+              );
+            }
+          }
+        } catch (dbError) {
+          console.error("Supabase operation failed:", dbError);
+        }
+
+        // Also try auth context for completeness
+        if (auth.isAuthenticated) {
+          try {
+            await auth.updateProfile({
+              username: updatedProfile.username,
+              avatar_url: updatedProfile.avatar_url,
+            });
+            console.log("Profile also updated via auth context");
+          } catch (authError) {
+            console.error("Auth context update failed:", authError);
+            // Continue anyway since we already tried direct update
           }
         }
-      } catch (dbError) {
-        console.error("Supabase operation failed:", dbError);
-      }
-      
-      // Also try auth context for completeness
-      if (auth.isAuthenticated) {
-        try {
-          await auth.updateProfile({
-            username: updatedProfile.username,
-            avatar_url: updatedProfile.avatar_url
-          });
-          console.log("Profile also updated via auth context");
-        } catch (authError) {
-          console.error("Auth context update failed:", authError);
-          // Continue anyway since we already tried direct update
+
+        // Force image refresh with cache buster
+        if (updatedProfile.avatar_url) {
+          // Create a new URL with timestamp to force refresh
+          const refreshedAvatarUrl = updatedProfile.avatar_url.includes("?")
+            ? `${updatedProfile.avatar_url}&t=${Date.now()}`
+            : `${updatedProfile.avatar_url}?t=${Date.now()}`;
+
+          // Update the local state to use this refreshed URL
+          if (auth.profile) {
+            auth.refreshProfile(); // If you have this method in your auth context
+          }
+
+          // Force the page to recognize the new image
+          setTimeout(() => {
+            // This will trigger a small UI update without a full page refresh
+            setUserData((prevData) => (prevData ? { ...prevData } : null));
+          }, 500);
         }
       }
-      
-      // Force image refresh with cache buster
-      if (updatedProfile.avatar_url) {
-        // Create a new URL with timestamp to force refresh
-        const refreshedAvatarUrl = updatedProfile.avatar_url.includes('?') 
-          ? `${updatedProfile.avatar_url}&t=${Date.now()}`
-          : `${updatedProfile.avatar_url}?t=${Date.now()}`;
-          
-        // Update the local state to use this refreshed URL
-        if (auth.profile) {
-          auth.refreshProfile(); // If you have this method in your auth context
-        }
-        
-        // Force the page to recognize the new image
-        setTimeout(() => {
-          // This will trigger a small UI update without a full page refresh
-          setUserData(prevData => prevData ? {...prevData} : null);
-        }, 500);
-      }
+    } catch (error) {
+      console.error("Profile update failed completely:", error);
+      alert("Failed to update profile. Please try again later.");
     }
-  } catch (error) {
-    console.error("Profile update failed completely:", error);
-    alert("Failed to update profile. Please try again later.");
-  }
-};
+  };
 
   // Handle transaction details display
   const handleShowTxDetails = (tx: any) => {
@@ -604,84 +1442,97 @@ const handleProfileUpdate = async (updatedProfile: {
   };
 
   // Handle watch 3D model button press
+  // Update the handleViewModel function in page.tsx
+
   const handleViewModel = async (nft: any) => {
     setModelLoadError(false);
     setIsLoadingModel(true);
+
     try {
-      console.log("Open 3D model viewer with NFT:", nft.name);
+      console.log("Opening 3D model viewer for:", nft.name);
 
-      let modelViewerUrl = null;
+      let modelUrl = null;
+      let fallbackUrls: string[] = [];
 
-      // Check direct modelViewerUrl if available
-      if (nft.modelViewerUrl) {
-        console.log("Use available modelViewerUrl:", nft.modelViewerUrl);
-        modelViewerUrl = nft.modelViewerUrl;
-      }
-      // Check model3d URL
-      else if (nft.model3d) {
+      // Check for model3d URL directly in the NFT
+      if (nft.model3d) {
         console.log("Using model3d URL:", nft.model3d);
-        // Check if it's a model viewer URL
-        if (nft.model3d.includes("modelviewer.dev")) {
-          modelViewerUrl = nft.model3d;
-        } else {
-          // Create model viewer URL from direct model3d URL
-          modelViewerUrl = `https://modelviewer.dev/viewer.html#src=${encodeURIComponent(
-            nft.model3d
-          )}&ar=true&autoplay=true&autoRotate=true&cameraControls=true`;
+        modelUrl = nft.model3d;
+
+        // If it's an IPFS URL, prepare alternative gateway URLs
+        if (nft.model3d.startsWith("ipfs://")) {
+          const hash = nft.model3d.replace("ipfs://", "");
+          // Prioritize Pinata gateway (worked in your logs)
+          modelUrl = `https://gateway.pinata.cloud/ipfs/${hash}`;
+
+          // Add fallback URLs
+          fallbackUrls = [
+            `https://ipfs.filebase.io/ipfs/${hash}`,
+            `https://dweb.link/ipfs/${hash}`,
+            `https://ipfs.io/ipfs/${hash}`,
+            `https://nftstorage.link/ipfs/${hash}`,
+            `https://w3s.link/ipfs/${hash}`,
+            `https://cloudflare-ipfs.com/ipfs/${hash}`,
+          ];
         }
       }
-      // Check model3dHash
+      // Check for model3dHash
       else if (nft.model3dHash) {
-        console.log("Use model3dHash:", nft.model3dHash);
-        // Use utility function to create URL for model viewer
-        modelViewerUrl = getModelViewerUrl(nft.model3dHash);
+        console.log("Using model3dHash:", nft.model3dHash);
 
-        // Save backup URLs for future use
-        nft.model3d = getDirectModelUrl(nft.model3dHash);
-        nft.modelViewerUrl = modelViewerUrl;
-        nft.googleModelViewerUrl = getGoogleModelViewerUrl(nft.model3dHash);
+        // Prioritize Pinata gateway as primary URL
+        modelUrl = `https://gateway.pinata.cloud/ipfs/${nft.model3dHash}`;
+
+        // Add fallback URLs
+        fallbackUrls = [
+          `https://ipfs.filebase.io/ipfs/${nft.model3dHash}`,
+          `https://dweb.link/ipfs/${nft.model3dHash}`,
+          `https://ipfs.io/ipfs/${nft.model3dHash}`,
+          `https://nftstorage.link/ipfs/${nft.model3dHash}`,
+          `https://w3s.link/ipfs/${nft.model3dHash}`,
+          `https://cloudflare-ipfs.com/ipfs/${nft.model3dHash}`,
+        ];
       }
-      // Check for model URL in properties.files of NFT
-      else if (nft.properties?.files?.length > 0) {
-        const modelFile = nft.properties.files.find(
-          (file: any) =>
-            file.type === "model/gltf-binary" || file.type === "model/gltf+json"
+      // Check modelViewerUrl
+      else if (nft.modelViewerUrl) {
+        console.log("Using model viewer URL:", nft.modelViewerUrl);
+        modelUrl = nft.modelViewerUrl;
+      }
+
+      // If we have a direct URL, add model viewer URL as fallback
+      if (modelUrl && !modelUrl.includes("modelviewer.dev")) {
+        fallbackUrls.push(
+          `https://modelviewer.dev/viewer.html#src=${encodeURIComponent(
+            modelUrl
+          )}&ar=true&autoplay=true&autoRotate=true&cameraControls=true`
         );
-
-        if (modelFile && modelFile.uri) {
-          console.log("Found model in properties.files:", modelFile.uri);
-
-          if (modelFile.uri.startsWith("ipfs://")) {
-            // If it's an IPFS URI, create model viewer URL from IPFS hash
-            const ipfsHash = modelFile.uri.replace("ipfs://", "");
-            modelViewerUrl = getModelViewerUrl(ipfsHash);
-          } else {
-            // If it's already a full URL, use it directly
-            modelViewerUrl = `https://modelviewer.dev/viewer.html#src=${encodeURIComponent(
-              modelFile.uri
-            )}&ar=true&autoplay=true&autoRotate=true&cameraControls=true`;
-          }
-        }
       }
 
-      // If no 3D model found, use sample
-      if (!modelViewerUrl) {
-        console.warn("Cannot find 3D model for NFT, using available model.");
-        modelViewerUrl =
-          "https://modelviewer.dev/shared-assets/models/Astronaut.glb";
+      // Add any additional fallback URLs from the NFT
+      if (nft.fallbackModel3d && Array.isArray(nft.fallbackModel3d)) {
+        fallbackUrls = [...fallbackUrls, ...nft.fallbackModel3d];
       }
 
-      // Set URL and display viewer
-      console.log("URL model viewer final:", modelViewerUrl);
-      setCurrentModelUrl(modelViewerUrl);
+      // Remove duplicates
+      fallbackUrls = [...new Set(fallbackUrls)];
+
+      // If no URL found, use sample model
+      if (!modelUrl) {
+        console.warn("No 3D model URL found, using sample model");
+        modelUrl = "https://modelviewer.dev/shared-assets/models/Astronaut.glb";
+      }
+
+      console.log("Model URL:", modelUrl);
+      console.log("Fallback URLs:", fallbackUrls);
+
+      // Set URLs and show viewer
+      setCurrentModelUrl(modelUrl);
+      setFallbackModelUrls(fallbackUrls);
+      setCurrentNftForViewer(nft);
       setShowModelViewer(true);
     } catch (error) {
-      console.error("Error displaying the 3D model.:", error);
-      alert(
-        "An error occurred while loading the 3D model. Please try again later."
-      );
+      console.error("Error preparing model viewer:", error);
       setModelLoadError(true);
-      // Try to load sample model
       setCurrentModelUrl(
         "https://modelviewer.dev/shared-assets/models/Astronaut.glb"
       );
@@ -1011,6 +1862,24 @@ const handleProfileUpdate = async (updatedProfile: {
                                 nft.mintedAt || new Date().toISOString(),
                               description:
                                 nft.description || "A unique VOID NFT",
+                              rarity:
+                                nft.rarity !== undefined
+                                  ? String(nft.rarity)
+                                  : undefined,
+                              shapeType: [
+                                "complex",
+                                "grid",
+                                "wave",
+                                "dots",
+                                "noise",
+                              ].includes(nft.shapeType)
+                                ? (nft.shapeType as
+                                    | "complex"
+                                    | "grid"
+                                    | "wave"
+                                    | "dots"
+                                    | "noise")
+                                : undefined,
                             }}
                             onMouseEnter={() => setCursorHover(true)}
                             onMouseLeave={() => setCursorHover(false)}
@@ -1713,121 +2582,18 @@ const handleProfileUpdate = async (updatedProfile: {
 
           {/* 3D Model Viewer Modal */}
           {showModelViewer && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-black border-2 border-purple-500 p-8 max-w-5xl w-full h-[80vh] relative"
-              >
-                <button
-                  onClick={handleCloseModelViewer}
-                  className="absolute top-4 right-4 text-white hover:text-pink-500 transition-colors"
-                  title="Close 3D Model Viewer"
-                  aria-label="Close 3D Model Viewer"
-                >
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M18 6L6 18M6 6L18 18"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
-
-                <h3 className="text-2xl font-bold text-white mb-6 font-pixel">
-                  3D MODEL VIEWER
-                </h3>
-
-                <div className="w-full h-[90%] flex items-center justify-center bg-black/50 relative">
-                  {isLoadingModel ? (
-                    <div className="flex flex-col items-center justify-center h-full w-full">
-                      <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                      <p className="text-gray-400">Loading 3D Model...</p>
-                    </div>
-                  ) : modelLoadError ? (
-                    <div className="text-center p-8">
-                      <p className="text-gray-400 mb-4">
-                        Unable to load 3D model. Please try again later.
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        URL: {currentModelUrl}
-                      </p>
-                      <button
-                        onClick={() =>
-                          setCurrentModelUrl(
-                            "https://modelviewer.dev/shared-assets/models/Astronaut.glb"
-                          )
-                        }
-                        className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded"
-                      >
-                        Try with a sample model
-                      </button>
-                    </div>
-                  ) : currentModelUrl ? (
-                    <>
-                      <iframe
-                        src={currentModelUrl}
-                        title="3D Model Viewer"
-                        className="w-full h-full border-0"
-                        allow="camera; microphone; fullscreen; autoplay; xr-spatial-tracking"
-                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                        loading="eager"
-                        referrerPolicy="no-referrer"
-                        onLoad={() =>
-                          console.log("iframe has loaded successfully!")
-                        }
-                        onError={() => {
-                          console.error("Error loading iframe");
-                          setModelLoadError(true);
-                        }}
-                      ></iframe>
-                      <div className="absolute bottom-4 right-4 flex space-x-2">
-                        <button
-                          onClick={() => window.open(currentModelUrl, "_blank")}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded"
-                        >
-                          Open in a new window
-                        </button>
-                        <button
-                          onClick={() =>
-                            setCurrentModelUrl(
-                              "https://modelviewer.dev/shared-assets/models/Astronaut.glb"
-                            )
-                          }
-                          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded"
-                        >
-                          Try with a sample model
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center p-8">
-                      <p className="text-gray-400 mb-4">
-                        Unable to load the 3D model. Please try again later.
-                      </p>
-                      <button
-                        onClick={() =>
-                          setCurrentModelUrl(
-                            "https://modelviewer.dev/shared-assets/models/Astronaut.glb"
-                          )
-                        }
-                        className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded"
-                      >
-                        Try with a sample model
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            </div>
+            <ModelViewer
+              isOpen={showModelViewer}
+              onClose={() => {
+                setShowModelViewer(false);
+                setCurrentModelUrl(null);
+                setFallbackModelUrls([]);
+                setCurrentNftForViewer(null);
+              }}
+              modelUrl={currentModelUrl}
+              fallbackUrls={fallbackModelUrls}
+              nft={currentNftForViewer}
+            />
           )}
 
           {publicKey && (
@@ -1844,6 +2610,10 @@ const handleProfileUpdate = async (updatedProfile: {
               onProfileUpdate={handleProfileUpdate}
             />
           )}
+
+          <style jsx global>
+            {cubeCssStyles}
+          </style>
 
           {/* Footer */}
           <Footer />

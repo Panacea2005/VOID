@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation"; // Import useRouter
 import VoidHub from "./hub/void-hub";
 import EchoRealm from "./realms/echo/echo-realm";
 import NexusRealm from "./realms/nexus/nexus-realm";
@@ -37,6 +38,9 @@ const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
   // Access wallet context
   const { connected, publicKey } = useWallet();
   
+  // Add router for navigation
+  const router = useRouter();
+  
   // Format wallet address for display
   const shortenAddress = (address: string, chars = 4) => {
     return `${address.slice(0, chars)}...${address.slice(-chars)}`;
@@ -61,11 +65,11 @@ const VoidGameInner: React.FC<VoidResonanceGameProps> = ({ onExit }) => {
     setTimeout(() => setLoading(false), 1000);
   }, []);
 
-  // Handle wallet profile click
+  // Handle wallet profile click - modified to use router.push() instead of window.location.href
   const handleWalletClick = () => {
     if (connected) {
-      // Navigate to profile page
-      window.location.href = "/profile";
+      // Navigate to profile page using Next.js router
+      router.push("/profile");
     }
   };
 

@@ -298,6 +298,48 @@ export function getModelViewerUrl(hash: string): string {
     return `https://modelviewer.dev/viewer.html#src=${encodeURIComponent(modelUrl)}&ar=true&autoplay=true&autoRotate=true&cameraControls=true&shadow-intensity=1.0`;
 }
 
+export function getReliableIpfsUrl(ipfsUriOrHash: string): string {
+    // Extract hash from URI if needed
+    let hash = ipfsUriOrHash;
+    
+    if (ipfsUriOrHash.startsWith('ipfs://')) {
+      hash = ipfsUriOrHash.replace('ipfs://', '');
+    } else if (ipfsUriOrHash.includes('/ipfs/')) {
+      hash = ipfsUriOrHash.split('/ipfs/')[1];
+    }
+    
+    // Clean the hash
+    hash = hash.split('?')[0].split('#')[0].replace(/\/$/, '');
+    
+    // Return the most reliable gateway (prioritize Pinata based on your logs)
+    return `https://gateway.pinata.cloud/ipfs/${hash}`;
+  }
+  
+  export function getIpfsFallbackUrls(ipfsUriOrHash: string): string[] {
+    // Extract hash from URI if needed
+    let hash = ipfsUriOrHash;
+    
+    if (ipfsUriOrHash.startsWith('ipfs://')) {
+      hash = ipfsUriOrHash.replace('ipfs://', '');
+    } else if (ipfsUriOrHash.includes('/ipfs/')) {
+      hash = ipfsUriOrHash.split('/ipfs/')[1];
+    }
+    
+    // Clean the hash
+    hash = hash.split('?')[0].split('#')[0].replace(/\/$/, '');
+    
+    // Return multiple gateway URLs (prioritizing those that worked in your logs)
+    return [
+      `https://gateway.pinata.cloud/ipfs/${hash}`,
+      `https://ipfs.filebase.io/ipfs/${hash}`,
+      `https://dweb.link/ipfs/${hash}`,
+      `https://ipfs.io/ipfs/${hash}`,
+      `https://nftstorage.link/ipfs/${hash}`,
+      `https://w3s.link/ipfs/${hash}`,
+      `https://cloudflare-ipfs.com/ipfs/${hash}` // Deprioritize since it failed
+    ];
+  }
+
 // Thêm hàm lấy URL trực tiếp cho model GLB
 export function getDirectModelUrl(hash: string): string {
     // Nếu hash bắt đầu bằng ipfs://, lấy phần hash

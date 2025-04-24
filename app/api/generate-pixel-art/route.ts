@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { AIPixelService } from '../../gacha/aiPixelService'
+import { AIPixelService } from '../../art/aiPixelService'
 
 export async function POST(request: Request) {
   try {

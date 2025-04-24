@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { motion } from "framer-motion"
+import { motion, useScroll, useTransform, useSpring } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import Navigation from "@/components/navigation"
 import Footer from "@/components/footer"
-// Import icons from phosphor-icons
-import { Planet, Star, Meteor, Sun, Moon, ShootingStar, Rocket, Airplane } from "@phosphor-icons/react"
-// Import renderToStaticMarkup to render icons to SVG string
-import { renderToStaticMarkup } from "react-dom/server"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import PixelHeading from "@/components/pixel-heading"
 
 // Pixel font for the cyberpunk aesthetic
 const pixelFontStyle = {
@@ -16,9 +16,43 @@ const pixelFontStyle = {
 }
 
 export default function PixelArtPage() {
-  const [canvasSize, setCanvasSize] = useState(32)
+  const [canvasSize, setCanvasSize] = useState(128)
+  const [prompt, setPrompt] = useState("")
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const bgCanvasRef = useRef<HTMLCanvasElement>(null)
+  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 })
+  const [cursorHover, setCursorHover] = useState(false)
+  const [presetPrompts, setPresetPrompts] = useState([
+    "A cyberpunk city skyline with neon lights",
+    "An 8-bit fantasy hero character",
+    "Retro space invaders arcade scene",
+    "Pixel art sunset over mountains",
+    "Cyberpunk samurai with glowing katana"
+  ])
+  
+  // Added for parallax scrolling effects
+  const containerRef = useRef(null)
+  
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"],
+  })
+  
+  // For background parallax effects
+  const bgY1 = useTransform(scrollYProgress, [0, 1], [0, -200])
+  const bgY2 = useTransform(scrollYProgress, [0, 1], [0, -100])
+  
+  // Handle cursor movement
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setCursorPosition({ x: e.clientX, y: e.clientY })
+    }
+
+    window.addEventListener("mousemove", handleMouseMove)
+    return () => window.removeEventListener("mousemove", handleMouseMove)
+  }, [])
 
   // Handle main canvas initialization
   useEffect(() => {
@@ -28,10 +62,11 @@ export default function PixelArtPage() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // Set canvas dimensions
     const resizeCanvas = () => {
       const container = canvas.parentElement
       if (!container) return
+      
+      // Set canvas dimensions
       canvas.width = container.clientWidth
       canvas.height = container.clientHeight
 
@@ -40,10 +75,12 @@ export default function PixelArtPage() {
       const cellWidth = canvas.width / gridSize
       const cellHeight = canvas.height / gridSize
 
-      ctx.fillStyle = "#1a1a1a"
+      // Fill with dark background
+      ctx.fillStyle = "#0a0a0a"
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      ctx.strokeStyle = "#333333"
+      // Draw lighter, more subtle grid
+      ctx.strokeStyle = "rgba(168, 85, 247, 0.07)" // Very faint purple grid
       ctx.lineWidth = 1
 
       for (let x = 0; x <= gridSize; x++) {
@@ -59,14 +96,6 @@ export default function PixelArtPage() {
         ctx.lineTo(canvas.width, y * cellHeight)
         ctx.stroke()
       }
-
-      // Draw placeholder text
-      ctx.fillStyle = "#ffffff"
-      ctx.font = "20px 'Press Start 2P'"
-      ctx.textAlign = "center"
-      ctx.textBaseline = "middle"
-      const text = "[ YOUR PIXEL ART WILL SHOW HERE ]"
-      ctx.fillText(text, canvas.width / 2, canvas.height / 2)
     }
 
     resizeCanvas()
@@ -75,690 +104,758 @@ export default function PixelArtPage() {
     return () => window.removeEventListener("resize", resizeCanvas)
   }, [canvasSize])
 
-  // Handle pixelated animated background
-  useEffect(() => {
-    if (!bgCanvasRef.current) return
+  // Handle download with a larger image size
+  const handleDownload = () => {
+    if (!generatedImageUrl || !canvasRef.current) return
 
-    const canvas = bgCanvasRef.current
+    const canvas = canvasRef.current
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // Set canvas dimensions
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
+    // Create a temporary canvas to draw the image
+    const tempCanvas = document.createElement("canvas")
+    tempCanvas.width = canvasSize
+    tempCanvas.height = canvasSize
+    const tempCtx = tempCanvas.getContext("2d")
+    if (!tempCtx) return
+
+    // Draw the generated image
+    const img = new Image()
+    img.crossOrigin = "Anonymous"
+    img.src = generatedImageUrl
+    img.onload = () => {
+      tempCtx.drawImage(img, 0, 0, canvasSize, canvasSize)
+
+      // Create a high-quality download canvas with a larger size
+      const downloadSize = 2048 // Set to 2048x2048 for a "normal" image size
+      const downloadCanvas = document.createElement("canvas")
+      downloadCanvas.width = downloadSize
+      downloadCanvas.height = downloadSize
+      const downloadCtx = downloadCanvas.getContext("2d")
+      if (!downloadCtx) return
+
+      // Draw the image, scaled up
+      downloadCtx.imageSmoothingEnabled = false // Preserve pixelated look
+      downloadCtx.drawImage(tempCanvas, 0, 0, downloadSize, downloadSize)
+
+      // Download the image without the grid to preserve colors
+      const link = document.createElement("a")
+      link.href = downloadCanvas.toDataURL("image/png", 1.0) // High quality
+      link.download = `pixel-art-${downloadSize}x${downloadSize}.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
     }
+  }
 
-    resizeCanvas()
-    window.addEventListener("resize", resizeCanvas)
+  // Handle mint (placeholder)
+  const handleMint = () => {
+    alert('Minting functionality not implemented yet.')
+    // Add actual minting logic here (e.g., connect to blockchain/NFT platform)
+  }
 
-    // VOID theme colors - cyberpunk neon palette
-    const voidColors = [
-      "#ff2a6d", // Neon pink
-      "#05d9e8", // Cyan
-      "#d1f7ff", // Light blue
-      "#7700a6", // Purple
-      "#8900f2", // Bright purple
-      "#b100e8", // Magenta
-      "#ff00a0", // Hot pink
-      "#01012b", // Dark blue
-    ]
+  // Generate pixel art and reveal pixel by pixel
+  const generatePixelArt = async () => {
+    if (!canvasRef.current || !prompt) return
+    setIsGenerating(true)
+    setErrorMessage("")
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
 
-    // Set up pixelated grid
-    const pixelSize = 20 // Size of each "pixel" in the background
-    const cols = Math.ceil(canvas.width / pixelSize)
-    const rows = Math.ceil(canvas.height / pixelSize)
-    
-    // Create pixel grid with initial colors and properties
-    const pixels: {
-      x: number; y: number; size: number; color: string; alpha: number // Different opacity levels
-      pulseSpeed: number; pulsePhase: number // Random starting phase
-      glitchTimer: number; glitchDuration: number; moveDirection: number // 0: right, 1: down, 2: left, 3: up
-      moveSpeed: number; moveTimer: number; isGlowing: boolean
-    }[] = []
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        const isVisible = Math.random() > 0.7 // 30% of pixels are visible initially
-        const colorIndex = Math.floor(Math.random() * voidColors.length)
-        
-        pixels.push({
-          x: x * pixelSize,
-          y: y * pixelSize,
-          size: pixelSize,
-          color: voidColors[colorIndex],
-          alpha: isVisible ? (Math.random() * 0.3 + 0.1) : 0, // Different opacity levels
-          pulseSpeed: Math.random() * 0.005 + 0.002,
-          pulsePhase: Math.random() * Math.PI * 2, // Random starting phase
-          glitchTimer: Math.random() * 100,
-          glitchDuration: 0,
-          moveDirection: Math.floor(Math.random() * 4), // 0: right, 1: down, 2: left, 3: up
-          moveSpeed: Math.random() * 0.2 + 0.05,
-          moveTimer: Math.random() * 100,
-          isGlowing: Math.random() > 0.9, // 10% have glow effect
-        })
-      }
-    }
+    try {
+      const formData = new FormData()
+      formData.append('prompt', prompt)
+      formData.append('canvasSize', canvasSize.toString())
 
-    // Create grid lines
-    const gridLines: { x1: number; y1: number; x2: number; y2: number; color: string; alpha: number; pulseSpeed: number }[] = []
-    // Horizontal grid lines
-    for (let y = 0; y <= rows; y++) {
-      gridLines.push({
-        x1: 0,
-        y1: y * pixelSize,
-        x2: canvas.width,
-        y2: y * pixelSize,
-        color: "#7700a620", // Semi-transparent purple
-        alpha: 0.2 + Math.random() * 0.1,
-        pulseSpeed: Math.random() * 0.005 + 0.001,
-      })
-    }
-    // Vertical grid lines
-    for (let x = 0; x <= cols; x++) {
-      gridLines.push({
-        x1: x * pixelSize,
-        y1: 0,
-        x2: x * pixelSize,
-        y2: canvas.height,
-        color: "#05d9e820", // Semi-transparent cyan
-        alpha: 0.2 + Math.random() * 0.1,
-        pulseSpeed: Math.random() * 0.005 + 0.001,
-      })
-    }
-
-    // Create scan lines for retro effect
-    const scanLines: { y: number; height: number; alpha: number }[] = []
-    const scanLineHeight = 2
-    for (let y = 0; y < canvas.height; y += scanLineHeight * 2) {
-      scanLines.push({
-        y,
-        height: scanLineHeight,
-        alpha: 0.1,
-      })
-    }
-
-    // Create floating geometric shapes
-    const shapes: { type: number; x: number; y: number; size: number; color: string; speedX: number; speedY: number; rotation: number; rotationSpeed: number; alpha: number; isGlowing: boolean }[] = []
-    const shapeCount = 15
-    for (let i = 0; i < shapeCount; i++) {
-      const shapeType = Math.floor(Math.random() * 3) // 0: square, 1: circle, 2: triangle
-      const size = Math.random() * 30 + 10
-      shapes.push({
-        type: shapeType,
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        size,
-        color: voidColors[Math.floor(Math.random() * voidColors.length)],
-        speedX: (Math.random() - 0.5) * 0.5,
-        speedY: (Math.random() - 0.5) * 0.5,
-        rotation: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.01,
-        alpha: Math.random() * 0.3 + 0.2,
-        isGlowing: Math.random() > 0.6, // 40% are glowing
-      })
-    }
-
-    // Create random "glitch" effects
-    const glitchEffects: { x: number; y: number; width: number; height: number; alpha: number; color: string; duration: number; cooldown: number }[] = []
-    for (let i = 0; i < 5; i++) {
-      glitchEffects.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        width: Math.random() * 300 + 50,
-        height: Math.random() * 20 + 10,
-        alpha: 0,
-        color: voidColors[Math.floor(Math.random() * voidColors.length)],
-        duration: 0,
-        cooldown: Math.random() * 100 + 50,
-      })
-    }
-
-    // Create "data streams" - vertical lines of falling pixels
-    const dataStreams: { x: number; segments: { y: number; char: string; alpha: number }[]; speed: number; length: number; color: string; alpha: number; active: boolean; timer: number; restartDelay: number }[] = []
-    for (let i = 0; i < 20; i++) {
-      dataStreams.push({
-        x: Math.random() * canvas.width,
-        segments: [],
-        speed: Math.random() * 2 + 1,
-        length: Math.floor(Math.random() * 15 + 5),
-        color: voidColors[Math.floor(Math.random() * voidColors.length)],
-        alpha: Math.random() * 0.5 + 0.3,
-        active: Math.random() > 0.5,
-        timer: 0,
-        restartDelay: Math.random() * 200 + 100,
-      })
-    }
-
-    // Animation loop
-    let time = 0
-    const animate = () => {
-      time += 0.016 // Approximate time increment (assuming 60fps)
-      
-      // Clear the canvas
-      ctx.fillStyle = '#000'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-      // Draw grid lines with pulsing effect
-      gridLines.forEach(line => {
-        const pulseAlpha = line.alpha + Math.sin(time * line.pulseSpeed) * 0.05
-        ctx.strokeStyle = line.color.substring(0, 7) + Math.floor(pulseAlpha * 255).toString(16).padStart(2, '0')
-        ctx.lineWidth = 1
-        ctx.beginPath()
-        ctx.moveTo(line.x1, line.y1)
-        ctx.lineTo(line.x2, line.y2)
-        ctx.stroke()
+      const response = await fetch('/api/generate-pixel-art', {
+        method: 'POST',
+        body: formData,
       })
 
-      // Draw pixels
-      pixels.forEach(pixel => {
-        // Update pixel properties
-        pixel.glitchTimer -= 0.016
-        pixel.moveTimer -= 0.016
-        
-        // Randomly start glitch effect
-        if (pixel.glitchTimer <= 0 && pixel.glitchDuration <= 0 && Math.random() > 0.995) {
-          pixel.glitchDuration = Math.random() * 0.3 + 0.1
-          pixel.color = voidColors[Math.floor(Math.random() * voidColors.length)]
-          pixel.alpha = Math.random() * 0.6 + 0.2
-        }
-        
-        // Handle glitch duration
-        if (pixel.glitchDuration > 0) {
-          pixel.glitchDuration -= 0.016
-          if (pixel.glitchDuration <= 0) {
-            pixel.glitchTimer = Math.random() * 5 + 2
-            pixel.alpha = Math.random() > 0.7 ? (Math.random() * 0.3 + 0.1) : 0
-          }
-        }
-        
-        // Randomly change movement direction
-        if (pixel.moveTimer <= 0) {
-          pixel.moveDirection = Math.floor(Math.random() * 4)
-          pixel.moveTimer = Math.random() * 5 + 3
-        }
-        
-        // Move pixels slightly
-        if (pixel.alpha > 0) {
-          switch (pixel.moveDirection) {
-            case 0: pixel.x += pixel.moveSpeed; break // right
-            case 1: pixel.y += pixel.moveSpeed; break // down
-            case 2: pixel.x -= pixel.moveSpeed; break // left
-            case 3: pixel.y -= pixel.moveSpeed; break // up
-          }
-          
-          // Wrap pixels around edges
-          if (pixel.x < -pixel.size) pixel.x = canvas.width
-          if (pixel.x > canvas.width) pixel.x = -pixel.size
-          if (pixel.y < -pixel.size) pixel.y = canvas.height
-          if (pixel.y > canvas.height) pixel.y = -pixel.size
-        }
-        
-        // Pulse the alpha value
-        const pulseAlpha = pixel.alpha + Math.sin(time + pixel.pulsePhase) * 0.1
-        
-        // Draw the pixel
-        if (pulseAlpha > 0) {
-          const alpha = Math.max(0, Math.min(1, pulseAlpha))
-          ctx.fillStyle = pixel.color + Math.floor(alpha * 255).toString(16).padStart(2, '0')
-          ctx.fillRect(pixel.x, pixel.y, pixel.size, pixel.size)
-          
-          // Add glow effect for some pixels
-          if (pixel.isGlowing) {
-            ctx.shadowColor = pixel.color
-            ctx.shadowBlur = 10
-            ctx.fillRect(pixel.x, pixel.y, pixel.size, pixel.size)
-            ctx.shadowBlur = 0
-          }
-        }
-      })
-
-      // Draw the shapes
-      shapes.forEach(shape => {
-        // Update position
-        shape.x += shape.speedX
-        shape.y += shape.speedY
-        shape.rotation += shape.rotationSpeed
-        
-        // Wrap around the screen
-        if (shape.x < -shape.size) shape.x = canvas.width + shape.size
-        if (shape.x > canvas.width + shape.size) shape.x = -shape.size
-        if (shape.y < -shape.size) shape.y = canvas.height + shape.size
-        if (shape.y > canvas.height + shape.size) shape.y = -shape.size
-        
-        ctx.save()
-        ctx.translate(shape.x, shape.y)
-        ctx.rotate(shape.rotation)
-        
-        // Set glow if needed
-        if (shape.isGlowing) {
-          ctx.shadowColor = shape.color
-          ctx.shadowBlur = 15
-        }
-        
-        ctx.fillStyle = shape.color + Math.floor(shape.alpha * 255).toString(16).padStart(2, '0')
-        
-        // Draw shape based on type
-        switch (shape.type) {
-          case 0: // Square
-            ctx.fillRect(-shape.size / 2, -shape.size / 2, shape.size, shape.size)
-            break
-          case 1: // Circle
-            ctx.beginPath()
-            ctx.arc(0, 0, shape.size / 2, 0, Math.PI * 2)
-            ctx.fill()
-            break
-          case 2: // Triangle
-            ctx.beginPath()
-            ctx.moveTo(0, -shape.size / 2)
-            ctx.lineTo(shape.size / 2, shape.size / 2)
-            ctx.lineTo(-shape.size / 2, shape.size / 2)
-            ctx.closePath()
-            ctx.fill()
-            break
-        }
-        
-        ctx.shadowBlur = 0
-        ctx.restore()
-      })
-
-      // Update and draw glitch effects
-      glitchEffects.forEach(glitch => {
-        if (glitch.duration > 0) {
-          glitch.duration -= 0.016
-          glitch.alpha = Math.min(1, glitch.duration * 5)
-          
-          if (glitch.duration <= 0) {
-            glitch.cooldown = Math.random() * 100 + 50
-          }
-        } else {
-          glitch.cooldown -= 0.016
-          if (glitch.cooldown <= 0) {
-            glitch.x = Math.random() * canvas.width
-            glitch.y = Math.random() * canvas.height
-            glitch.width = Math.random() * 300 + 50
-            glitch.height = Math.random() * 20 + 10
-            glitch.duration = Math.random() * 0.4 + 0.1
-            glitch.color = voidColors[Math.floor(Math.random() * voidColors.length)]
-          }
-        }
-        
-        if (glitch.alpha > 0) {
-          ctx.fillStyle = glitch.color + Math.floor(glitch.alpha * 255).toString(16).padStart(2, '0')
-          ctx.fillRect(glitch.x, glitch.y, glitch.width, glitch.height)
-        }
-      })
-
-      // Update and draw data streams
-      dataStreams.forEach(stream => {
-        if (stream.active) {
-          // Move existing segments
-          for (let i = 0; i < stream.segments.length; i++) {
-            stream.segments[i].y += stream.speed
-          }
-          
-          // Add new segment at the top
-          if (stream.segments.length === 0 || 
-              stream.segments[0].y > pixelSize) {
-            stream.segments.unshift({
-              y: 0,
-              char: Math.random() > 0.5 ? '1' : '0',
-              alpha: 1
-            })
-          }
-          
-          // Remove segments that moved off screen
-          if (stream.segments.length > 0 && 
-              stream.segments[stream.segments.length - 1].y > canvas.height) {
-            stream.segments.pop()
-          }
-          
-          // Draw segments
-          ctx.font = `${pixelSize - 4}px "Press Start 2P", monospace`
-          ctx.textAlign = 'center'
-          
-          for (let i = 0; i < stream.segments.length; i++) {
-            const segment = stream.segments[i]
-            const alpha = stream.alpha * (1 - (i / stream.length))
-            if (alpha > 0) {
-              ctx.fillStyle = stream.color + Math.floor(alpha * 255).toString(16).padStart(2, '0')
-              ctx.fillText(segment.char, stream.x, segment.y)
-            }
-          }
-          
-          // Check if stream should deactivate
-          if (stream.segments.length >= stream.length && 
-              Math.random() > 0.995) {
-            stream.active = false
-            stream.timer = stream.restartDelay
-          }
-        } else {
-          // Handle inactive streams
-          stream.timer -= 0.016
-          if (stream.timer <= 0) {
-            stream.active = true
-            stream.x = Math.random() * canvas.width
-            stream.speed = Math.random() * 2 + 1
-            stream.length = Math.floor(Math.random() * 15 + 5)
-            stream.color = voidColors[Math.floor(Math.random() * voidColors.length)]
-            stream.segments = []
-          }
-        }
-      })
-
-      // Draw scan lines
-      scanLines.forEach(line => {
-        ctx.fillStyle = `rgba(0, 0, 0, ${line.alpha})`
-        ctx.fillRect(0, line.y, canvas.width, line.height)
-      })
-      
-      // Create a digital "noise" effect
-      if (Math.random() > 0.97) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.02)'
-        for (let i = 0; i < 20; i++) {
-          const x = Math.random() * canvas.width
-          const y = Math.random() * canvas.height
-          const size = Math.random() * 4 + 1
-          ctx.fillRect(x, y, size, size)
-        }
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to fetch from API route')
       }
 
-      // Draw a subtle vignette effect
-      const gradient = ctx.createRadialGradient(
-        canvas.width / 2, canvas.height / 2, 0,
-        canvas.width / 2, canvas.height / 2, canvas.width / 1.5
-      )
-      gradient.addColorStop(0, 'rgba(0, 0, 0, 0)')
-      gradient.addColorStop(1, 'rgba(0, 0, 0, 0.6)')
-      ctx.fillStyle = gradient
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      const blob = await response.blob()
+      const imageUrl = URL.createObjectURL(blob)
+      setGeneratedImageUrl(imageUrl)
+      const img = new Image()
+      img.crossOrigin = "Anonymous"
+      img.src = imageUrl
+      img.onload = () => {
+        const tempCanvas = document.createElement("canvas")
+        tempCanvas.width = canvasSize
+        tempCanvas.height = canvasSize
+        const tempCtx = tempCanvas.getContext("2d")
+        if (!tempCtx) return
+        tempCtx.drawImage(img, 0, 0, canvasSize, canvasSize)
+        const imageData = tempCtx.getImageData(0, 0, canvasSize, canvasSize).data
+        ctx.fillStyle = "#0a0a0a"
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      // Continue animation loop
-      requestAnimationFrame(animate)
+        const cellWidth = canvas.width / canvasSize
+        const cellHeight = canvas.height / canvasSize
+        const pixelCount = canvasSize * canvasSize
+        const pixelIndices = Array.from({ length: pixelCount }, (_, i) => i)
+        for (let i = pixelCount - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          ;[pixelIndices[i], pixelIndices[j]] = [pixelIndices[j], pixelIndices[i]]
+        }
+        let pixelIndex = 0
+        const pixelsPerFrame = Math.max(100, Math.floor(canvasSize * canvasSize / 1000))
+        const reveal = () => {
+          for (let i = 0; i < pixelsPerFrame && pixelIndex < pixelCount; i++) {
+            const idx = pixelIndices[pixelIndex]
+            const x = idx % canvasSize
+            const y = Math.floor(idx / canvasSize)
+            const r = imageData[idx * 4]
+            const g = imageData[idx * 4 + 1]
+            const b = imageData[idx * 4 + 2]
+            const a = imageData[idx * 4 + 3]
+            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a / 255})`
+            ctx.fillRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight)
+            pixelIndex++
+          }
+          if (pixelIndex < pixelCount) {
+            setTimeout(() => requestAnimationFrame(reveal), 10)
+          } else {
+            setIsGenerating(false)
+          }
+        }
+        requestAnimationFrame(reveal)
+      }
+      img.onerror = () => {
+        throw new Error('Failed to load generated image')
+      }
+    } catch (error: any) {
+      console.error("Error generating pixel art:", error)
+      const displayError = error.message.includes('Authentication error')
+        ? 'API Error: Invalid API key or permissions'
+        : error.message.includes('Rate limit exceeded')
+        ? 'API Error: Rate limit exceeded, try again later'
+        : error.message.includes('Stability API error')
+        ? `API Error: ${error.message.split(' - ')[1] || 'Invalid request parameters'}`
+        : 'Failed to generate pixel art'
+      setErrorMessage(displayError)
+      ctx.fillStyle = "#ffffff"
+      ctx.font = "16px 'Press Start 2P'"
+      ctx.textAlign = "center"
+      ctx.textBaseline = "middle"
+      ctx.fillText(`ERROR: ${displayError}`, canvas.width / 2, canvas.height / 2)
+      setIsGenerating(false)
     }
+  }
 
-    // Start animation
-    const animationId = requestAnimationFrame(animate)
+  // Handle preset prompt selection
+  const handlePresetPrompt = (preset: string) => {
+    setPrompt(preset)
+  }
 
-    // Cleanup
-    return () => {
-      window.removeEventListener('resize', resizeCanvas)
-      cancelAnimationFrame(animationId)
-    }
-  }, [])
+  // 3D Banner for Pixel Art Page - Using exact structure from About banner
+  const PixelArtBanner = () => {
+    // Use useRef instead of useState to prevent re-renders on mouse movement
+    const mousePositionRef = useRef({ x: 0, y: 0 });
 
-  return (
-    <div className="min-h-screen bg-black text-white relative">
-      {/* Background Canvas */}
-      <canvas
-        ref={bgCanvasRef}
-        className="absolute inset-0 w-full h-full opacity-90"
-      />
+    // For tracking mouse movement
+    useEffect(() => {
+      const handleMouseMove = (e: { clientX: number; clientY: number }) => {
+        // Calculate mouse position relative to the center of the viewport
+        const x = (e.clientX / window.innerWidth - 0.5) * 2;
+        const y = (e.clientY / window.innerHeight - 0.5) * 2;
+        mousePositionRef.current = { x, y };
 
-      <Navigation />
+        // Apply the transform directly using DOM methods instead of re-rendering
+        const grid = document.querySelector(".creator-grid-3d") as HTMLElement;
+        if (grid) {
+          grid.style.transform = `rotateX(${y * 5}deg) rotateY(${-x * 5}deg)`;
+        }
+      };
 
-      <div className="pt-20 pb-16 min-h-[calc(100vh-200px)] relative z-10">
-        {/* Header */}
+      window.addEventListener("mousemove", handleMouseMove);
+
+      return () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+      };
+    }, []);
+
+    return (
+      <div className="relative h-screen w-full flex items-center justify-center overflow-hidden">
+        {/* Background gradient and particles */}
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-black to-black z-0"></div>
+
+        {/* 3D rotating grid */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="mb-8 text-center"
+          className="absolute inset-0 z-0 opacity-20"
+          style={{
+            perspective: "1000px",
+            transformStyle: "preserve-3d",
+          }}
         >
-          <h1
-            style={pixelFontStyle}
-            className="text-3xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-cyan-400 tracking-wider glitch-text"
-            data-text="VOID DEVICE"
+          <div
+            className="creator-grid-3d w-full h-full grid grid-cols-12 grid-rows-12 gap-4"
+            style={{
+              transformStyle: "preserve-3d",
+            }}
           >
-            VOID DEVICE
-          </h1>
-          <p className="text-gray-400 mt-2 max-w-2xl mx-auto">
-            Generate pixel art with AI. Describe your idea and watch it come to life.
-          </p>
+            {Array.from({ length: 144 }).map((_, i) => (
+              <motion.div
+                key={`grid-${i}`}
+                className="border border-purple-500/30"
+                style={{
+                  translateZ: Math.sin(i * 0.1) * 20,
+                }}
+                animate={{
+                  opacity: [0.1, i % 10 === 0 ? 0.5 : 0.2, 0.1],
+                  borderColor: [
+                    "rgba(168, 85, 247, 0.3)",
+                    "rgba(236, 72, 153, 0.3)",
+                    "rgba(168, 85, 247, 0.3)",
+                  ],
+                }}
+                transition={{
+                  duration: 4 + Math.random() * 6,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
+              />
+            ))}
+          </div>
         </motion.div>
 
-        {/* Main Content - Left-Right Layout */}
-        <div className="max-w-7xl mx-auto px-4 flex flex-col lg:flex-row gap-8">
-          {/* Left Column - Prompt Section */}
-          <motion.div 
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="lg:w-2/5"
+        {/* Animated rings */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          {[100, 200, 300, 400].map((size, i) => (
+            <motion.div
+              key={`ring-${i}`}
+              className="absolute border border-purple-500/20 rounded-full"
+              style={{
+                width: size,
+                height: size,
+                borderRadius: "50%",
+              }}
+              animate={{
+                rotate: [0, 360],
+                scale: [1, 1.1, 1],
+                opacity: [0.1, 0.3, 0.1],
+              }}
+              transition={{
+                rotate: { duration: 20 + i * 5, repeat: Infinity, ease: "linear" },
+                scale: { duration: 3 + i, repeat: Infinity, repeatType: "reverse" },
+                opacity: { duration: 4 + i, repeat: Infinity, repeatType: "reverse" },
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Main title with parallax effect */}
+        <div className="relative z-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.2 }}
+            style={{
+              textShadow: "0 0 30px rgba(168, 85, 247, 0.5)",
+            }}
           >
-            <div className="bg-gradient-to-br from-purple-900/30 to-black border border-purple-500/50 rounded-lg p-6 backdrop-blur-md shadow-lg shadow-purple-500/20">
-              <div className="flex justify-between items-center mb-4">
-                <h2
-                  style={pixelFontStyle}
-                  className="text-xl text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 tracking-wide"
-                >
-                  DESCRIBE YOUR PIXEL ART
-                </h2>
-                <div className="flex items-center space-x-2">
-                  <span
-                    style={pixelFontStyle}
-                    className="text-sm text-gray-400"
-                  >
-                    Size:
-                  </span>
-                  <select
-                    value={canvasSize}
-                    onChange={(e) => setCanvasSize(Number(e.target.value))}
-                    className="bg-black/60 border border-purple-500 text-white rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    style={pixelFontStyle}
-                  >
-                    <option value={16}>16×16</option>
-                    <option value={32}>32×32</option>
-                    <option value={64}>64×64</option>
-                  </select>
-                </div>
-              </div>
+            <PixelHeading
+              text="PIXEL ART"
+              className="text-8xl sm:text-9xl font-black tracking-tighter mb-6 leading-none text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
+              animate
+            />
+          </motion.div>
 
-              <textarea
-                className="w-full h-32 bg-black/50 border border-purple-500/50 rounded-md p-4 text-white resize-none focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all duration-300"
-                style={{ fontFamily: "sans-serif" }}
-                placeholder="Enter your pixel art idea... (e.g., 'A cyberpunk cat with neon glasses', 'A pixel art sunset over mountains', 'An 8-bit spaceship with laser beams')"
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+            className="relative"
+          >
+            <motion.div
+              className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-pink-500 opacity-75 blur-lg"
+              animate={{
+                opacity: [0.5, 0.8, 0.5],
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+            <PixelHeading
+              text="AI-POWERED CREATOR"
+              className="text-3xl sm:text-4xl md:text-5xl mt-2 tracking-wide text-gray-300 relative"
+              animate
+            />
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.2 }}
+            className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto mt-10 mb-12 font-light"
+          >
+            Generate unique pixel art with advanced AI and mint as NFTs
+          </motion.p>
+
+          {/* Decorative elements */}
+          <motion.div
+            className="flex items-center justify-center gap-4 mt-12"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.6 }}
+          >
+            {[1, 2, 3, 4, 5].map((i) => (
+              <motion.div
+                key={`decoration-${i}`}
+                className="w-3 h-3 bg-purple-500"
+                animate={{
+                  scale: [1, i % 2 === 0 ? 1.5 : 0.7, 1],
+                  opacity: [0.5, 1, 0.5],
+                  backgroundColor: ["#a855f7", "#ec4899", "#a855f7"],
+                }}
+                transition={{
+                  duration: 2 + i * 0.5,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
               />
+            ))}
+          </motion.div>
+        </div>
 
-              <div className="mt-4 space-y-4">
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-black/40 border border-purple-500/30 rounded p-2 cursor-pointer hover:border-purple-500 transition-all duration-300">
-                    <span className="text-xs text-gray-300 block mb-1">Style:</span>
-                    <select className="w-full bg-black/60 border border-purple-500/50 text-white rounded px-2 py-1 text-sm focus:outline-none">
-                      <option>Modern</option>
-                      <option>Retro</option>
-                      <option>Fantasy</option>
-                      <option>Sci-Fi</option>
-                    </select>
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 2 }}
+          className="absolute bottom-10 left-1/2 transform -translate-x-1/2"
+        >
+          <div className="flex flex-col items-center">
+            <p className="text-sm text-gray-400 mb-2 font-pixel">SCROLL TO CREATE</p>
+            <motion.div className="relative">
+              <svg
+                width="24"
+                height="40"
+                viewBox="0 0 24 40"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  x="0"
+                  y="0"
+                  width="24"
+                  height="40"
+                  rx="12"
+                  stroke="#a855f7"
+                  strokeWidth="2"
+                />
+                <motion.rect
+                  animate={{ y: [4, 28, 4] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                  x="8"
+                  width="8"
+                  height="8"
+                  rx="4"
+                  fill="#ec4899"
+                />
+              </svg>
+
+              {/* Glow effect */}
+              <motion.div
+                className="absolute -inset-4 bg-purple-500 opacity-20 blur-xl rounded-full"
+                animate={{ opacity: [0.1, 0.3, 0.1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+            </motion.div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Custom cursor component
+  const CustomCursor = () => {
+    return (
+      <motion.div
+        className="fixed w-8 h-8 pointer-events-none z-[100] hidden md:block"
+        animate={{
+          x: cursorPosition.x - 16,
+          y: cursorPosition.y - 16,
+          scale: cursorHover ? 1.5 : 1,
+        }}
+        transition={{ type: "spring", damping: 10, mass: 0.1, stiffness: 100 }}
+      >
+        <svg
+          width="32"
+          height="32"
+          viewBox="0 0 32 32"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect x="0" y="0" width="4" height="4" fill="#a855f7" />
+          <rect x="28" y="0" width="4" height="4" fill="#a855f7" />
+          <rect x="0" y="28" width="4" height="4" fill="#a855f7" />
+          <rect x="28" y="28" width="4" height="4" fill="#a855f7" />
+          <rect
+            x="12"
+            y="12"
+            width="8"
+            height="8"
+            fill={cursorHover ? "#ec4899" : "#a855f7"}
+          />
+        </svg>
+      </motion.div>
+    )
+  }
+
+  return (
+    <div ref={containerRef} className="min-h-screen bg-black text-white relative">
+      {/* Custom cursor */}
+      <CustomCursor />
+      
+      <Navigation />
+
+      {/* Enhanced Banner Section */}
+      <PixelArtBanner />
+
+      {/* Main Creation Section */}
+      <section id="creator" className="relative py-20 min-h-screen">
+        {/* Parallax background layers */}
+        <motion.div
+          className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none"
+          style={{ y: bgY1 }}
+        >
+          <div className="absolute top-20 left-20 w-64 h-64 rounded-full bg-purple-900/30 blur-3xl" />
+          <div className="absolute bottom-40 right-10 w-80 h-80 rounded-full bg-pink-900/20 blur-3xl" />
+        </motion.div>
+        
+        {/* Secondary parallax layer */}
+        <motion.div
+          className="absolute inset-0 z-0 grid grid-cols-12 grid-rows-12 gap-px opacity-10 pointer-events-none"
+          style={{ y: bgY2 }}
+        >
+          {Array.from({ length: 20 }).map((_, i) => (
+            <motion.div
+              key={`grid-bg-${i}`}
+              className={`bg-gray-700`}
+              initial={{ opacity: 0.05 }}
+              animate={{
+                opacity: [0.05, i % 5 === 0 ? 0.2 : 0.05, 0.05],
+                backgroundColor: i % 3 === 0 ? "#a855f7" : i % 3 === 1 ? "#ec4899" : "#3b82f6",
+              }}
+              transition={{
+                duration: 4 + Math.random() * 6,
+                repeat: Infinity,
+                repeatType: "reverse",
+              }}
+            />
+          ))}
+        </motion.div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7 }}
+              className="text-center mb-16"
+            >
+              <PixelHeading
+                text="CREATE YOUR MASTERPIECE"
+                className="text-4xl md:text-5xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500"
+                animate
+              />
+              <p className="text-gray-400 max-w-2xl mx-auto">
+                Generate stunning pixel art using AI and your imagination. Describe your vision and watch it come to life pixel by pixel.
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              {/* Control Panel */}
+              <motion.div
+                initial={{ opacity: 0, x: -30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.7, delay: 0.2 }}
+                className="bg-gradient-to-br from-purple-900/20 to-black border border-purple-500/50 rounded-lg p-8 shadow-lg shadow-purple-500/10"
+              >
+                <h3 
+                  style={pixelFontStyle} 
+                  className="text-2xl text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 mb-6"
+                >
+                  DESCRIBE YOUR PIXEL ART IDEA
+                </h3>
+
+                <div className="flex justify-between items-center mb-6">
+                  <p style={pixelFontStyle} className="text-sm text-gray-400">
+                    Canvas Size:
+                  </p>
+                  <div 
+                    className="flex items-center space-x-2 bg-black/50 border border-purple-500/30 rounded px-3 py-2"
+                    onMouseEnter={() => setCursorHover(true)}
+                    onMouseLeave={() => setCursorHover(false)}
+                  >
+                    {[128, 256, 512, 1024].map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setCanvasSize(size)}
+                        className={`px-2 py-1 text-xs rounded ${
+                          canvasSize === size 
+                            ? "bg-purple-600 text-white" 
+                            : "bg-black/50 text-gray-400 hover:bg-purple-900/30"
+                        } transition-colors`}
+                        disabled={isGenerating}
+                      >
+                        {size}x
+                      </button>
+                    ))}
                   </div>
-                  <div className="bg-black/40 border border-purple-500/30 rounded p-2 cursor-pointer hover:border-purple-500 transition-all duration-300">
-                    <span className="text-xs text-gray-300 block mb-1">Colors:</span>
-                    <select className="w-full bg-black/60 border border-purple-500/50 text-white rounded px-2 py-1 text-sm focus:outline-none">
-                      <option>Vibrant</option>
-                      <option>Pastel</option>
-                      <option>Monochrome</option>
-                      <option>Neon</option>
-                    </select>
-                  </div>
-                  <div className="bg-black/40 border border-purple-500/30 rounded p-2 cursor-pointer hover:border-purple-500 transition-all duration-300">
-                    <span className="text-xs text-gray-300 block mb-1">Detail:</span>
-                    <select className="w-full bg-black/60 border border-purple-500/50 text-white rounded px-2 py-1 text-sm focus:outline-none">
-                      <option>Low</option>
-                      <option>Medium</option>
-                      <option>High</option>
-                    </select>
+                </div>
+
+                <div className="mb-6">
+                  <Label className="block text-gray-300 mb-3 font-pixel">
+                    YOUR VISION
+                  </Label>
+                  <textarea
+                    className="w-full h-40 bg-black/50 border border-purple-500/50 rounded-md p-4 text-white resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 font-pixel"
+                    placeholder="Enter your pixel art idea (e.g., a cyberpunk city at night with neon signs)..."
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    disabled={isGenerating}
+                    onMouseEnter={() => setCursorHover(true)}
+                    onMouseLeave={() => setCursorHover(false)}
+                  />
+                </div>
+
+                {/* Preset Prompts */}
+                <div className="mb-6">
+                  <p style={pixelFontStyle} className="text-sm text-gray-400 mb-3">
+                    INSPIRATION:
+                  </p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {presetPrompts.map((preset, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handlePresetPrompt(preset)}
+                        className="bg-black/30 border border-purple-500/30 hover:border-purple-500/70 text-left p-3 rounded-md text-gray-300 text-sm transition-colors"
+                        disabled={isGenerating}
+                        onMouseEnter={() => setCursorHover(true)}
+                        onMouseLeave={() => setCursorHover(false)}
+                      >
+                        {preset}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
                 <Button
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border border-purple-500/30 rounded-md px-6 py-3 font-pixel uppercase tracking-wider shadow-lg shadow-purple-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/30"
+                  className="w-full bg-transparent text-white border-2 border-purple-500 hover:bg-purple-500/20 rounded-none px-6 py-6 font-pixel uppercase tracking-wider relative overflow-hidden group mb-4"
                   style={pixelFontStyle}
+                  onClick={generatePixelArt}
+                  disabled={isGenerating || !prompt}
+                  onMouseEnter={() => setCursorHover(true)}
+                  onMouseLeave={() => setCursorHover(false)}
                 >
-                  Generate
+                  <motion.div 
+                    className="absolute inset-0 bg-gradient-to-r from-purple-600/0 via-purple-600/30 to-purple-600/0" 
+                    animate={{ 
+                      x: ['-100%', '200%'],
+                    }}
+                    transition={{ 
+                      repeat: Infinity, 
+                      duration: 2,
+                      ease: "linear",
+                    }}
+                  />
+                  {isGenerating ? (
+                    <div className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      GENERATING...
+                    </div>
+                  ) : "GENERATE PIXEL ART"}
                 </Button>
 
-                <p
-                  className="text-xs text-gray-400 mt-2 text-center px-4"
-                >
-                  Powered by AI. No wallet needed. Your art will appear on the canvas.
-                </p>
-              </div>
-            </div>
+                <div className="flex space-x-4">
+                  <Button
+                    className="w-1/2 bg-transparent text-white border-2 border-pink-500 hover:bg-pink-500/20 rounded-none px-6 py-3 font-pixel uppercase tracking-wider"
+                    style={pixelFontStyle}
+                    onClick={handleDownload}
+                    disabled={!generatedImageUrl || isGenerating}
+                    onMouseEnter={() => setCursorHover(true)}
+                    onMouseLeave={() => setCursorHover(false)}
+                  >
+                    DOWNLOAD
+                  </Button>
+                  <Button
+                    className="w-1/2 bg-transparent text-white border-2 border-cyan-500 hover:bg-cyan-500/20 rounded-none px-6 py-3 font-pixel uppercase tracking-wider"
+                    style={pixelFontStyle}
+                    onClick={handleMint}
+                    disabled={!generatedImageUrl || isGenerating}
+                    onMouseEnter={() => setCursorHover(true)}
+                    onMouseLeave={() => setCursorHover(false)}
+                  >
+                    MINT NFT
+                  </Button>
+                </div>
 
-            {/* Recent Generations */}
-            <div className="mt-6 bg-gradient-to-br from-purple-900/20 to-black/40 border border-purple-500/30 rounded-lg p-4 backdrop-blur-md">
-              <h3 className="text-sm font-semibold text-gray-300 mb-3">RECENT GENERATIONS</h3>
-              <div className="grid grid-cols-3 gap-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="aspect-square bg-black/50 border border-purple-500/30 rounded overflow-hidden hover:border-pink-500 transition-all duration-300 cursor-pointer">
-                    {/* Placeholder for generated art */}
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-xs text-gray-500">Art #{i}</span>
-                    </div>
+                {errorMessage && (
+                  <div className="mt-4 p-3 bg-red-900/30 border border-red-500/50 rounded">
+                    <p
+                      style={pixelFontStyle}
+                      className="text-xs text-red-400 text-center"
+                    >
+                      {errorMessage}
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
+                )}
+              </motion.div>
 
-          {/* Right Column - Canvas Section */}
-          <motion.div 
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-            className="lg:w-3/5"
-          >
-            <div className="relative w-full aspect-square max-h-[80vh] rounded-lg border-4 border-purple-500/50 overflow-hidden shadow-lg shadow-purple-500/20 backdrop-blur-md">
-              <canvas ref={canvasRef} className="w-full h-full" />
-              
-              {/* Device frame effects */}
-              <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute inset-0 border-2 border-purple-600/70 rounded-lg"></div>
+              {/* Canvas Display */}
+              <motion.div
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.7, delay: 0.4 }}
+              >
+                <div className="relative w-full aspect-square rounded-lg border-4 border-purple-500/50 overflow-hidden shadow-lg shadow-purple-500/20 bg-black/70">
+                  <canvas ref={canvasRef} className="w-full h-full" />
+                  
+                  {/* Empty state */}
+                  {!generatedImageUrl && !isGenerating && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <div className="w-16 h-16 border-2 border-dashed border-purple-500 rounded mb-4"></div>
+                      <p style={pixelFontStyle} className="text-gray-400 text-sm text-center max-w-xs">
+                        YOUR PIXEL ART WILL APPEAR HERE
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Loading state */}
+                  {isGenerating && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="relative">
+                        {/* Pixel loading animation */}
+                        <div className="grid grid-cols-4 grid-rows-4 gap-1 opacity-80">
+                          {Array.from({ length: 16 }).map((_, i) => (
+                            <motion.div
+                              key={`loading-pixel-${i}`}
+                              className="w-3 h-3"
+                              style={{
+                                backgroundColor: ['#a855f7', '#ec4899', '#60a5fa'][i % 3],
+                              }}
+                              animate={{
+                                opacity: [0.2, 1, 0.2],
+                                scale: [1, 1.2, 1],
+                              }}
+                              transition={{
+                                duration: 1,
+                                repeat: Infinity,
+                                delay: i * 0.05,
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Canvas border effects */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute inset-0 border-2 border-purple-600/70 rounded-lg"></div>
+                    <motion.div 
+                      className="absolute top-0 left-1/2 transform -translate-x-1/2 w-16 h-2 bg-purple-600/50 rounded-b-sm"
+                      animate={{
+                        opacity: [0.5, 1, 0.5],
+                        boxShadow: [
+                          "0 0 5px rgba(168, 85, 247, 0.5)",
+                          "0 0 10px rgba(168, 85, 247, 0.8)",
+                          "0 0 5px rgba(168, 85, 247, 0.5)",
+                        ],
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                    ></motion.div>
+                  </div>
+                </div>
                 
-                {/* Top notch */}
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-3 bg-gradient-to-r from-purple-600/50 via-pink-500/50 to-purple-600/50 rounded-b-md"></div>
+                {/* Canvas controls info */}
+                <div className="mt-4 text-center">
+                  <p style={pixelFontStyle} className="text-xs text-gray-500">
+                    {generatedImageUrl ? "CLICK AND DRAG TO ROTATE VIEW" : "GENERATE YOUR FIRST PIXEL MASTERPIECE"}
+                  </p>
+                </div>
                 
-                {/* Corner accents */}
-                <div className="absolute top-0 left-0 w-12 h-12 border-t-2 border-l-2 border-cyan-500/50 rounded-tl-lg"></div>
-                <div className="absolute top-0 right-0 w-12 h-12 border-t-2 border-r-2 border-pink-500/50 rounded-tr-lg"></div>
-                <div className="absolute bottom-0 left-0 w-12 h-12 border-b-2 border-l-2 border-pink-500/50 rounded-bl-lg"></div>
-                <div className="absolute bottom-0 right-0 w-12 h-12 border-b-2 border-r-2 border-cyan-500/50 rounded-br-lg"></div>
-                
-                {/* Scanline effect */}
-                <div className="absolute inset-0 bg-scanline opacity-10 pointer-events-none"></div>
-                
-                {/* Light reflection */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-30 pointer-events-none"></div>
-              </div>
-              
-              {/* Controls overlay */}
-              <div className="absolute bottom-4 right-4 flex space-x-2">
-                <button className="bg-black/60 text-white p-2 rounded-full border border-purple-500/50 hover:border-purple-500 transition-all duration-300">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                  </svg>
-                </button>
-                <button className="bg-black/60 text-white p-2 rounded-full border border-purple-500/50 hover:border-purple-500 transition-all duration-300">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                <button className="bg-black/60 text-white p-2 rounded-full border border-purple-500/50 hover:border-purple-500 transition-all duration-300">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
-                    <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
+                {/* Generation Info */}
+                {generatedImageUrl && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.7 }}
+                    className="mt-6 p-4 bg-black/50 border border-purple-500/30 rounded"
+                  >
+                    <h4 style={pixelFontStyle} className="text-sm text-purple-400 mb-2">GENERATION INFO:</h4>
+                    <p className="text-xs text-gray-400">
+                      Canvas size: {canvasSize}x{canvasSize} pixels<br/>
+                      Total pixels: {canvasSize * canvasSize}<br/>
+                      Format: PNG (lossless)<br/>
+                      Download size: 2048x2048 pixels
+                    </p>
+                  </motion.div>
+                )}
+              </motion.div>
             </div>
             
-            {/* Action buttons */}
-            <div className="mt-4 flex space-x-3 justify-end">
-              <Button className="bg-black/60 hover:bg-black/80 border border-cyan-500/50 hover:border-cyan-500 text-white rounded px-4 py-2 font-pixel text-sm transition-all duration-300">
-                Download
-              </Button>
-              <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white rounded px-4 py-2 font-pixel text-sm transition-all duration-300">
-                Share
-              </Button>
-              <Button className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded px-4 py-2 font-pixel text-sm transition-all duration-300">
-                Save to Gallery
-              </Button>
-            </div>
-          </motion.div>
+            {/* How it works section */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.6 }}
+              className="mt-20 text-center"
+            >
+              <h3 
+                style={pixelFontStyle} 
+                className="text-2xl text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 mb-6"
+              >
+                HOW IT WORKS
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
+                <div className="bg-black/30 border border-purple-500/30 p-6 rounded-lg">
+                  <div className="w-12 h-12 mx-auto mb-4 bg-purple-900/50 rounded-lg flex items-center justify-center">
+                    <span style={pixelFontStyle} className="text-2xl text-purple-400">1</span>
+                  </div>
+                  <h4 style={pixelFontStyle} className="text-lg mb-3 text-gray-200">DESCRIBE</h4>
+                  <p className="text-gray-400 text-sm">
+                    Enter a detailed description of the pixel art you want to create. The more specific, the better the results.
+                  </p>
+                </div>
+                
+                <div className="bg-black/30 border border-purple-500/30 p-6 rounded-lg">
+                  <div className="w-12 h-12 mx-auto mb-4 bg-purple-900/50 rounded-lg flex items-center justify-center">
+                    <span style={pixelFontStyle} className="text-2xl text-purple-400">2</span>
+                  </div>
+                  <h4 style={pixelFontStyle} className="text-lg mb-3 text-gray-200">GENERATE</h4>
+                  <p className="text-gray-400 text-sm">
+                    Our AI transforms your description into stunning pixel art, constructed one pixel at a time in a visually engaging animation.
+                  </p>
+                </div>
+                
+                <div className="bg-black/30 border border-purple-500/30 p-6 rounded-lg">
+                  <div className="w-12 h-12 mx-auto mb-4 bg-purple-900/50 rounded-lg flex items-center justify-center">
+                    <span style={pixelFontStyle} className="text-2xl text-purple-400">3</span>
+                  </div>
+                  <h4 style={pixelFontStyle} className="text-lg mb-3 text-gray-200">DOWNLOAD/MINT</h4>
+                  <p className="text-gray-400 text-sm">
+                    Download your creation in high resolution or mint it as an NFT to showcase in your digital collection.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
-      </div>
-
-      <style jsx>{`
-        .bg-scanline {
-          background: linear-gradient(
-            to bottom,
-            transparent 50%,
-            rgba(0, 0, 0, 0.1) 50%
-          );
-          background-size: 100% 4px;
-        }
-        
-        @keyframes glitch {
-          0% { transform: translate(0); }
-          20% { transform: translate(-2px, 2px); }
-          40% { transform: translate(-2px, -2px); }
-          60% { transform: translate(2px, 2px); }
-          80% { transform: translate(2px, -2px); }
-          100% { transform: translate(0); }
-        }
-        
-        .glitch-text {
-          position: relative;
-          animation: glitch 0.5s infinite;
-          animation-play-state: paused;
-        }
-        
-        .glitch-text:hover {
-          animation-play-state: running;
-        }
-        
-        .glitch-text::before,
-        .glitch-text::after {
-          content: attr(data-text);
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: black;
-        }
-        
-        .glitch-text::before {
-          left: -2px;
-          text-shadow: 2px 0 #ff2a6d;
-          clip: rect(24px, 550px, 90px, 0);
-          animation: glitch-anim 3s infinite linear alternate-reverse;
-        }
-        
-        .glitch-text::after {
-          left: 2px;
-          text-shadow: -2px 0 #05d9e8;
-          clip: rect(85px, 550px, 140px, 0);
-          animation: glitch-anim2 2.5s infinite linear alternate-reverse;
-        }
-        
-        @keyframes glitch-anim {
-          0% { clip: rect(52px, 9999px, 21px, 0); }
-          20% { clip: rect(35px, 9999px, 36px, 0); }
-          40% { clip: rect(63px, 9999px, 44px, 0); }
-          60% { clip: rect(14px, 9999px, 97px, 0); }
-          80% { clip: rect(79px, 9999px, 53px, 0); }
-          100% { clip: rect(45px, 9999px, 65px, 0); }
-        }
-        
-        @keyframes glitch-anim2 {
-          0% { clip: rect(78px, 9999px, 81px, 0); }
-          20% { clip: rect(46px, 9999px, 15px, 0); }
-          40% { clip: rect(13px, 9999px, 91px, 0); }
-          60% { clip: rect(84px, 9999px, 67px, 0); }
-          80% { clip: rect(36px, 9999px, 79px, 0); }
-          100% { clip: rect(59px, 9999px, 27px, 0); }
-        }
-      `}</style>
+      </section>
 
       <Footer />
     </div>
