@@ -103,7 +103,7 @@ export const cubeCollection: Array<{
 ];
 
 // Custom styles for cube rendering and scrollbar
-const cubeStyles = `
+const enhancedCubeStyles = `
   .cube-collection-container::-webkit-scrollbar {
     width: 4px;
     background: transparent;
@@ -123,10 +123,13 @@ const cubeStyles = `
     scrollbar-color: rgba(139, 92, 246, 0.5) transparent;
   }
   
-  /* Essential 3D cube styles */
+  /* Enhanced 3D cube styles for consistent appearance */
   .cube-scene {
     perspective: 800px;
     perspective-origin: center center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .cube {
@@ -134,6 +137,7 @@ const cubeStyles = `
     width: 100%;
     height: 100%;
     transform-style: preserve-3d;
+    transform-origin: center center;
   }
   
   .cube-face {
@@ -142,9 +146,10 @@ const cubeStyles = `
     height: 100%;
     backface-visibility: hidden;
     border-style: solid;
+    transform-origin: center center;
   }
   
-  /* Face transforms - properly positioned in 3D space */
+  /* Face transforms - exactly matching default cubes */
   .cube-face-front {
     transform: translateZ(calc(var(--cube-size) / 2));
   }
@@ -358,6 +363,17 @@ export function getCORSProxyURL(url: string): string {
 
 // Helper function for generating color shades
 const generateColorShades = (baseColor: string): string[] => {
+  // Ensure base color is in correct format
+  if (!baseColor.startsWith("#")) {
+    baseColor = `#${baseColor}`;
+  }
+
+  // If it's still not a valid hex color, use a default
+  if (!/^#[0-9A-F]{6}$/i.test(baseColor)) {
+    baseColor = "#8b5cf6"; // Default purple
+  }
+
+  // Generate shades with better contrast
   return [
     baseColor,
     adjustColorBrightness(baseColor, -0.1),
@@ -374,7 +390,12 @@ const extractColorsFromNFT = async (nft: any): Promise<string[]> => {
 
   // Default colors if we can't extract them
   const defaultColors = [
-    "#8b5cf6", "#7c3aed", "#6d28d9", "#5b21b6", "#4c1d95", "#3a1078",
+    "#8b5cf6",
+    "#7c3aed",
+    "#6d28d9",
+    "#5b21b6",
+    "#4c1d95",
+    "#3a1078",
   ];
 
   try {
@@ -421,16 +442,22 @@ const extractColorsFromNFT = async (nft: any): Promise<string[]> => {
 
     // 3. Check for material parameters
     if (metadata?.materialParams?.color || nft.materialParams?.color) {
-      const color = metadata?.materialParams?.color || nft.materialParams?.color;
+      const color =
+        metadata?.materialParams?.color || nft.materialParams?.color;
       console.log(`Found color in materialParams: ${color}`);
       return generateColorShades(color);
     }
 
     // 4. Check for gradient colors
-    if (metadata?.materialParams?.gradientColors || nft.materialParams?.gradientColors) {
-      const colors = metadata?.materialParams?.gradientColors || nft.materialParams?.gradientColors;
+    if (
+      metadata?.materialParams?.gradientColors ||
+      nft.materialParams?.gradientColors
+    ) {
+      const colors =
+        metadata?.materialParams?.gradientColors ||
+        nft.materialParams?.gradientColors;
       if (Array.isArray(colors)) {
-        console.log(`Found gradient colors: ${colors.join(', ')}`);
+        console.log(`Found gradient colors: ${colors.join(", ")}`);
         return colors;
       }
     }
@@ -480,203 +507,60 @@ function sanitizeModelUrl(url: string): string {
 }
 
 const processModelUrl = async (nft: any): Promise<string | null> => {
-  console.log(`Processing model URL for NFT: ${nft.name || nft.id || "Unknown"}`);
+  console.log(
+    `Processing model URL for NFT: ${nft.name || nft.id || "Unknown"}`
+  );
 
   try {
     // Check if this is a VOID Cube from the collection
-    const isVoidCube = 
+    const isVoidCube =
       nft.name?.includes("VOID Cube") ||
       nft.metadata?.collection?.name === "VOID Cube Collection" ||
       nft.metadata?.properties?.collection?.name === "VOID Cube Collection" ||
-      nft.attributes?.some((attr: any) => 
-        attr.trait_type === "Collection" && attr.value === "VOID Cube Collection"
+      nft.attributes?.some(
+        (attr: any) =>
+          attr.trait_type === "Collection" &&
+          attr.value === "VOID Cube Collection"
       );
 
-    if (isVoidCube) {
-      console.log("Identified as a VOID Cube NFT");
-      
-      // First try to get color from NFT attributes
-      const attributes = nft.attributes || nft.metadata?.attributes || [];
-      
-      // Extract color attribute
-      const colorAttr = attributes.find((attr: any) => 
-        attr.trait_type === "Color"
-      );
-      
-      let color = "ff66cc"; // Default pink
-      if (colorAttr?.value) {
-        // Remove # if present
-        color = colorAttr.value.replace('#', '');
-        console.log(`Extracted color from attributes: ${color}`);
-      } else if (nft.color) {
-        // Try getting from direct color property
-        color = nft.color.replace('#', '');
-        console.log(`Using color from nft.color: ${color}`);
-      }
-      
-      // Extract texture attribute
-      const textureAttr = attributes.find((attr: any) => 
-        attr.trait_type === "Texture"
-      );
-      
-      let texture = "default";
-      if (textureAttr?.value) {
-        texture = textureAttr.value.toLowerCase();
-        console.log(`Extracted texture: ${texture}`);
-      }
-      
-      // Extract animation attribute
-      const animationAttr = attributes.find((attr: any) => 
-        attr.trait_type === "Animation"
-      );
-      
-      let animation = "none";
-      if (animationAttr?.value) {
-        animation = animationAttr.value.toLowerCase();
-        console.log(`Extracted animation: ${animation}`);
-      } else if (nft.animation) {
-        // Try getting from direct animation property
-        animation = nft.animation.toLowerCase();
-        console.log(`Using animation from nft.animation: ${animation}`);
-      }
-      
-      // Generate URL for on-demand cube
-      return `/api/cube/${color}?texture=${texture}&animation=${animation}`;
-    }
+    // For all NFT cubes, we'll just use a simple cube with the right color
+    // Extract color attribute
+    const attributes = nft.attributes || nft.metadata?.attributes || [];
 
-    // STEP 1: Check direct model URL fields (similar to audio extraction)
-    const directModelFields = [
-      "model3d",
-      "model",
-      "animation_url",
-      "modelUrl",
-      "modelIpfsUri",
-      "direct_model_url",
-      "modelViewerUrl",
-      "3d_model",
-      "glb_model"
-    ];
+    // Extract color attribute
+    const colorAttr = attributes.find(
+      (attr: any) => attr.trait_type === "Color"
+    );
 
-    // Try each of these fields directly on the NFT object
-    for (const field of directModelFields) {
-      if (nft[field] && typeof nft[field] === "string") {
-        const url = nft[field];
-        console.log(`Found model URL in direct field ${field}: ${url}`);
-        
-        // Check if it's a GLB file by extension or contains indicators
-        if (isModelFile(url)) {
-          return getAlternativeIpfsUrls(url)[0]; // Use first gateway
-        }
+    let color = "ff66cc"; // Default pink
+    if (colorAttr?.value) {
+      // Remove # if present
+      color = colorAttr.value.replace("#", "");
+      console.log(`Extracted color from attributes: ${color}`);
+    } else if (nft.color) {
+      // Try getting from direct color property
+      color = nft.color.replace("#", "");
+      console.log(`Using color from nft.color: ${color}`);
+    } else if (nft.name) {
+      // Try to extract color from name
+      const colorFromName = extractColorFromName(nft.name);
+      if (colorFromName) {
+        color = colorFromName.replace("#", "");
+        console.log(`Extracted color from name: ${color}`);
       }
     }
 
-    // STEP 2: Check model3dHash directly (as done in audio)
-    if (nft.model3dHash) {
-      console.log(`Found model3dHash: ${nft.model3dHash}`);
-      return `/api/ipfs/${nft.model3dHash}`;
-    }
-
-    // STEP 3: Check metadata fields
-    let metadata = nft.metadata;
-    
-    if (!metadata && nft.uri) {
-      try {
-        metadata = await fetchMetadataWithRetry(nft.uri);
-        if (metadata) {
-          // Cache metadata for future use
-          nft.metadata = metadata;
-        }
-      } catch (error) {
-        console.error("Error fetching metadata:", error);
-      }
-    }
-
-    if (metadata) {
-      // Check animation_url (common for 3D models)
-      if (metadata.animation_url && isModelFile(metadata.animation_url)) {
-        console.log(`Found model in animation_url: ${metadata.animation_url}`);
-        return getAlternativeIpfsUrls(metadata.animation_url)[0];
-      }
-
-      // Check all possible metadata locations
-      for (const field of directModelFields) {
-        if (metadata[field] && typeof metadata[field] === "string" && isModelFile(metadata[field])) {
-          console.log(`Found model in metadata.${field}: ${metadata[field]}`);
-          return getAlternativeIpfsUrls(metadata[field])[0];
-        }
-      }
-
-      // Check properties.files
-      if (metadata.properties?.files && Array.isArray(metadata.properties.files)) {
-        const modelFile = metadata.properties.files.find((file: any) => {
-          if (!file) return false;
-          return (
-            file.type === "model/gltf-binary" || 
-            file.type === "model/gltf+json" ||
-            (file.uri && isModelFile(file.uri)) ||
-            (file.url && isModelFile(file.url))
-          );
-        });
-
-        if (modelFile) {
-          const modelUrl = modelFile.uri || modelFile.url;
-          console.log(`Found model in properties.files: ${modelUrl}`);
-          return getAlternativeIpfsUrls(modelUrl)[0];
-        }
-      }
-
-      // Check for attributes that might contain model URLs (similar to audio)
-      if (Array.isArray(metadata.attributes)) {
-        const modelAttr = metadata.attributes.find((attr: any) => {
-          if (!attr || !attr.trait_type) return false;
-          const traitType = attr.trait_type.toLowerCase();
-          return (
-            traitType.includes("model") ||
-            traitType === "3d" ||
-            traitType === "3d model"
-          );
-        });
-        
-        if (modelAttr?.value && typeof modelAttr.value === "string" && isModelFile(modelAttr.value)) {
-          console.log(`Found model URL in attributes: ${modelAttr.value}`);
-          return getAlternativeIpfsUrls(modelAttr.value)[0];
-        }
-      }
-    }
-
-    // If we got here, this is a cube NFT without a model, so generate one
-    if (isVoidCube) {
-      // Extract color, texture and animation - using same code as above
-      const attributes = nft.attributes || nft.metadata?.attributes || [];
-      
-      let color = "ff66cc"; // Default pink
-      const colorAttr = attributes.find((attr: any) => attr.trait_type === "Color");
-      if (colorAttr?.value) {
-        color = colorAttr.value.replace('#', '');
-      } else if (nft.color) {
-        color = nft.color.replace('#', '');
-      }
-      
-      let texture = "default";
-      const textureAttr = attributes.find((attr: any) => attr.trait_type === "Texture");
-      if (textureAttr?.value) {
-        texture = textureAttr.value.toLowerCase();
-      }
-      
-      let animation = "none";
-      const animationAttr = attributes.find((attr: any) => attr.trait_type === "Animation");
-      if (animationAttr?.value) {
-        animation = animationAttr.value.toLowerCase();
-      } else if (nft.animation) {
-        animation = nft.animation.toLowerCase();
-      }
-      
-      console.log(`Generating dynamic cube with color=${color}, texture=${texture}, animation=${animation}`);
-      return `/api/cube/${color}?texture=${texture}&animation=${animation}`;
-    }
-
-    console.log("No model URL found for this NFT");
+    // For NFT cubes, always return null to force client-side rendering
+    // This is the most direct fix - don't try to load models at all
+    console.log(`NFT cube color: ${color} - using client-side rendering`);
     return null;
+
+    /* 
+    // If you want to use API-generated cubes, uncomment this:
+    // Generate URL for on-demand cube - we're skipping textures and animations
+    // to ensure consistent rendering as a plain cube
+    return `/api/cube/${color}?standardCube=true`;
+    */
   } catch (error) {
     console.error("Error processing model URL:", error);
     return null;
@@ -689,45 +573,47 @@ function isKnownVoidCubeCollection(nft: any): boolean {
   if (nft.metadata?.collection?.name === "VOID Cube Collection") {
     return true;
   }
-  
+
   // Check for collection in properties
   if (nft.metadata?.properties?.collection?.name === "VOID Cube Collection") {
     return true;
   }
-  
+
   // Check for collection in attributes
   if (nft.metadata?.attributes) {
     const collectionAttr = nft.metadata.attributes.find(
-      (attr: any) => attr.trait_type === "Collection" && attr.value === "VOID Cube Collection"
+      (attr: any) =>
+        attr.trait_type === "Collection" &&
+        attr.value === "VOID Cube Collection"
     );
     if (collectionAttr) {
       return true;
     }
   }
-  
+
   // Check name pattern
   if (nft.name && nft.name.match(/VOID Cube \d+/)) {
     return true;
   }
-  
+
   return false;
 }
 
 // Helper function to potentially generate a model CID from NFT data
-// This is a placeholder - in a real implementation, you'd need to know the 
+// This is a placeholder - in a real implementation, you'd need to know the
 // actual mapping pattern for your specific collection
 function generateModelCidFromNft(nft: any): string | null {
   // This would need to be customized based on your specific collection's model mapping
   // This is just an example implementation
   if (!nft.id && !nft.mintAddress) return null;
-  
+
   // Example: Use the NFT ID to map to a specific model CID pattern
   // This is just a placeholder - you'd need to replace with your actual mapping logic
   const idHash = nft.id || nft.mintAddress;
-  
+
   // If your collection has a consistent pattern for model CIDs based on NFT ID,
   // you would implement that here
-  
+
   // For testing, just return null
   return null;
 }
@@ -735,46 +621,60 @@ function generateModelCidFromNft(nft: any): string | null {
 // Function to log detailed NFT information for debugging
 function logNFTDetails(nft: any) {
   console.log(`------- NFT DETAILS: ${nft.name || nft.id} -------`);
-  
+
   // Basic info
   console.log(`Name: ${nft.name}`);
   console.log(`ID/Address: ${nft.id || nft.mintAddress}`);
-  
+
   // URI and metadata
   console.log(`URI: ${nft.uri || "N/A"}`);
-  
+
   // Check if metadata exists
   if (nft.metadata) {
     console.log(`Metadata summary: ${Object.keys(nft.metadata).join(", ")}`);
-    
+
     // Look for important fields
     if (nft.metadata.image) console.log(`Image: ${nft.metadata.image}`);
-    if (nft.metadata.animation_url) console.log(`Animation URL: ${nft.metadata.animation_url}`);
+    if (nft.metadata.animation_url)
+      console.log(`Animation URL: ${nft.metadata.animation_url}`);
     if (nft.metadata.model3d) console.log(`Model3D: ${nft.metadata.model3d}`);
     if (nft.metadata.model) console.log(`Model: ${nft.metadata.model}`);
-    
+
     // Properties
     if (nft.metadata.properties) {
-      console.log(`Properties: ${Object.keys(nft.metadata.properties).join(", ")}`);
-      
+      console.log(
+        `Properties: ${Object.keys(nft.metadata.properties).join(", ")}`
+      );
+
       // Check for files
-      if (nft.metadata.properties.files && Array.isArray(nft.metadata.properties.files)) {
+      if (
+        nft.metadata.properties.files &&
+        Array.isArray(nft.metadata.properties.files)
+      ) {
         console.log("Files:");
         nft.metadata.properties.files.forEach((file: any, idx: number) => {
           if (typeof file === "object") {
-            console.log(`  File ${idx}: Type=${file.type}, URI=${file.uri || file.url || "N/A"}`);
+            console.log(
+              `  File ${idx}: Type=${file.type}, URI=${
+                file.uri || file.url || "N/A"
+              }`
+            );
           } else {
             console.log(`  File ${idx}: ${file}`);
           }
         });
       }
-      
+
       // Check for material params
       if (nft.metadata.properties.materialParams) {
-        console.log(`Material Params: ${JSON.stringify(nft.metadata.properties.materialParams)}`);
+        console.log(
+          `Material Params: ${JSON.stringify(
+            nft.metadata.properties.materialParams
+          )}`
+        );
       }
     }
-    
+
     // Attributes
     if (nft.metadata.attributes && Array.isArray(nft.metadata.attributes)) {
       console.log("Attributes:");
@@ -785,13 +685,13 @@ function logNFTDetails(nft: any) {
   } else {
     console.log("No metadata available");
   }
-  
+
   console.log("------------------------------------");
 }
 
 function getAlternativeIpfsUrls(ipfsUri: string): string[] {
   if (!ipfsUri) return [];
-  
+
   // Extract the IPFS hash/CID
   let ipfsHash = ipfsUri;
 
@@ -813,7 +713,7 @@ function getAlternativeIpfsUrls(ipfsUri: string): string[] {
   // Generate the full list of alternatives, prioritizing our API endpoint first
   return [
     `/api/ipfs/${ipfsHash}`, // Local API endpoint - use this first
-    `https://nftstorage.link/ipfs/${ipfsHash}`, 
+    `https://nftstorage.link/ipfs/${ipfsHash}`,
     `https://dweb.link/ipfs/${ipfsHash}`,
     `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`,
     `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
@@ -825,12 +725,14 @@ function getAlternativeIpfsUrls(ipfsUri: string): string[] {
 
 async function fetchMetadataWithRetry(uri: string, retries = 3): Promise<any> {
   if (!uri) return null;
-  
+
   // For IPFS URIs, try alternative gateways
   if (uri.includes("/ipfs/") || uri.startsWith("ipfs://")) {
     const altUrls = getAlternativeIpfsUrls(uri);
-    console.log(`Generated ${altUrls.length} alternative URLs for IPFS content`);
-    
+    console.log(
+      `Generated ${altUrls.length} alternative URLs for IPFS content`
+    );
+
     // Try each URL until one works
     for (const url of altUrls) {
       try {
@@ -846,11 +748,11 @@ async function fetchMetadataWithRetry(uri: string, retries = 3): Promise<any> {
         // Continue to next URL
       }
     }
-    
+
     console.error(`All IPFS gateways failed for ${uri}`);
     return null;
   }
-  
+
   // For non-IPFS URLs, use standard retry logic
   let attempt = 0;
   while (attempt < retries) {
@@ -865,14 +767,14 @@ async function fetchMetadataWithRetry(uri: string, retries = 3): Promise<any> {
     } catch (error) {
       console.warn(`Fetch error (attempt ${attempt + 1}/${retries}):`, error);
     }
-    
+
     attempt++;
     if (attempt < retries) {
       // Wait before retry
-      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
     }
   }
-  
+
   console.error(`Failed to fetch metadata after ${retries} attempts`);
   return null;
 }
@@ -1132,7 +1034,7 @@ const convertNFTsToCubes = async (nfts: any[]) => {
       const colorAttr = nft.attributes?.find(
         (attr: any) => attr.trait_type === "Color"
       );
-      
+
       if (colorAttr?.value) {
         console.log(`Extracted color from attributes: ${colorAttr.value}`);
         colors = generateColorShades(colorAttr.value);
@@ -1168,13 +1070,8 @@ const convertNFTsToCubes = async (nfts: any[]) => {
       // Get accent color from first color
       const accentColor = colors[0];
 
-      // Extract model URL using our improved function
-      const model3d = await processModelUrl(nft);
-      if (model3d) {
-        console.log(`Found 3D model URL: ${model3d}`);
-      } else {
-        console.log(`No 3D model found for NFT: ${nft.name || nft.id}`);
-      }
+      // CRITICAL FIX: Don't use model3d for NFT cubes
+      const model3d = null;
 
       // Extract texture information for display
       const textureAttr = nft.attributes?.find(
@@ -1188,14 +1085,13 @@ const convertNFTsToCubes = async (nfts: any[]) => {
       );
       const animation = animationAttr?.value || "";
 
-      // Assign rarity - all NFTs with models are at least rare
-      let rarity = "common";
-      if (model3d) {
-        // Higher rarity for NFTs with custom 3D models
-        rarity =
-          nft.metadata?.attributes
-            ?.find((a: any) => a.trait_type?.toLowerCase() === "rarity")
-            ?.value?.toLowerCase() || "rare";
+      // Assign rarity based on attributes or default to rare for NFTs
+      let rarity = "rare";
+      const rarityAttr = nft.attributes?.find(
+        (attr: any) => attr.trait_type === "Rarity"
+      );
+      if (rarityAttr?.value) {
+        rarity = rarityAttr.value.toLowerCase();
       }
 
       // Create border color and glow effect
@@ -1214,7 +1110,7 @@ const convertNFTsToCubes = async (nfts: any[]) => {
         glow: glow,
         rarity: rarity,
         nftData: nft,
-        model3d: model3d,
+        model3d: model3d, // Always null to force CSS-based rendering
         texture: texture,
         animation: animation,
         isNFT: true,
@@ -1224,7 +1120,7 @@ const convertNFTsToCubes = async (nfts: any[]) => {
         id: newCube.id,
         name: newCube.name,
         colors: newCube.colors.slice(0, 2), // Log just a couple colors
-        model3d: model3d ? "Present" : "None",
+        useClientSide: "true - for consistent rendering",
         texture: texture,
         animation: animation,
       });
@@ -1241,8 +1137,6 @@ const convertNFTsToCubes = async (nfts: any[]) => {
   console.log(`Converted ${cubes.length} NFTs to RealmCubes`);
   return cubes;
 };
-
-
 
 // Helper to convert hex to rgb for rgba strings
 const hexToRgb = (hex: string) => {
@@ -1336,11 +1230,9 @@ const Cube: React.FC<{
   rotateZ = 0,
   model3d = null,
 }) => {
-  // Calculate half of the size for translateZ values
   const halfSize = size / 2;
   const modelRef = useRef<HTMLDivElement>(null);
 
-  // Use useEffect to load 3D model if available instead of basic cube
   useEffect(() => {
     if (model3d && modelRef.current) {
       // Clear any existing content
@@ -1349,9 +1241,12 @@ const Cube: React.FC<{
       }
 
       try {
-        // Create scene
+        // Create a scene
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+
+        // Create a camera with a wider field of view for better visibility
+        const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+
         const renderer = new THREE.WebGLRenderer({
           alpha: true,
           antialias: true,
@@ -1363,163 +1258,152 @@ const Cube: React.FC<{
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         modelRef.current.appendChild(renderer.domElement);
 
-        // Position camera
-        camera.position.z = 2;
+        // Position camera further back for better view
+        camera.position.z = 2.5;
 
-        // Add lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        // Add better lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
         directionalLight.position.set(1, 1, 1);
         scene.add(directionalLight);
 
-        // Extract the original modelUrl and possible fallback URLs
-        let modelUrl = model3d;
-        let fallbackUrls: string[] = [];
+        // Add secondary light for better illumination
+        const secondaryLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        secondaryLight.position.set(-1, -1, -1);
+        scene.add(secondaryLight);
 
-        // Get all alternative URLs for this model
-        if (modelUrl.includes("/ipfs/") || modelUrl.startsWith("ipfs://")) {
-          fallbackUrls = getAlternativeIpfsUrls(modelUrl);
-          // Use the first URL as the main one
-          if (fallbackUrls.length > 0) {
-            modelUrl = fallbackUrls[0];
-            fallbackUrls = fallbackUrls.slice(1); // Remove the first one as we're using it
-          }
-        }
+        // CRITICAL FIX: If URL contains 'api/cube', create a custom cube instead of loading model
+        if (model3d.includes("/api/cube/")) {
+          console.log(
+            "Creating custom cube instead of loading model:",
+            model3d
+          );
 
-        console.log(`Trying to load model from: ${modelUrl}`);
-        console.log(`Have ${fallbackUrls.length} fallback URLs if needed`);
+          // Create a box geometry with proper size
+          const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
 
-        // Load the model with retries
-        const loadModelWithRetries = async () => {
-          const loader = new GLTFLoader();
-          let lastError = null;
-
-          // Try the main URL first
-          try {
-            const gltf = await new Promise((resolve, reject) => {
-              loader.load(modelUrl, resolve, undefined, reject);
-            });
-            return gltf;
-          } catch (mainError) {
-            console.warn(
-              `Error loading model from primary URL: ${modelUrl}`,
-              mainError
-            );
-            lastError = mainError;
-
-            // Try each fallback URL
-            for (const fallbackUrl of fallbackUrls) {
-              try {
-                console.log(`Trying fallback URL: ${fallbackUrl}`);
-                const gltf = await new Promise((resolve, reject) => {
-                  loader.load(fallbackUrl, resolve, undefined, reject);
-                });
-                console.log(
-                  `Successfully loaded model from fallback: ${fallbackUrl}`
-                );
-                return gltf;
-              } catch (fallbackError) {
-                console.warn(
-                  `Fallback URL failed: ${fallbackUrl}`,
-                  fallbackError
-                );
-                lastError = fallbackError;
-                // Continue to next fallback
-              }
-            }
-
-            // If we get here, all URLs failed
-            throw lastError || new Error("All model URLs failed to load");
-          }
-        };
-
-        // Try to load with our retry logic
-        loadModelWithRetries()
-          .then((gltf) => {
-            console.log("Successfully loaded 3D model!");
-
-            // Center and scale the model
-            const box = new THREE.Box3().setFromObject((gltf as GLTF).scene);
-            const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const scale = 1.5 / maxDim;
-
-            (gltf as GLTF).scene.position.x = -center.x * scale;
-            (gltf as GLTF).scene.position.y = -center.y * scale;
-            (gltf as GLTF).scene.position.z = -center.z * scale;
-            (gltf as GLTF).scene.scale.multiplyScalar(scale);
-
-            // Add model to scene
-            scene.add((gltf as GLTF).scene);
-
-            // Animation loop
-            const animate = () => {
-              requestAnimationFrame(animate);
-
-              // Apply rotation from props
-              (gltf as GLTF).scene.rotation.x =
-                THREE.MathUtils.degToRad(rotateX);
-              (gltf as GLTF).scene.rotation.y =
-                THREE.MathUtils.degToRad(rotateY);
-              (gltf as GLTF).scene.rotation.z =
-                THREE.MathUtils.degToRad(rotateZ);
-
-              renderer.render(scene, camera);
-            };
-
-            animate();
-          })
-          .catch((error) => {
-            console.error("All model loading attempts failed:", error);
-
-            // Create a colored cube as a last resort
-            console.log("Creating colored cube with NFT colors:", colors);
-            const geometry = new THREE.BoxGeometry(1, 1, 1);
-
-            // Create materials for each face using the NFT's colors
-            const materials = colors.map((color, index) => {
-              return new THREE.MeshStandardMaterial({
+          // Create materials for each face using the provided colors
+          const materials = colors.map(
+            (color) =>
+              new THREE.MeshStandardMaterial({
                 color: new THREE.Color(color),
                 metalness: 0.3,
-                roughness: 0.6,
-              });
-            });
+                roughness: 0.5,
+                emissive: new THREE.Color(color).multiplyScalar(0.15),
+              })
+          );
 
-            // Ensure we have 6 materials (one for each face)
-            while (materials.length < 6) {
-              materials.push(materials[materials.length - 1].clone());
+          // Ensure we have 6 materials (one for each face)
+          while (materials.length < 6) {
+            materials.push(materials[materials.length - 1].clone());
+          }
+
+          const cube = new THREE.Mesh(geometry, materials);
+          scene.add(cube);
+
+          // Animation loop
+          const animate = () => {
+            requestAnimationFrame(animate);
+
+            cube.rotation.x = THREE.MathUtils.degToRad(rotateX);
+            cube.rotation.y = THREE.MathUtils.degToRad(rotateY);
+            cube.rotation.z = THREE.MathUtils.degToRad(rotateZ);
+
+            renderer.render(scene, camera);
+          };
+
+          animate();
+        } else {
+          // For non-API cube URLs, try loading the model normally
+          const loader = new GLTFLoader();
+
+          loader.load(
+            model3d,
+            (gltf) => {
+              console.log("Successfully loaded 3D model");
+
+              // Center and scale the model
+              const box = new THREE.Box3().setFromObject(gltf.scene);
+              const center = box.getCenter(new THREE.Vector3());
+              const size = box.getSize(new THREE.Vector3());
+              const maxDim = Math.max(size.x, size.y, size.z);
+
+              // Use a much larger scale factor to make the model larger
+              const scale = 3.0 / maxDim;
+
+              gltf.scene.position.x = -center.x * scale;
+              gltf.scene.position.y = -center.y * scale;
+              gltf.scene.position.z = -center.z * scale;
+              gltf.scene.scale.multiplyScalar(scale);
+
+              scene.add(gltf.scene);
+
+              // Animation loop
+              const animate = () => {
+                requestAnimationFrame(animate);
+
+                gltf.scene.rotation.x = THREE.MathUtils.degToRad(rotateX);
+                gltf.scene.rotation.y = THREE.MathUtils.degToRad(rotateY);
+                gltf.scene.rotation.z = THREE.MathUtils.degToRad(rotateZ);
+
+                renderer.render(scene, camera);
+              };
+
+              animate();
+            },
+            undefined,
+            (error) => {
+              console.error("Error loading model:", error);
+
+              // Create fallback cube if model loading fails
+              console.log("Creating fallback cube with colors:", colors);
+
+              const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+
+              const materials = colors.map(
+                (color) =>
+                  new THREE.MeshStandardMaterial({
+                    color: new THREE.Color(color),
+                    metalness: 0.3,
+                    roughness: 0.5,
+                    emissive: new THREE.Color(color).multiplyScalar(0.15),
+                  })
+              );
+
+              while (materials.length < 6) {
+                materials.push(materials[materials.length - 1].clone());
+              }
+
+              const cube = new THREE.Mesh(geometry, materials);
+              scene.add(cube);
+
+              const animate = () => {
+                requestAnimationFrame(animate);
+                cube.rotation.x = THREE.MathUtils.degToRad(rotateX);
+                cube.rotation.y = THREE.MathUtils.degToRad(rotateY);
+                cube.rotation.z = THREE.MathUtils.degToRad(rotateZ);
+                renderer.render(scene, camera);
+              };
+
+              animate();
             }
-
-            const cube = new THREE.Mesh(geometry, materials);
-            scene.add(cube);
-
-            // Animation loop for the fallback cube
-            const animate = () => {
-              requestAnimationFrame(animate);
-              cube.rotation.x = THREE.MathUtils.degToRad(rotateX);
-              cube.rotation.y = THREE.MathUtils.degToRad(rotateY);
-              cube.rotation.z = THREE.MathUtils.degToRad(rotateZ);
-              renderer.render(scene, camera);
-            };
-
-            animate();
-          });
+          );
+        }
       } catch (error) {
         console.error("Error initializing model viewer:", error);
       }
 
-      // Cleanup function
       return () => {
         if (modelRef.current && modelRef.current.firstChild) {
           modelRef.current.removeChild(modelRef.current.firstChild);
         }
       };
     }
-  }, [model3d, size, isHovered, colors, glow, rotateX, rotateY, rotateZ]);
+  }, [model3d, size, colors, rotateX, rotateY, rotateZ]);
 
+  // If using a 3D model, return the model container
   if (model3d) {
     return (
       <div
@@ -1547,6 +1431,7 @@ const Cube: React.FC<{
     );
   }
 
+  // For non-model cubes, return the CSS-based cube
   return (
     <div className="cube-scene" style={{ width: size, height: size }}>
       <div
@@ -1624,7 +1509,6 @@ const Cube: React.FC<{
 };
 
 // OPTIMIZED VERSION: Avoid re-renders with React.memo
-// Modified AnimatedCube to prevent unnecessary re-renders
 interface AnimatedCubeProps {
   colors: string[];
   size?: number;
@@ -1637,6 +1521,7 @@ interface AnimatedCubeProps {
   rotateY?: number;
   rotateZ?: number;
   model3d?: string | null;
+  isNFT?: boolean; // Add this property
 }
 
 const AnimatedCube: React.FC<AnimatedCubeProps> = React.memo(
@@ -1652,7 +1537,11 @@ const AnimatedCube: React.FC<AnimatedCubeProps> = React.memo(
     rotateY = 15,
     rotateZ = 0,
     model3d = null,
+    isNFT = false,
   }) => {
+    // Always use client-side CSS rendering for NFT cubes
+    const useClientSideRendering = isNFT || !model3d;
+
     return (
       <motion.div className="cube-scene" style={{ width: size, height: size }}>
         <motion.div
@@ -1666,7 +1555,7 @@ const AnimatedCube: React.FC<AnimatedCubeProps> = React.memo(
             animate
               ? {
                   rotateX: rotateX,
-                  rotateY: rotateY, // Fixed: don't use hover-based animation
+                  rotateY: rotateY,
                   rotateZ: rotateZ,
                 }
               : {
@@ -1679,22 +1568,10 @@ const AnimatedCube: React.FC<AnimatedCubeProps> = React.memo(
             duration: 0.5,
           }}
         >
-          {model3d ? (
-            <Cube
-              colors={colors}
-              size={size}
-              borderWidth={borderWidth}
-              borderColor={borderColor}
-              glow={glow}
-              isHovered={isHovered}
-              rotateX={rotateX}
-              rotateY={rotateY}
-              rotateZ={rotateZ}
-              model3d={model3d}
-            />
-          ) : (
+          {useClientSideRendering ? (
+            // Use CSS-based cube rendering
             <>
-              {/* Cube faces */}
+              {/* Standard cube faces */}
               {[
                 { face: "front", color: colors[0] },
                 { face: "back", color: colors[1] },
@@ -1715,6 +1592,20 @@ const AnimatedCube: React.FC<AnimatedCubeProps> = React.memo(
                 />
               ))}
             </>
+          ) : (
+            // Only use 3D model rendering for non-NFT cubes with model3d
+            <Cube
+              colors={colors}
+              size={size}
+              borderWidth={borderWidth}
+              borderColor={borderColor}
+              glow={glow}
+              isHovered={isHovered}
+              rotateX={rotateX}
+              rotateY={rotateY}
+              rotateZ={rotateZ}
+              model3d={model3d}
+            />
           )}
         </motion.div>
       </motion.div>
@@ -1722,14 +1613,13 @@ const AnimatedCube: React.FC<AnimatedCubeProps> = React.memo(
   },
   // Custom equality check to minimize re-renders
   (prevProps, nextProps) => {
-    // Only re-render if important props change
     return (
       prevProps.size === nextProps.size &&
       prevProps.colors.join() === nextProps.colors.join() &&
       prevProps.borderColor === nextProps.borderColor &&
       prevProps.model3d === nextProps.model3d &&
-      prevProps.animate === nextProps.animate
-      // Intentionally NOT comparing isHovered to avoid re-renders on hover
+      prevProps.animate === nextProps.animate &&
+      prevProps.isNFT === nextProps.isNFT
     );
   }
 );
@@ -1746,7 +1636,6 @@ const MemoizedCubeCard = React.memo(
     isSelected: boolean;
     onCubeSelect: (id: string) => void;
   }) => {
-    // Use refs instead of state to prevent re-renders
     const cardRef = useRef<HTMLDivElement>(null);
     const rarity = getRarityStyles(cube.rarity);
     const [localHovered, setLocalHovered] = useState(false);
@@ -1783,6 +1672,7 @@ const MemoizedCubeCard = React.memo(
             rotateY={25}
             rotateZ={0}
             model3d={cube.model3d}
+            isNFT={cube.isNFT} // Pass isNFT flag to control rendering
           />
         </div>
 
@@ -1832,9 +1722,8 @@ const MemoizedCubeCard = React.memo(
       </motion.div>
     );
   },
-  // Proper equality check to prevent unnecessary rerenders
+  // Equality check remains the same
   (prevProps, nextProps) => {
-    // Only re-render if selected state changes or if the cube ID changes
     return (
       prevProps.isSelected === nextProps.isSelected &&
       prevProps.cube.id === nextProps.cube.id
@@ -1889,17 +1778,18 @@ const PortalModal = React.memo(
 );
 
 interface RealmCubeProps {
-  position?: "corner" | "center"; // Position on screen
-  size?: number; // Size in pixels
-  primaryColor?: string; // Primary color override
-  cubeId?: string; // Selected cube
+  position?: "corner" | "center";
+  size?: number;
+  primaryColor?: string;
+  cubeId?: string;
   isAnimated?: boolean;
-  onCubeChange?: (cubeId: string) => void; // Cube change handler
-  onCubeClick?: () => void; // Alternative click handler
+  onCubeChange?: (cubeId: string) => void;
+  onCubeClick?: () => void;
   interactable?: boolean;
   onCubeInteractionStart?: () => void;
   onCubeInteractionEnd?: () => void;
   colors?: string[];
+  onCubeCollectionUpdate?: (collection: any[]) => void; // Add this line
 }
 
 const RealmCube: React.FC<RealmCubeProps> = ({
@@ -1909,6 +1799,7 @@ const RealmCube: React.FC<RealmCubeProps> = ({
   cubeId = "pink-neon",
   onCubeChange,
   onCubeClick,
+  onCubeCollectionUpdate, // Add this line
 }) => {
   const wallet = useWallet();
   // States
@@ -1941,6 +1832,13 @@ const RealmCube: React.FC<RealmCubeProps> = ({
   }, [combinedCubeCollection]);
 
   useEffect(() => {
+    console.log("Combined collection updated in RealmCube");
+    if (onCubeCollectionUpdate && combinedCubeCollection.length > 0) {
+      onCubeCollectionUpdate(combinedCubeCollection);
+    }
+  }, [combinedCubeCollection, onCubeCollectionUpdate]);
+
+  useEffect(() => {
     console.log(
       "RealmCube - Wallet status:",
       wallet.connected ? "Connected" : "Disconnected"
@@ -1953,22 +1851,37 @@ const RealmCube: React.FC<RealmCubeProps> = ({
     }
   }, [wallet.connected, wallet.publicKey]);
 
+  // Make sure selected cube ID gets updated when selectedCubeId prop changes
+  useEffect(() => {
+    if (cubeId !== selectedCubeId && cubeId) {
+      setSelectedCubeId(cubeId);
+
+      // Find the cube in the combined collection and call the change handler
+      const selectedCube = combinedCubeCollection.find(
+        (cube) => cube.id === cubeId
+      );
+      if (selectedCube && onCubeChange) {
+        onCubeChange(cubeId);
+      }
+    }
+  }, [cubeId, combinedCubeCollection, onCubeChange, selectedCubeId]);
+
   // Load NFT cubes from blockchain only on first render
   useEffect(() => {
     const loadNFTCubesFromBlockchain = async () => {
       try {
         setIsLoadingNFTs(true);
-    
+
         // First try to load from wallet
         if (wallet.connected && wallet.publicKey) {
           try {
             // Get the public key from the connected wallet
             const publicKey = wallet.publicKey;
-    
+
             // Import libraries dynamically
             const { Connection, PublicKey } = await import("@solana/web3.js");
             const { Metaplex } = await import("@metaplex-foundation/js");
-    
+
             // Set up connection
             const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || "devnet";
             const endpoint =
@@ -1976,49 +1889,61 @@ const RealmCube: React.FC<RealmCubeProps> = ({
                 ? "https://api.mainnet-beta.solana.com"
                 : "https://api.devnet.solana.com";
             const connection = new Connection(endpoint);
-    
+
             // Initialize Metaplex
             const metaplex = Metaplex.make(connection);
-    
+
             console.log(
               `Loading NFTs from blockchain for wallet: ${publicKey.toString()}`
             );
-    
+
             // Fetch NFTs owned by this wallet
             const nfts = await metaplex.nfts().findAllByOwner({
               owner: new PublicKey(publicKey),
             });
-    
+
             console.log(`Found ${nfts.length} total NFTs in wallet`);
-    
+
             // Process all NFTs - we'll filter cube-specific ones later
             if (nfts.length > 0) {
               // Process in batches to avoid overwhelming the network
               const batchSize = 5;
               const allNfts = [];
               const cubeNfts: any[] = [];
-              
+
               // Process in batches
               for (let i = 0; i < nfts.length; i += batchSize) {
                 const batch = nfts.slice(i, i + batchSize);
-                console.log(`Processing NFT batch ${i/batchSize + 1}/${Math.ceil(nfts.length/batchSize)}`);
-                
+                console.log(
+                  `Processing NFT batch ${i / batchSize + 1}/${Math.ceil(
+                    nfts.length / batchSize
+                  )}`
+                );
+
                 const batchResults = await Promise.all(
                   batch.map(async (nft) => {
                     try {
                       // Try to fetch metadata if available
                       let metadata = null;
-    
+
                       if (nft.uri) {
                         try {
                           console.log(`Fetching metadata from: ${nft.uri}`);
                           // Use our improved metadata fetching function
                           metadata = await fetchMetadataWithRetry(nft.uri);
-                          
+
                           if (metadata) {
-                            console.log(`Got metadata for: ${metadata.name || nft.name || nft.address.toString()}`);
+                            console.log(
+                              `Got metadata for: ${
+                                metadata.name ||
+                                nft.name ||
+                                nft.address.toString()
+                              }`
+                            );
                           } else {
-                            console.warn(`Failed to fetch metadata for ${nft.uri}`);
+                            console.warn(
+                              `Failed to fetch metadata for ${nft.uri}`
+                            );
                           }
                         } catch (metadataError) {
                           console.warn(
@@ -2027,7 +1952,7 @@ const RealmCube: React.FC<RealmCubeProps> = ({
                           );
                         }
                       }
-    
+
                       // Use JSON data if it's already available in the nft object
                       if (!metadata && nft.json) {
                         metadata = nft.json;
@@ -2037,7 +1962,7 @@ const RealmCube: React.FC<RealmCubeProps> = ({
                           }`
                         );
                       }
-    
+
                       // Create basic NFT object with all available data
                       const processedNft: {
                         id: string;
@@ -2058,57 +1983,72 @@ const RealmCube: React.FC<RealmCubeProps> = ({
                           `NFT #${nft.address.toString().slice(0, 6)}`,
                         description: metadata?.description || "A unique NFT",
                         image: metadata?.image || nft.json?.image,
-                        attributes: metadata?.attributes || nft.json?.attributes || [],
+                        attributes:
+                          metadata?.attributes || nft.json?.attributes || [],
                         metadata: metadata || nft.json || {},
                         json: nft.json || metadata || {},
                         mintAddress: nft.address.toString(),
                         uri: nft.uri,
                       };
-    
+
                       // Enhanced VOID cube detection - check various patterns
                       const isCube =
                         // Check name
                         (processedNft.name?.includes("VOID") &&
                           processedNft.name?.includes("Cube")) ||
                         // Check collection name
-                        processedNft.metadata?.collection?.name?.includes("VOID Cube") ||
+                        processedNft.metadata?.collection?.name?.includes(
+                          "VOID Cube"
+                        ) ||
                         // Check collection family
-                        processedNft.metadata?.collection?.family?.includes("VOID Cube") ||
+                        processedNft.metadata?.collection?.family?.includes(
+                          "VOID Cube"
+                        ) ||
                         // Check properties.collection
-                        processedNft.metadata?.properties?.collection?.name?.includes("VOID Cube") ||
+                        processedNft.metadata?.properties?.collection?.name?.includes(
+                          "VOID Cube"
+                        ) ||
                         // Check explicit type in attributes
-                        processedNft.attributes?.some((attr: any) =>
-                          (attr.trait_type === "Type" && attr.value === "Cube") ||
-                          (attr.trait_type === "Collection" && attr.value?.includes("VOID Cube"))
+                        processedNft.attributes?.some(
+                          (attr: any) =>
+                            (attr.trait_type === "Type" &&
+                              attr.value === "Cube") ||
+                            (attr.trait_type === "Collection" &&
+                              attr.value?.includes("VOID Cube"))
                         );
-    
+
                       // Add isCube flag to the processedNft
                       processedNft.isCube = isCube;
-                      
+
                       if (isCube) {
-                        console.log(`Found VOID Cube NFT: ${processedNft.name}`);
+                        console.log(
+                          `Found VOID Cube NFT: ${processedNft.name}`
+                        );
                         cubeNfts.push(processedNft);
                       }
-                      
+
                       // Add to all NFTs
                       allNfts.push(processedNft);
                       return processedNft;
                     } catch (error) {
-                      console.error(`Error processing NFT ${nft.address.toString()}:`, error);
+                      console.error(
+                        `Error processing NFT ${nft.address.toString()}:`,
+                        error
+                      );
                       return null;
                     }
                   })
                 );
               }
-    
+
               console.log(
                 `Successfully processed ${allNfts.length} NFTs, found ${cubeNfts.length} cubes`
               );
-    
+
               // Convert NFTs to cube format
               const nftCubes = await convertNFTsToCubes(cubeNfts);
               console.log(`Converted ${nftCubes.length} NFTs into RealmCubes`);
-    
+
               if (nftCubes.length > 0) {
                 // Combine default and NFT cubes
                 setCombinedCubeCollection([...cubeCollection, ...nftCubes]);
@@ -2122,7 +2062,7 @@ const RealmCube: React.FC<RealmCubeProps> = ({
         } else {
           console.log("No wallet connected or not initialized yet");
         }
-    
+
         // If we get here, we couldn't load from blockchain or there were no cubes
         // Either show no NFT cubes or create mock ones for testing
         console.log("Creating mock NFT cubes for testing");
@@ -2162,7 +2102,7 @@ const RealmCube: React.FC<RealmCubeProps> = ({
             isNFT: true,
           },
         ];
-    
+
         setCombinedCubeCollection([...cubeCollection, ...mockNftCubes]);
       } catch (error) {
         console.error("Error in NFT loading process:", error);
@@ -2557,7 +2497,7 @@ const RealmCube: React.FC<RealmCubeProps> = ({
 
       {/* Global styles */}
       <style jsx global>
-        {cubeStyles}
+        {enhancedCubeStyles}
       </style>
     </>
   );

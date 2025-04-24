@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useAnimationControls } from "framer-motion";
 import { cubeCollection } from "../../cube/realm-cube";
+import RealmCube from "../../cube/realm-cube";
 
 // 3D Cube Art - Using the same 3D rendering technique as Cryptic Realm Tetris
 interface VortexRealmProps {
@@ -46,6 +47,9 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
   
   // For showing export confirmation
   const [showExportMessage, setShowExportMessage] = useState(false);
+
+  // Store complete cube collection including NFTs
+  const [combinedCubeCollection, setCombinedCubeCollection] = useState<any[]>(cubeCollection);
   
   // 3D View settings
   const [viewSettings, setViewSettings] = useState({
@@ -66,9 +70,15 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
   // Mouse position for ambient lighting
   const [ambientLightPosition, setAmbientLightPosition] = useState({ x: 50, y: 50 });
   
+  // Handler for cube collection updates from RealmCube component
+  const handleCubeCollectionUpdate = (collection: any[]) => {
+    console.log("Vortex Realm received cube collection:", collection.length);
+    setCombinedCubeCollection(collection);
+  };
+
   // Get selected cube from collection
   const defaultCube = cubeCollection[0];
-  const selectedCube = cubeCollection.find(cube => cube.id === selectedCubeId) || defaultCube;
+  const selectedCube = combinedCubeCollection.find(cube => cube.id === selectedCubeId) || defaultCube;
   
   // Create color palette from the selected cube
   const cubeColors = [...(selectedCube?.colors || ['#ec4899', '#8B5CF6', '#A78BFA'])];
@@ -115,6 +125,7 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
   
   // Main color for background effects
   const mainColor = cubeColors[0] || "#ec4899";
+  const secondaryColor = cubeColors[1] || "#8B5CF6";
   
   // Templates for users to start with
   const templates: Template[] = [
@@ -493,7 +504,7 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
       
       // Create temporary link and trigger download
       const link = document.createElement('a');
-      link.download = `cube-art-3d-${new Date().getTime()}.png`;
+      link.download = `${selectedCube.name}-art-3d-${new Date().getTime()}.png`;
       link.href = dataURL;
       link.click();
       
@@ -651,7 +662,7 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
           
           <div className="space-y-4 text-gray-300">
             <p>
-              Create beautiful 3D cube art inspired by your chosen cube! 
+              Create beautiful 3D cube art inspired by your {selectedCube.isNFT ? 'NFT' : ''} cube! 
               The colors are derived from your selected cube's palette.
             </p>
             
@@ -678,6 +689,37 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
       </motion.div>
     );
   };
+
+  // Generate background particles
+  const renderParticles = () => {
+    return Array.from({ length: 60 }).map((_, i) => (
+      <motion.div
+        key={`particle-${i}`}
+        className="absolute rounded-full bg-gradient-to-r from-blue-300 to-purple-400"
+        animate={{
+          x: [
+            Math.random() * window.innerWidth,
+            Math.random() * window.innerWidth,
+          ],
+          y: [
+            Math.random() * window.innerHeight,
+            Math.random() * window.innerHeight,
+          ],
+          opacity: [0.1, 0.3, 0.1],
+        }}
+        transition={{
+          duration: Math.random() * 20 + 10,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+        style={{
+          width: `${Math.random() * 4 + 1}px`,
+          height: `${Math.random() * 4 + 1}px`,
+          boxShadow: `0 0 ${Math.random() * 8 + 2}px ${mainColor}`,
+        }}
+      />
+    ));
+  };
   
   // Prevent context menu on right-click
   useEffect(() => {
@@ -697,47 +739,79 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
       ref={containerRef}
       className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-purple-900/30 via-black to-black"
     >
-      {/* Retro grid background */}
+      {/* Hidden RealmCube component to ensure we get the cube collection update */}
+      <div style={{ position: 'absolute', top: '-100px', left: '-100px', opacity: 0, visibility: 'hidden', pointerEvents: 'none' }}>
+        <RealmCube
+          position="corner"
+          size={5} // Very small size just to get the collection
+          cubeId={selectedCubeId}
+          onCubeCollectionUpdate={handleCubeCollectionUpdate}
+          onCubeClick={() => {}} // Prevent cube library from opening
+        />
+      </div>
+    
+      {/* Background particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {renderParticles()}
+      </div>
+
+      {/* Gradient background with dynamic lighting */}
       <div className="absolute inset-0 z-0">
-        <div 
-          className="absolute inset-0" 
-          style={{
-            backgroundImage: "linear-gradient(rgba(30, 30, 60, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(30, 30, 60, 0.3) 1px, transparent 1px)",
-            backgroundSize: "24px 24px",
-            backgroundPosition: "-1px -1px",
-            perspective: "1000px",
-            transformStyle: "preserve-3d"
-          }}
-        ></div>
-        
-        {/* Glow line horizontal */}
-        <div 
-          className="absolute left-0 right-0 h-px top-1/2 transform -translate-y-1/2"
-          style={{
-            background: `linear-gradient(90deg, transparent, ${mainColor}, transparent)`,
-            boxShadow: `0 0 15px 0 ${mainColor}`,
-            opacity: 0.5
-          }}
-        ></div>
-        
-        {/* Glow line vertical */}
-        <div 
-          className="absolute top-0 bottom-0 w-px left-1/2 transform -translate-x-1/2"
-          style={{
-            background: `linear-gradient(0deg, transparent, ${mainColor}, transparent)`,
-            boxShadow: `0 0 15px 0 ${mainColor}`,
-            opacity: 0.5
-          }}
-        ></div>
-        
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-900/30 via-black to-black opacity-70"></div>
+
         {/* Dynamic ambient light that follows mouse */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
             background: `radial-gradient(circle at ${ambientLightPosition.x}% ${ambientLightPosition.y}%, ${mainColor}20 0%, transparent 70%)`,
-            filter: "blur(60px)",
+            filter: "blur(40px)",
           }}
         />
+      </div>
+
+      {/* Atmosphere effect with ripples */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        {/* Central energy pulse */}
+        <motion.div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+          animate={{
+            scale: [1, 1.5, 1],
+            opacity: [0.1, 0.15, 0.1],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          style={{
+            width: "300px",
+            height: "300px",
+            background: `radial-gradient(circle, ${mainColor}30 0%, transparent 70%)`,
+          }}
+        />
+
+        {/* Echo ripples */}
+        {[1, 2, 3].map((i) => (
+          <motion.div
+            key={`ripple-${i}`}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-purple-500/10"
+            initial={{ scale: 0.1, opacity: 0.5 }}
+            animate={{
+              scale: [0.1, 3],
+              opacity: [0.5, 0],
+            }}
+            transition={{
+              duration: 8,
+              repeat: Infinity,
+              delay: i * 2,
+              ease: "easeOut",
+            }}
+            style={{
+              width: "100px",
+              height: "100px",
+            }}
+          />
+        ))}
       </div>
       
       {/* Header */}
@@ -755,6 +829,7 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
           <div className="h-px w-16 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
           <p className="text-blue-300 font-light">
             Create with {selectedCube?.name || selectedCubeId}
+            {selectedCube?.isNFT && <span className="ml-2 text-xs px-2 py-0.5 bg-purple-600 rounded">NFT</span>}
           </p>
           <div className="h-px w-16 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
         </div>
@@ -1081,18 +1156,10 @@ const VortexRealm: React.FC<VortexRealmProps> = ({ onReturn, selectedCubeId }) =
           100% { transform: translateY(100%); }
         }
         
-        .scan-line {
-          animation: scan-line 8s linear infinite;
+        .glow-effect {
+          animation: pulse 4s infinite ease-in-out;
         }
       `}</style>
-      
-      {/* Animated scan line effect */}
-      <div 
-        className="absolute left-0 right-0 h-40 pointer-events-none z-30 opacity-10 scan-line"
-        style={{
-          background: `linear-gradient(0deg, transparent, ${mainColor}40, transparent)`,
-        }}
-      ></div>
     </div>
   );
 };

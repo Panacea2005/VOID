@@ -42,39 +42,35 @@ export interface NFTMetadata {
 let PINATA_FAILED = false;
 
 // Hàm upload an toàn, thử các phương pháp khác nhau nếu phương pháp chính thất bại
-async function safeUpload(file: File, metadata: any): Promise<string> {
+async function safeUpload(file: File, metadata: any, retries = 3): Promise<string> {
   try {
-    // Nếu Pinata không gặp vấn đề, sử dụng nó
-    if (!PINATA_FAILED) {
-      return await uploadToPinata(file, metadata);
-    } else {
-      throw new Error("Pinata previously failed, using fallback");
-    }
+    return await uploadToPinata(file, metadata);
   } catch (error) {
-    console.warn("Pinata upload failed, using fallback:", error);
-    PINATA_FAILED = true;
-
-    // Sử dụng phương thức mockup đơn giản
-    // Thực tế sẽ sử dụng dịch vụ thay thế như NFT.Storage, Infura IPFS, hoặc Filebase
-    // Giả lập CID hợp lệ cho môi trường phát triển
+    console.error("Error uploading to Pinata:", error);
+    
+    if (retries > 0) {
+      console.log(`Retrying upload, ${retries} attempts remaining...`);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+      return safeUpload(file, metadata, retries - 1);
+    }
+    
+    // If we've exhausted retries, create a mock hash for development
+    console.error("Failed all upload attempts, using mock CID");
     const mockCid = `mock${Date.now()}${Math.floor(Math.random() * 1000000)}`;
-    console.log("Generated mock CID:", mockCid);
-
-    // Lưu file vào localStorage để hiển thị trong ứng dụng
-    if (typeof window !== "undefined") {
+    
+    // Try to save data to localStorage for display purposes
+    if (typeof window !== 'undefined') {
       try {
-        const fileReader = new FileReader();
-        fileReader.readAsDataURL(file);
-        fileReader.onload = () => {
-          const dataUrl = fileReader.result as string;
-          localStorage.setItem(`file_${mockCid}`, dataUrl);
-          console.log("Saved file data to localStorage");
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+          localStorage.setItem(`file_${mockCid}`, reader.result as string);
         };
       } catch (e) {
-        console.error("Failed to save file to localStorage:", e);
+        console.error("Error saving file to localStorage:", e);
       }
     }
-
+    
     return mockCid;
   }
 }
@@ -89,196 +85,122 @@ export async function mintNFT(
   metadata: NFTMetadata
 ): Promise<string> {
   try {
-    console.log("Bắt đầu quá trình mint NFT với metadata:", {
+    console.log("Starting NFT minting process with metadata:", {
       name: metadata.name,
       description: metadata.description,
+      hasImage: !!metadata.image,
+      hasModel: !!metadata.model,
     });
 
-    // Cấu hình kết nối với tùy chọn preflight tốt hơn
+    // Configure connection with better options
     const enhancedConnection = new Connection(connection.rpcEndpoint, {
       commitment: "confirmed",
-      confirmTransactionInitialTimeout: 60000, // 60 giây timeout
+      confirmTransactionInitialTimeout: 60000, // 60 seconds timeout
       disableRetryOnRateLimit: false,
       httpHeaders: { "Content-Type": "application/json" },
     });
 
-    // Tải ảnh lên IPFS thông qua Pinata hoặc phương pháp thay thế
-    console.log("Đang upload hình ảnh...");
+    // Upload image to IPFS
+    console.log("Uploading image to IPFS...");
     const imageIpfsHash = await safeUpload(metadata.image, {
       name: `${metadata.name}-image`,
       description: metadata.description,
       type: metadata.image.type || "image/png",
     });
 
-    const imageUri = getIpfsUrl(imageIpfsHash);
-    console.log("Hình ảnh đã được upload:", imageUri);
+    const imageUri = `ipfs://${imageIpfsHash}`;
+    console.log("Image uploaded:", imageUri);
 
-    // Nếu có file 3D model, cũng tải lên
+    // Variables for model data
     let modelUri = "";
     let modelType = "model/gltf-binary";
+    let model3dIpfsHash = "";
+
+    // If we have a 3D model file, upload it too
     if (metadata.model) {
-      console.log("Đang upload model 3D...");
-      // Đảm bảo rằng file model có loại MIME chính xác
+      console.log("Uploading 3D model...");
+      
+      // Make sure it has the correct MIME type
       const modelFile = metadata.model;
-      // Kiểm tra nếu là file GLB
-      const isGLB =
-        modelFile.name.toLowerCase().endsWith(".glb") ||
-        modelFile.type === "model/gltf-binary";
-
-      if (!isGLB) {
-        console.log("Model không phải GLB, cần chuyển đổi trước khi upload");
-        // Ở đây có thể gọi hàm để chuyển đổi model sang GLB nếu cần
-      }
-
-      // Đặt đúng loại MIME cho file GLB
+      console.log("Model file:", modelFile.name, modelFile.type, modelFile.size, "bytes");
+      
+      // Set correct model MIME type
       modelType = "model/gltf-binary";
 
-      const modelIpfsHash = await safeUpload(modelFile, {
-        name: `${metadata.name}-model`,
-        description: `3D Model for ${metadata.name}`,
-        type: modelType,
-      });
+      // Upload model to IPFS with material params in metadata
+      try {
+        model3dIpfsHash = await safeUpload(modelFile, {
+          name: `${metadata.name}-model`,
+          description: `3D Model for ${metadata.name}`,
+          type: modelType,
+          materialParams: JSON.stringify(metadata.properties?.materialParams || {}),
+        });
 
-      // Lấy URI IPFS và URL trực tiếp
-      modelUri = `ipfs://${modelIpfsHash}`;
-      const directModelUrl = getDirectModelUrl(modelIpfsHash);
-      const modelViewerUrl = getModelViewerUrl(modelIpfsHash);
-
-      console.log("Model đã được upload:", {
-        modelUri,
-        directModelUrl,
-        modelViewerUrl,
-        modelIpfsHash,
-      });
+        // Generate proper URIs and URLs
+        modelUri = `ipfs://${model3dIpfsHash}`;
+        
+        console.log("Model uploaded successfully:", {
+          modelUri,
+          model3dIpfsHash,
+        });
+      } catch (modelError) {
+        console.error("Error uploading model, continuing without it:", modelError);
+      }
     }
 
-    // Xử lý file âm thanh nếu có
-    let audioUri = "";
-    let audioType = "";
-    if (metadata.audio) {
-      console.log("Đang upload file âm thanh...");
-      const audioFile = metadata.audio;
-      // Xác định loại file âm thanh
-      audioType = audioFile.type || "audio/mpeg";
-
-      // Upload file âm thanh
-      const audioIpfsHash = await safeUpload(audioFile, {
-        name: `${metadata.name}-audio`,
-        description: `Audio for ${metadata.name}`,
-        type: audioType,
-      });
-
-      // Lấy URI IPFS cho âm thanh
-      audioUri = `ipfs://${audioIpfsHash}`;
-      console.log("Audio đã được upload:", {
-        audioUri,
-        audioIpfsHash,
-      });
-    } else if (metadata.audioUrl) {
-      // Trường hợp đã có URL âm thanh (từ Vercel Blob)
-      console.log("Sử dụng audioUrl có sẵn:", metadata.audioUrl);
-      audioUri = metadata.audioUrl;
-      audioType = "audio/mpeg";
-    }
-
-    // Xác định loại NFT (music hoặc cube)
-    const isMusic = !!audioUri;
-
-    // Xác định collection dựa vào loại NFT
-    const collectionName = isMusic
-      ? "VOID Music Collection"
-      : "VOID Cube Collection";
-    const collectionSymbol = isMusic ? "VMUSIC" : "VOID";
-    const collectionType = isMusic ? "audio" : "cube";
-    const collectionId = isMusic
-      ? VOID_MUSIC_COLLECTION_ID
-      : VOID_CUBE_COLLECTION_ID;
-
-    // Thêm thuộc tính collection vào attributes
-    const collectionAttribute = {
-      trait_type: "Collection",
-      value: collectionName,
-    };
-
-    // Thêm vào danh sách attributes nếu chưa có
-    const hasCollectionAttribute = metadata.attributes.some(
-      (attr) => attr.trait_type === "Collection"
-    );
-    if (!hasCollectionAttribute) {
-      metadata.attributes.push(collectionAttribute);
-    }
-
-    // Chuẩn bị metadata với cả ảnh và model
+    // Prepare metadata with image and model
     const metadataWithFiles: any = {
       name: metadata.name,
       description: metadata.description,
       image: imageUri,
       attributes: metadata.attributes,
       collection: {
-        name: collectionName,
-        family: isMusic ? "VOID Music" : "VOID Cube",
+        name: "VOID Cube Collection",
+        family: "VOID Cube",
       },
       properties: {
         files: [
           {
             uri: imageUri,
             type: metadata.image.type || "image/png",
-            cdn: getIpfsUrl(imageIpfsHash),
           },
         ],
-        category: isMusic ? "audio" : "image",
+        category: "image",
         collection: {
-          name: collectionName,
-          family: isMusic ? "VOID Music" : "VOID Cube",
+          name: "VOID Cube Collection",
+          family: "VOID Cube",
         },
       },
     };
 
-    // Thêm model vào files nếu có
+    // Add model to metadata if we have one
     if (modelUri) {
-      // Đảm bảo dùng đúng URI cho model 3D
       metadataWithFiles.model = modelUri;
-      metadataWithFiles.animation_url = modelUri; // Một số thị trường NFT sử dụng trường này cho model 3D
-
+      metadataWithFiles.animation_url = modelUri; // Many marketplaces use this for 3D models
+      
+      // Add to files array
       metadataWithFiles.properties.files.push({
         uri: modelUri,
         type: modelType,
-        cdn: getDirectModelUrl(modelUri.replace("ipfs://", "")),
       });
-
-      // Bổ sung thêm thông tin để dễ dàng hiển thị model
-      metadataWithFiles.properties.model_viewer_url = getModelViewerUrl(
-        modelUri.replace("ipfs://", "")
-      );
+      
+      // Add extra model properties
+      metadataWithFiles.properties.model = modelUri;
       metadataWithFiles.properties.model_type = "glb";
-    }
-
-    // Thêm âm thanh vào files nếu có
-    if (audioUri) {
-      // Nếu không có model 3D, dùng audio làm animation_url
-      if (!modelUri) {
-        metadataWithFiles.animation_url = audioUri;
+      
+      // Add material parameters for perfect reproduction
+      if (metadata.properties?.materialParams) {
+        metadataWithFiles.properties.materialParams = metadata.properties.materialParams;
       }
-
-      metadataWithFiles.audio = audioUri;
-
-      // Thêm vào danh sách files
-      metadataWithFiles.properties.files.push({
-        uri: audioUri,
-        type: audioType,
-        cdn: audioUri.startsWith("ipfs://")
-          ? getIpfsUrl(audioUri.replace("ipfs://", ""))
-          : audioUri, // Giữ nguyên URL nếu không phải IPFS
-      });
-
-      // Cập nhật category nếu đây là NFT âm nhạc
-      if (!modelUri) {
-        metadataWithFiles.properties.category = "audio";
+      
+      // Add colors for easier access
+      if (metadata.properties?.colors) {
+        metadataWithFiles.properties.colors = metadata.properties.colors;
       }
     }
 
-    // Tạo file metadata JSON
-    console.log("Đang chuẩn bị metadata...");
+    // Prepare metadata JSON file
+    console.log("Preparing metadata JSON...");
     const metadataBlob = new Blob(
       [JSON.stringify(metadataWithFiles, null, 2)],
       { type: "application/json" }
@@ -289,95 +211,86 @@ export async function mintNFT(
       { type: "application/json" }
     );
 
-    // Tải metadata lên
-    console.log("Đang upload metadata...");
+    // Upload metadata to IPFS
+    console.log("Uploading metadata to IPFS...");
     const metadataIpfsHash = await safeUpload(metadataFile, {
       name: `${metadata.name}-metadata`,
       type: "application/json",
     });
-    const metadataUri = getIpfsUrl(metadataIpfsHash);
+    const metadataUri = `ipfs://${metadataIpfsHash}`;
 
-    // In ra thông tin chi tiết để debug
-    console.log("NFT Metadata đã được upload:", {
-      metadataUri,
-      imageUri,
-      modelUri,
-      audioUri,
-    });
-
-    // Khởi tạo và sử dụng Metaplex
-    console.log("Đang khởi tạo Metaplex và mint NFT...");
+    // Initialize Metaplex
+    console.log("Initializing Metaplex and minting NFT...");
     const metaplex = Metaplex.make(enhancedConnection).use(
       walletAdapterIdentity(wallet)
     );
 
-    // Số lần thử lại cho mint NFT
+    // Limited retry logic for minting
     let attemptCount = 0;
     const maxAttempts = 3;
     let mintedNftAddress = "";
 
-    // Sử dụng vòng lặp để thử lại khi gặp lỗi blockhash
+    // Try minting with multiple attempts
     while (attemptCount < maxAttempts) {
       try {
-        // Tăng số lần thử
         attemptCount++;
-        console.log(`Đang tạo NFT (lần thử ${attemptCount}/${maxAttempts})...`);
+        console.log(`Minting NFT (attempt ${attemptCount}/${maxAttempts})...`);
 
-        // Lấy blockhash mới nhất trước khi tạo giao dịch
+        // Get latest blockhash
         const { blockhash, lastValidBlockHeight } =
           await enhancedConnection.getLatestBlockhash("finalized");
         console.log(
-          `Đã lấy blockhash mới: ${blockhash}, lastValidBlockHeight: ${lastValidBlockHeight}`
+          `Got blockhash: ${blockhash}, lastValidBlockHeight: ${lastValidBlockHeight}`
         );
 
-        // Tạo NFT với blockhash mới
+        // Create NFT with new blockhash
         const { nft, response } = await metaplex.nfts().create({
           uri: metadataUri,
           name: metadata.name,
           sellerFeeBasisPoints: 500, // 5% royalty
-          symbol: isMusic ? "VMUSIC" : "VOID",
+          symbol: metadata.symbol || "VOID",
           creators: [
             {
               address: wallet.publicKey,
               share: 100,
             },
           ],
-          collection: null, // Tạm thời không sử dụng collection chính thức
+          collection: null, // Not using official collection
           tokenStandard: 0, // Non-Fungible Token standard
           uses: null,
         });
 
-        console.log("NFT đã được tạo thành công:", nft.address.toString());
-        console.log("Signature giao dịch:", response.signature);
+        console.log("NFT created successfully:", nft.address.toString());
+        console.log("Transaction signature:", response.signature);
 
-        // Lưu lại địa chỉ của NFT
+        // Save the NFT address
         mintedNftAddress = nft.address.toString();
 
-        // Đã mint thành công, thoát vòng lặp
+        // Successfully minted, break the loop
         break;
       } catch (error) {
-        // Xử lý lỗi và quyết định có thử lại không
+        // Handle error and decide whether to retry
         console.error(
-          `Lỗi khi mint NFT (lần thử ${attemptCount}/${maxAttempts}):`,
+          `Error minting NFT (attempt ${attemptCount}/${maxAttempts}):`,
           error
         );
 
-        // Nếu đã thử lại tối đa, ném lỗi
+        // If max attempts reached, throw error
         if (attemptCount >= maxAttempts) {
-          console.error("Đã thử lại tối đa, không thể mint NFT");
+          console.error("Max retry attempts reached, minting failed");
           throw error;
         }
 
-        // Chờ một khoảng thời gian trước khi thử lại
-        console.log("Chờ 2 giây trước khi thử lại...");
+        // Wait before retrying
+        console.log("Waiting 2 seconds before retrying...");
         await new Promise((resolve) => setTimeout(resolve, 2000));
       }
     }
 
-    // Trả về địa chỉ của NFT đã mint
+    // Return the minted NFT address
     return mintedNftAddress;
   } catch (error) {
-    console.error("Lỗi trong quá trình mint NFT:", error);
+    console.error("Error in mintNFT function:", error);
     throw error;
   }
 }
@@ -388,12 +301,13 @@ export async function getCubeNFTMetadata(
   image: File,
   model: File | null,
   attributes: any,
-  p0: { materialParams: any; colors: string[] }
+  params: { materialParams: any; colors: string[] }
 ): Promise<NFTMetadata> {
   // Add Collection attribute if not present
   const hasCollectionAttribute = attributes.some(
     (attr: any) => attr.trait_type === "Collection"
   );
+  
   const completeAttributes = hasCollectionAttribute
     ? attributes
     : [
@@ -404,12 +318,29 @@ export async function getCubeNFTMetadata(
         },
       ];
 
+  // Build files array for properties, always starting with the image
+  const files = [
+    {
+      uri: "placeholder", // Will be replaced with actual URI after upload
+      type: image.type || "image/png",
+    }
+  ];
+  
+  // If we have a 3D model, add it to the files array
+  if (model) {
+    files.push({
+      uri: "placeholder-model", // Will be replaced with actual model URI after upload
+      type: "model/gltf-binary",
+    });
+  }
+
+  // Return complete metadata
   return {
     name,
     symbol: "VOID",
     description,
     image,
-    ...(model && { model }),
+    ...(model && { model }), // Only add model if provided
     attributes: [
       {
         trait_type: "Type",
@@ -418,22 +349,22 @@ export async function getCubeNFTMetadata(
       ...completeAttributes,
     ],
     properties: {
-      files: [
-        {
-          uri: "placeholder",
-          type: "image/png",
-        },
-      ],
+      files,
       category: "image",
       collection: {
         name: "VOID Cube Collection",
         family: "VOID Cube",
       },
-      // Store material parameters in properties
-      materialParams: p0.materialParams,
+      // Store material parameters in properties for perfect reproduction
+      materialParams: params.materialParams,
+      // Store colors separately for easier access
+      colors: params.colors,
+      // Add model_type property if we have a model
+      ...(model && { model_type: "glb" }),
     },
   };
 }
+
 
 export function verifyCubeProperties(
   originalMaterialParams: any,

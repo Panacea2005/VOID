@@ -31,7 +31,12 @@ interface PortalPosition {
 type Direction = "up" | "down" | "left" | "right";
 
 // Game states
-type GameState = "waiting" | "playing" | "paused" | "gameOver" | "levelComplete";
+type GameState =
+  | "waiting"
+  | "playing"
+  | "paused"
+  | "gameOver"
+  | "levelComplete";
 
 const AbyssRealm: React.FC<AbyssRealmProps> = ({
   onReturn,
@@ -49,14 +54,28 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
   const [portalVisible, setPortalVisible] = useState(false);
   const [isPulsing, setIsPulsing] = useState(false);
   const [cameraAngle, setCameraAngle] = useState({ x: 15, y: 0 });
-  const [ambientLightPosition, setAmbientLightPosition] = useState({ x: 50, y: 50 });
+  const [ambientLightPosition, setAmbientLightPosition] = useState({
+    x: 50,
+    y: 50,
+  });
   const [foodPulse, setFoodPulse] = useState(false);
   const [portalPulse, setPortalPulse] = useState(false);
-  const [trailEffects, setTrailEffects] = useState<{x: number, y: number, opacity: number}[]>([]);
+  const [trailEffects, setTrailEffects] = useState<
+    { x: number; y: number; opacity: number }[]
+  >([]);
+
+  // Add state for combined cube collection
+  const [combinedCubeCollection, setCombinedCubeCollection] =
+    useState<any[]>(cubeCollection);
 
   // Animation controls
   const gridControls = useAnimationControls();
   const snakeHeadControls = useAnimationControls();
+
+  const handleCubeCollectionUpdate = (collection: any[]) => {
+    console.log("Abyss Realm received cube collection:", collection.length);
+    setCombinedCubeCollection(collection);
+  };
 
   // Game refs
   const gameLoopRef = useRef<number | null>(null);
@@ -76,8 +95,22 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
 
   // Get selected cube info
   const selectedCube =
-    cubeCollection.find((cube) => cube.id === selectedCubeId) ||
-    cubeCollection[0];
+    combinedCubeCollection.find((cube) => cube.id === selectedCubeId) ||
+    combinedCubeCollection[0];
+
+  // Helper to convert hex to rgb for rgba strings
+  const hexToRgb = (hex: string) => {
+    // Remove # if present
+    hex = hex.replace(/^#/, "");
+
+    // Parse hex values
+    const bigint = parseInt(hex, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+
+    return `${r}, ${g}, ${b}`;
+  };
 
   // Get cube colors
   const getCubeColor = () => {
@@ -93,31 +126,32 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
 
   const cubeColor = getCubeColor();
   const cubeGlow = selectedCube.glow || "rgba(236, 72, 153, 0.6)";
-  const cubeSecondaryColor = selectedCube.colors[1] || "#8B5CF6"; 
+  const cubeSecondaryColor = selectedCube.colors[1] || "#8B5CF6";
 
   // Handle mouse movement for ambient lighting and parallax
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!containerRef.current) return;
-      
+
       const rect = containerRef.current.getBoundingClientRect();
       const x = ((e.clientX - rect.left) / rect.width) * 100;
       const y = ((e.clientY - rect.top) / rect.height) * 100;
-      
+
       setAmbientLightPosition({ x, y });
-      
+
       // Subtle camera shift based on mouse position
-      const cameraShiftX = 15 + ((e.clientX - rect.left) / rect.width - 0.5) * 5;
+      const cameraShiftX =
+        15 + ((e.clientX - rect.left) / rect.width - 0.5) * 5;
       const cameraShiftY = ((e.clientY - rect.top) / rect.height - 0.5) * 5;
-      
+
       setCameraAngle({
         x: cameraShiftX,
-        y: cameraShiftY
+        y: cameraShiftY,
       });
     };
-    
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
   // Initialize the game
@@ -151,7 +185,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
     gridControls.start({
       opacity: [0, 1],
       scale: [0.9, 1],
-      transition: { duration: 1.2, ease: "easeOut" }
+      transition: { duration: 1.2, ease: "easeOut" },
     });
   };
 
@@ -175,7 +209,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
       // Pick a random empty cell
       const randomIndex = Math.floor(Math.random() * emptyCells.length);
       setFood(emptyCells[randomIndex]);
-      
+
       // Animate food appearing
       setFoodPulse(true);
       setTimeout(() => setFoodPulse(false), 1000);
@@ -216,15 +250,16 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
   useEffect(() => {
     if (trailEffects.length > 0) {
       const timer = setTimeout(() => {
-        setTrailEffects(prev => 
-          prev.filter(effect => effect.opacity > 0.05)
-             .map(effect => ({
-                ...effect,
-                opacity: effect.opacity * 0.92
-             }))
+        setTrailEffects((prev) =>
+          prev
+            .filter((effect) => effect.opacity > 0.05)
+            .map((effect) => ({
+              ...effect,
+              opacity: effect.opacity * 0.92,
+            }))
         );
       }, 100);
-      
+
       return () => clearTimeout(timer);
     }
   }, [trailEffects]);
@@ -356,13 +391,13 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
     ) {
       setGameState("gameOver");
       playSound("gameover");
-      
+
       // Shake the grid
       gridControls.start({
         x: [0, -5, 5, -5, 5, 0],
-        transition: { duration: 0.5 }
+        transition: { duration: 0.5 },
       });
-      
+
       return;
     }
 
@@ -372,11 +407,14 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
     // Add trail effect at the old tail position when moving
     if (newSnake.length > 3) {
       const tailPos = newSnake[newSnake.length - 1];
-      setTrailEffects(prev => [...prev, {
-        x: tailPos.x,
-        y: tailPos.y,
-        opacity: 0.7
-      }]);
+      setTrailEffects((prev) => [
+        ...prev,
+        {
+          x: tailPos.x,
+          y: tailPos.y,
+          opacity: 0.7,
+        },
+      ]);
     }
 
     // Check if snake found food
@@ -390,7 +428,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
       // Animate snake head when eating
       snakeHeadControls.start({
         scale: [1, 1.2, 1],
-        transition: { duration: 0.3 }
+        transition: { duration: 0.3 },
       });
 
       // Generate new food
@@ -409,13 +447,13 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
     if (portal && portalVisible && head.x === portal.x && head.y === portal.y) {
       setGameState("levelComplete");
       playSound("success");
-      
+
       // Victory animation
       gridControls.start({
         scale: [1, 1.05, 1],
-        transition: { duration: 0.8 }
+        transition: { duration: 0.8 },
       });
-      
+
       return;
     }
 
@@ -433,22 +471,23 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
     // Animate grid on pulse
     gridControls.start({
       scale: [1, 1.02, 1],
-      transition: { duration: 0.5 }
+      transition: { duration: 0.5 },
     });
 
     // Create energy waves radiating from center
     for (let i = 0; i < 8; i++) {
       setTimeout(() => {
-        setTrailEffects(prev => [...prev, 
+        setTrailEffects((prev) => [
+          ...prev,
           ...Array.from({ length: 8 }).map((_, j) => {
             const angle = (j / 8) * Math.PI * 2;
             const distance = 5 + i * 2;
             return {
               x: Math.floor(GRID_SIZE / 2) + Math.cos(angle) * distance,
               y: Math.floor(GRID_SIZE / 2) + Math.sin(angle) * distance,
-              opacity: 0.8 - (i * 0.1)
+              opacity: 0.8 - i * 0.1,
             };
-          })
+          }),
         ]);
       }, i * 100);
     }
@@ -566,11 +605,11 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
   // Game actions
   const startGame = () => {
     setGameState("playing");
-    
+
     // Animate the grid on game start
     gridControls.start({
       scale: [1, 1.05, 1],
-      transition: { duration: 0.8 }
+      transition: { duration: 0.8 },
     });
 
     // Play start sound
@@ -580,12 +619,12 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
   const nextLevel = () => {
     setLevel((prev) => prev + 1);
     setGameState("waiting");
-    
+
     // Animate transition to next level
     gridControls.start({
       scale: [1, 1.1, 1],
       rotateZ: [0, 5, -5, 0],
-      transition: { duration: 1.2 }
+      transition: { duration: 1.2 },
     });
   };
 
@@ -593,11 +632,11 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
     setLevel(1);
     setScore(0);
     setGameState("waiting");
-    
+
     // Reset animation
     gridControls.start({
       scale: [1, 0.95, 1],
-      transition: { duration: 0.8 }
+      transition: { duration: 0.8 },
     });
   };
 
@@ -614,23 +653,25 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
         animate={{
           x: [
             Math.random() * window.innerWidth,
-            Math.random() * window.innerWidth
+            Math.random() * window.innerWidth,
           ],
           y: [
             Math.random() * window.innerHeight,
-            Math.random() * window.innerHeight
+            Math.random() * window.innerHeight,
           ],
-          opacity: [0.1, 0.3, 0.1]
+          opacity: [0.1, 0.3, 0.1],
         }}
         transition={{
           duration: Math.random() * 20 + 10,
           repeat: Infinity,
-          ease: "linear"
+          ease: "linear",
         }}
         style={{
           width: `${Math.random() * 4 + 1}px`,
           height: `${Math.random() * 4 + 1}px`,
-          boxShadow: `0 0 ${Math.random() * 8 + 2}px #8b5cf6`
+          boxShadow: `0 0 ${Math.random() * 8 + 2}px ${
+            selectedCube.colors[0] || "#8b5cf6"
+          }`,
         }}
       />
     ));
@@ -643,42 +684,47 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
         key={`trail-${index}`}
         className="absolute rounded-full pointer-events-none"
         style={{
-          width: `${CELL_SIZE/2}px`,
-          height: `${CELL_SIZE/2}px`,
-          left: effect.x * CELL_SIZE + CELL_SIZE/4,
-          top: effect.y * CELL_SIZE + CELL_SIZE/4,
-          background: `radial-gradient(circle, ${cubeColor}${Math.floor(effect.opacity * 255).toString(16).padStart(2, '0')} 0%, transparent 70%)`,
+          width: `${CELL_SIZE / 2}px`,
+          height: `${CELL_SIZE / 2}px`,
+          left: effect.x * CELL_SIZE + CELL_SIZE / 4,
+          top: effect.y * CELL_SIZE + CELL_SIZE / 4,
+          background: `radial-gradient(circle, ${cubeColor}${Math.floor(
+            effect.opacity * 255
+          )
+            .toString(16)
+            .padStart(2, "0")} 0%, transparent 70%)`,
           opacity: effect.opacity,
-          zIndex: 5
+          zIndex: 5,
         }}
       />
     ));
   };
 
   // Render a enhanced 3D cube for snake body
-  const renderSnakeCube = (isHead: boolean, rotation: number = 0, index: number) => {
+  const renderSnakeCube = (
+    isHead: boolean,
+    rotation: number = 0,
+    index: number
+  ) => {
     // Shadow color based on the main color
     const shadowColor = `${cubeColor}99`;
     const isNeck = index === 1; // The segment right after the head
-    
+
     // Calculate animation properties based on segment position
     const hoverOffset = Math.sin(Date.now() * 0.003 + index * 0.5) * 3;
-    const scaleVariation = isHead ? 1 : 0.9 - (index * 0.01);
+    const scaleVariation = isHead ? 1 : 0.9 - index * 0.01;
 
     return (
       <div
         className={`w-full h-full relative transition-transform duration-200`}
-        style={{ 
-          transform: isHead 
-            ? `rotate(${rotation}deg)` 
+        style={{
+          transform: isHead
+            ? `rotate(${rotation}deg)`
             : `translateZ(${5 + hoverOffset}px) scale(${scaleVariation})`,
         }}
       >
         {isHead ? (
-          <motion.div
-            animate={snakeHeadControls}
-            className="w-full h-full"
-          >
+          <motion.div animate={snakeHeadControls} className="w-full h-full">
             {/* Use actual RealmCube component for head with advanced styling */}
             <RealmCube
               position="center"
@@ -686,18 +732,19 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
               cubeId={selectedCubeId}
               isAnimated={isPulsing}
               onCubeClick={() => {}}
+              onCubeCollectionUpdate={handleCubeCollectionUpdate}
             />
-            
+
             {/* Head glow effect */}
-            <div 
-              className="absolute inset-0 rounded-sm" 
+            <div
+              className="absolute inset-0 rounded-sm"
               style={{
                 boxShadow: `0 0 10px ${cubeGlow}`,
                 opacity: 0.8,
                 transform: "scale(1.1)",
               }}
             />
-            
+
             {/* Snake eyes for head */}
             <div className="absolute top-1/4 left-1/4 w-2 h-2 rounded-full bg-white"></div>
             <div className="absolute top-1/4 right-1/4 w-2 h-2 rounded-full bg-white"></div>
@@ -706,12 +753,14 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
           // Enhanced 3D cube for body segments with better depth and shading
           <div className="w-full h-full relative transform-gpu">
             {/* Main body element with 3D transforms */}
-            <div 
+            <div
               className="absolute inset-0 rounded-sm transition-all duration-300"
               style={{
                 background: `linear-gradient(135deg, ${cubeColor}, ${cubeSecondaryColor})`,
                 boxShadow: `0 0 ${isNeck ? 8 : 5}px ${shadowColor}`,
-                transform: `perspective(200px) rotateX(${hoverOffset}deg) rotateY(${hoverOffset * 0.5}deg)`
+                transform: `perspective(200px) rotateX(${hoverOffset}deg) rotateY(${
+                  hoverOffset * 0.5
+                }deg)`,
               }}
             >
               {/* Top face - lighter */}
@@ -740,7 +789,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
                   opacity: 0.7,
                 }}
               />
-              
+
               {/* Left side - medium */}
               <div
                 className="absolute top-0 left-0 bottom-0 w-1/4 rounded-l-sm"
@@ -749,20 +798,21 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
                   opacity: 0.6,
                 }}
               />
-              
+
               {/* Highlight effect */}
               <div
                 className="absolute top-0 left-0 w-full h-full rounded-sm overflow-hidden"
                 style={{
-                  background: "linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%)",
+                  background:
+                    "linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%)",
                   opacity: 0.5,
                 }}
               />
             </div>
-            
+
             {/* Connection point to next segment (subtle) */}
             {!isNeck && (
-              <div 
+              <div
                 className="absolute inset-0 rounded-sm opacity-70"
                 style={{
                   boxShadow: `0 0 5px ${cubeColor}`,
@@ -789,7 +839,8 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
           perspective: "1000px",
           transform: `perspective(1200px) rotateX(${cameraAngle.x}deg) rotateY(${cameraAngle.y}deg)`,
           background: "rgba(7, 11, 23, 0.7)",
-          boxShadow: "0 10px 40px rgba(0,0,0,0.7), inset 0 0 30px rgba(139, 92, 246, 0.1)",
+          boxShadow:
+            "0 10px 40px rgba(0,0,0,0.7), inset 0 0 30px rgba(139, 92, 246, 0.1)",
           transition: "transform 0.5s ease-out",
         }}
         animate={gridControls}
@@ -804,7 +855,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
               style={{ top: `${i * CELL_SIZE}px` }}
             />
           ))}
-          
+
           {/* Vertical lines */}
           {Array.from({ length: 21 }).map((_, i) => (
             <div
@@ -814,16 +865,16 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
             />
           ))}
         </div>
-        
+
         {/* Background glow */}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-900/10 to-purple-900/20 pointer-events-none"></div>
-        
+
         {/* Dynamic ambient light that follows mouse */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
             background: `radial-gradient(circle at ${ambientLightPosition.x}% ${ambientLightPosition.y}%, ${cubeColor}20 0%, transparent 70%)`,
-            filter: 'blur(40px)',
+            filter: "blur(40px)",
           }}
         />
 
@@ -840,31 +891,43 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
               width: CELL_SIZE,
               height: CELL_SIZE,
             }}
-            animate={foodPulse ? {
-              scale: [1, 1.2, 1],
-              opacity: [0, 1, 1],
-            } : {
-              y: [0, -2, 0],
-              rotateZ: [0, 5, 0, -5, 0],
-            }}
-            transition={foodPulse ? {
-              duration: 0.5,
-            } : {
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
+            animate={
+              foodPulse
+                ? {
+                    scale: [1, 1.2, 1],
+                    opacity: [0, 1, 1],
+                  }
+                : {
+                    y: [0, -2, 0],
+                    rotateZ: [0, 5, 0, -5, 0],
+                  }
+            }
+            transition={
+              foodPulse
+                ? {
+                    duration: 0.5,
+                  }
+                : {
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }
+            }
           >
             <div
               className="w-2/3 h-2/3 rounded-full relative"
               style={{
                 background: `radial-gradient(circle, #a855f7 0%, #8b5cf6 70%)`,
-                boxShadow: "0 0 15px rgba(168, 85, 247, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.6)",
+                boxShadow:
+                  "0 0 15px rgba(168, 85, 247, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.6)",
               }}
             >
               {/* Inner glow */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/50 to-transparent" style={{ transform: "scale(0.7)" }}></div>
-              
+              <div
+                className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/50 to-transparent"
+                style={{ transform: "scale(0.7)" }}
+              ></div>
+
               {/* Orbiting particles */}
               {[0, 1, 2].map((i) => (
                 <motion.div
@@ -882,7 +945,9 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
                   style={{
                     left: "50%",
                     top: "50%",
-                    transform: `translate(-50%, -50%) rotate(${i * 120}deg) translateX(${CELL_SIZE/3}px)`,
+                    transform: `translate(-50%, -50%) rotate(${
+                      i * 120
+                    }deg) translateX(${CELL_SIZE / 3}px)`,
                     boxShadow: "0 0 5px rgba(255, 255, 255, 0.8)",
                   }}
                 />
@@ -901,79 +966,89 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
               width: CELL_SIZE,
               height: CELL_SIZE,
             }}
-            animate={portalPulse ? {
-              scale: [0, 1.2, 1],
-              opacity: [0, 1, 1],
-            } : {
-              scale: [1, 1.05, 1],
-              rotateZ: [0, 360],
-            }}
-            transition={portalPulse ? {
-              duration: 0.8,
-            } : {
-              duration: 8,
-              repeat: Infinity,
-              ease: "linear",
-            }}
+            animate={
+              portalPulse
+                ? {
+                    scale: [0, 1.2, 1],
+                    opacity: [0, 1, 1],
+                  }
+                : {
+                    scale: [1, 1.05, 1],
+                    rotateZ: [0, 360],
+                  }
+            }
+            transition={
+              portalPulse
+                ? {
+                    duration: 0.8,
+                  }
+                : {
+                    duration: 8,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }
+            }
           >
             <div className="w-full h-full flex items-center justify-center"></div>
-              <div
-                className="w-4/5 h-4/5 rounded-full relative overflow-hidden"
+            <div
+              className="w-4/5 h-4/5 rounded-full relative overflow-hidden"
+              style={{
+                background: `conic-gradient(from 0deg, #047857, #0d9488, #0891b2, #0d9488, #047857)`,
+                boxShadow: `0 0 20px rgba(16, 185, 129, 0.8)`,
+                border: "2px solid rgba(16, 185, 129, 0.8)",
+              }}
+            >
+              {/* Inner swirl effect */}
+              <motion.div
+                className="absolute inset-0"
                 style={{
-                  background: `conic-gradient(from 0deg, #047857, #0d9488, #0891b2, #0d9488, #047857)`,
-                  boxShadow: `0 0 20px rgba(16, 185, 129, 0.8)`,
-                  border: "2px solid rgba(16, 185, 129, 0.8)",
+                  background: `radial-gradient(circle at center, transparent 30%, #0d9488 100%)`,
+                  mixBlendMode: "overlay",
                 }}
-              >
-                {/* Inner swirl effect */}
+                animate={{
+                  rotate: [0, 360],
+                }}
+                transition={{
+                  duration: 5,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+              />
+
+              {/* Vortex center */}
+              <div
+                className="absolute left-1/2 top-1/2 w-1/3 h-1/3 rounded-full"
+                style={{
+                  background: "white",
+                  transform: "translate(-50%, -50%)",
+                  boxShadow: "0 0 10px white",
+                }}
+              />
+
+              {/* Orbiting energy dots */}
+              {[0, 1, 2, 3].map((i) => (
                 <motion.div
-                  className="absolute inset-0"
-                  style={{
-                    background: `radial-gradient(circle at center, transparent 30%, #0d9488 100%)`,
-                    mixBlendMode: "overlay",
-                  }}
+                  key={`portal-particle-${i}`}
+                  className="absolute w-1 h-1 rounded-full bg-white"
                   animate={{
                     rotate: [0, 360],
                   }}
                   transition={{
-                    duration: 5,
+                    duration: 2,
                     repeat: Infinity,
                     ease: "linear",
+                    delay: i * 0.5,
                   }}
-                />
-                
-                {/* Vortex center */}
-                <div
-                  className="absolute left-1/2 top-1/2 w-1/3 h-1/3 rounded-full"
                   style={{
-                    background: "white",
-                    transform: "translate(-50%, -50%)",
-                    boxShadow: "0 0 10px white",
+                    left: "50%",
+                    top: "50%",
+                    transform: `translate(-50%, -50%) rotate(${
+                      i * 90
+                    }deg) translateX(${CELL_SIZE / 3}px)`,
+                    boxShadow: "0 0 5px rgba(255, 255, 255, 0.8)",
                   }}
                 />
-                
-                {/* Orbiting energy dots */}
-                {[0, 1, 2, 3].map((i) => (
-                  <motion.div
-                    key={`portal-particle-${i}`}
-                    className="absolute w-1 h-1 rounded-full bg-white"
-                    animate={{
-                      rotate: [0, 360],
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "linear",
-                      delay: i * 0.5,
-                    }}
-                    style={{
-                      left: "50%",
-                      top: "50%",
-                      transform: `translate(-50%, -50%) rotate(${i * 90}deg) translateX(${CELL_SIZE/3}px)`,
-                      boxShadow: "0 0 5px rgba(255, 255, 255, 0.8)",
-                    }}
-                  />
-                ))}
+              ))}
               {renderGameGrid()}
             </div>
           </motion.div>
@@ -1022,8 +1097,14 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
                 zIndex,
                 transformStyle: "preserve-3d",
               }}
-              initial={index === 0 && gameState === "waiting" ? { scale: 0 } : { scale: 1 }}
-              animate={index === 0 && gameState === "waiting" ? { scale: 1 } : {}}
+              initial={
+                index === 0 && gameState === "waiting"
+                  ? { scale: 0 }
+                  : { scale: 1 }
+              }
+              animate={
+                index === 0 && gameState === "waiting" ? { scale: 1 } : {}
+              }
               transition={{ delay: gameState === "waiting" ? 0.5 : 0 }}
             >
               {renderSnakeCube(isHead, rotation, index)}
@@ -1044,7 +1125,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
                 background: `radial-gradient(circle, ${cubeColor}50 0%, transparent 70%)`,
               }}
             />
-            
+
             {/* Secondary pulse waves */}
             {[1, 2, 3].map((i) => (
               <motion.div
@@ -1055,10 +1136,10 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
                   opacity: [0.5, 0],
                   scale: [0.8, 2],
                 }}
-                transition={{ 
-                  duration: 1.5, 
-                  delay: i * 0.2, 
-                  ease: "easeOut"
+                transition={{
+                  duration: 1.5,
+                  delay: i * 0.2,
+                  ease: "easeOut",
                 }}
                 style={{
                   background: `radial-gradient(circle, ${cubeColor}30 0%, transparent 70%)`,
@@ -1078,13 +1159,13 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
 
   // Render pause screen
   const renderPauseScreen = () => (
-    <motion.div 
+    <motion.div
       className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-50 backdrop-blur"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      <motion.h2 
+      <motion.h2
         className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-blue-500 mb-8"
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -1093,7 +1174,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
         Game Paused
       </motion.h2>
 
-      <motion.div 
+      <motion.div
         className="flex flex-col gap-4 w-64"
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -1118,7 +1199,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
 
   // Render game over screen
   const renderGameOverScreen = () => (
-    <motion.div 
+    <motion.div
       className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-50 backdrop-blur"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -1133,12 +1214,12 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
         <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-purple-500 mb-2">
           Game Over
         </h2>
-        
+
         {/* Red glowing line under title */}
         <div className="h-0.5 w-32 mx-auto bg-gradient-to-r from-red-500 to-purple-500 rounded-full mb-6"></div>
       </motion.div>
 
-      <motion.p 
+      <motion.p
         className="text-gray-300 mb-8 text-xl"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -1147,7 +1228,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
         Your cube has been lost to the depths of the void...
       </motion.p>
 
-      <motion.div 
+      <motion.div
         className="bg-black/50 p-6 rounded-lg border border-purple-800/50 mb-8 backdrop-blur-sm"
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -1160,20 +1241,22 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
         <div className="text-lg text-center text-pink-400 mt-2">
           Snake Length: {snake.length}
         </div>
-        
+
         {/* Score stats separated by glowing line */}
         <div className="h-px w-full bg-purple-500/30 my-3"></div>
-        
+
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div className="text-gray-400">Highest Level</div>
           <div className="text-right text-blue-300">{level}</div>
-          
+
           <div className="text-gray-400">Longest Snake</div>
-          <div className="text-right text-pink-300">{snake.length} segments</div>
+          <div className="text-right text-pink-300">
+            {snake.length} segments
+          </div>
         </div>
       </motion.div>
 
-      <motion.div 
+      <motion.div
         className="flex flex-col gap-4 w-64"
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -1183,7 +1266,17 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
           onClick={restartGame}
           className="px-6 py-3 bg-gradient-to-r from-purple-800 to-purple-600 text-white rounded-lg font-bold hover:opacity-90 transition-all hover:shadow-lg hover:shadow-purple-500/20 flex items-center justify-center gap-2"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
             <path d="M21 3v5h-5"></path>
             <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
@@ -1196,7 +1289,17 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
           onClick={onReturn}
           className="px-6 py-3 bg-gray-800 text-white rounded-lg font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
             <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -1209,7 +1312,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
 
   // Render level complete screen
   const renderLevelCompleteScreen = () => (
-    <motion.div 
+    <motion.div
       className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-50 backdrop-blur"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -1224,12 +1327,12 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
         <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500 mb-2">
           Level {level} Complete!
         </h2>
-        
+
         {/* Green glowing line under title */}
         <div className="h-0.5 w-32 mx-auto bg-gradient-to-r from-green-500 to-blue-500 rounded-full mb-6"></div>
       </motion.div>
 
-      <motion.p 
+      <motion.p
         className="text-gray-300 mb-8 text-xl"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -1238,7 +1341,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
         You've found the portal to the next layer of the abyss.
       </motion.p>
 
-      <motion.div 
+      <motion.div
         className="bg-black/50 p-6 rounded-lg border border-green-800/50 mb-8 backdrop-blur-sm"
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -1253,15 +1356,15 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
         <div className="text-lg text-center text-pink-400 mt-2">
           Snake Length: {snake.length}
         </div>
-        
+
         {/* Stats separated by glowing line */}
         <div className="h-px w-full bg-green-500/30 my-3"></div>
-        
+
         {/* Level complete stats */}
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div className="text-gray-400">Next Level</div>
           <div className="text-right text-green-300">{level + 1}</div>
-          
+
           <div className="text-gray-400">Speed</div>
           <div className="text-right text-blue-300">
             {Math.min(level, speeds.length)} / {speeds.length}
@@ -1281,10 +1384,20 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
         <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-blue-600 group-hover:from-green-500 group-hover:to-blue-500 rounded-lg transition-all duration-300"></div>
         <div className="absolute inset-0 opacity-0 group-hover:opacity-50 transition-opacity duration-300 bg-[radial-gradient(closest-side_at_50%_50%,white,transparent)]"></div>
         <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-        
+
         <span className="relative text-white font-pixel text-lg tracking-wider flex items-center gap-2">
           <span>Enter Next Level</span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M5 12h14"></path>
             <path d="m12 5 7 7-7 7"></path>
           </svg>
@@ -1308,12 +1421,12 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
             <div className="text-gray-300 text-sm">Level</div>
             <div className="text-xl text-pink-300 font-bold">{level}</div>
           </div>
-          
+
           <div className="h-10 w-px bg-purple-500/30"></div>
-          
+
           <div className="flex flex-col items-center">
             <div className="text-gray-300 text-sm">Score</div>
-            <motion.div 
+            <motion.div
               key={score}
               initial={{ scale: 1 }}
               animate={{ scale: [1, 1.2, 1] }}
@@ -1323,22 +1436,24 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
               {score}
             </motion.div>
           </div>
-          
+
           <div className="h-10 w-px bg-purple-500/30"></div>
-          
+
           <div className="flex flex-col items-center">
             <div className="text-gray-300 text-sm">Snake</div>
-            <div className="text-xl text-blue-300 font-bold">{snake.length}</div>
+            <div className="text-xl text-blue-300 font-bold">
+              {snake.length}
+            </div>
           </div>
-          
+
           {portalVisible && (
             <>
               <div className="h-10 w-px bg-purple-500/30"></div>
               <div className="flex flex-col items-center">
                 <div className="text-gray-300 text-sm">Portal</div>
-                <motion.div 
-                  animate={{ 
-                    color: ["#4ade80", "#34d399", "#4ade80"]
+                <motion.div
+                  animate={{
+                    color: ["#4ade80", "#34d399", "#4ade80"],
                   }}
                   transition={{ duration: 2, repeat: Infinity }}
                   className="text-xl font-bold"
@@ -1370,11 +1485,12 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
                 opacity: Math.random() * 0.5 + 0.1,
-                boxShadow: i % 5 === 0 ? `0 0 ${Math.random() * 3 + 1}px white` : 'none',
+                boxShadow:
+                  i % 5 === 0 ? `0 0 ${Math.random() * 3 + 1}px white` : "none",
               }}
             />
           ))}
-          
+
           {/* Animated drifting stars */}
           {Array.from({ length: 30 }).map((_, i) => (
             <motion.div
@@ -1383,53 +1499,64 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
               animate={{
                 x: [0, Math.random() * 20 - 10],
                 y: [0, Math.random() * 20 - 10],
-                opacity: [0.2, 0.7, 0.2]
+                opacity: [0.2, 0.7, 0.2],
               }}
               transition={{
                 duration: Math.random() * 20 + 10,
                 repeat: Infinity,
-                ease: "easeInOut"
+                ease: "easeInOut",
               }}
               style={{
                 width: `${Math.random() * 3 + 1}px`,
                 height: `${Math.random() * 3 + 1}px`,
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
-                boxShadow: `0 0 ${Math.random() * 5 + 2}px rgba(255,255,255,0.7)`,
+                boxShadow: `0 0 ${
+                  Math.random() * 5 + 2
+                }px rgba(255,255,255,0.7)`,
               }}
             />
           ))}
-          
+
           {/* Nebula clouds */}
-          <div className="absolute inset-0 opacity-20 pointer-events-none"
+          <div
+            className="absolute inset-0 opacity-20 pointer-events-none"
             style={{
-              background: `radial-gradient(circle at 20% 30%, ${cubeColor}20 0%, transparent 50%), 
-                          radial-gradient(circle at 80% 70%, ${cubeSecondaryColor}20 0%, transparent 40%)`,
-              filter: 'blur(40px)',
+              background: `radial-gradient(circle at 20% 30%, ${
+                selectedCube.colors[0]
+              }20 0%, transparent 50%), 
+                          radial-gradient(circle at 80% 70%, ${
+                            selectedCube.colors[1] || cubeSecondaryColor
+                          }20 0%, transparent 40%)`,
+              filter: "blur(40px)",
             }}
           />
         </div>
-        
+
         {/* Distant vortex effect */}
         <motion.div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-30 pointer-events-none"
           animate={{
-            rotate: 360
+            rotate: 360,
           }}
           transition={{
             duration: 60,
             repeat: Infinity,
-            ease: "linear"
+            ease: "linear",
           }}
           style={{
-            width: '800px',
-            height: '800px',
-            background: `conic-gradient(from 0deg, transparent, ${cubeColor}30, ${cubeSecondaryColor}20, transparent)`,
-            filter: 'blur(40px)',
-            zIndex: -1
+            width: "800px",
+            height: "800px",
+            background: `conic-gradient(from 0deg, transparent, ${
+              selectedCube.colors[0]
+            }30, ${
+              selectedCube.colors[1] || cubeSecondaryColor
+            }20, transparent)`,
+            filter: "blur(40px)",
+            zIndex: -1,
           }}
         />
-        
+
         {/* Energy pulses */}
         {[1, 2, 3].map((i) => (
           <motion.div
@@ -1444,13 +1571,13 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
               duration: 8,
               repeat: Infinity,
               delay: i * 2.5,
-              ease: "easeOut"
+              ease: "easeOut",
             }}
             style={{
-              width: '150px',
-              height: '150px',
-              border: `1px solid ${cubeColor}40`,
-              zIndex: -1
+              width: "150px",
+              height: "150px",
+              border: `1px solid ${selectedCube.colors[0]}40`,
+              zIndex: -1,
             }}
           />
         ))}
@@ -1468,25 +1595,23 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {renderParticles()}
       </div>
-      
+
       {/* Gradient background with dynamic lighting */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-b from-blue-900/30 via-black to-black opacity-70"></div>
-        
+
         {/* Dynamic ambient light that follows mouse */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
             background: `radial-gradient(circle at ${ambientLightPosition.x}% ${ambientLightPosition.y}%, ${cubeColor}20 0%, transparent 70%)`,
-            filter: 'blur(40px)',
+            filter: "blur(40px)",
           }}
         />
       </div>
 
       {/* Abyss atmosphere effect with ripples */}
-      <div
-        className="absolute inset-0 z-0 pointer-events-none overflow-hidden"
-      >
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         {/* Central echo pulse */}
         <motion.div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
@@ -1497,15 +1622,16 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
           transition={{
             duration: 8,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut",
           }}
           style={{
-            width: '300px',
-            height: '300px',
-            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%)',
+            width: "300px",
+            height: "300px",
+            background:
+              "radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%)",
           }}
         />
-        
+
         {/* Ripple effects */}
         {[1, 2, 3].map((i) => (
           <motion.div
@@ -1520,11 +1646,11 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
               duration: 8,
               repeat: Infinity,
               delay: i * 2,
-              ease: "easeOut"
+              ease: "easeOut",
             }}
             style={{
-              width: '100px',
-              height: '100px',
+              width: "100px",
+              height: "100px",
             }}
           />
         ))}
@@ -1540,7 +1666,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
         <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600 mb-2 font-pixel tracking-wider">
           ABYSS REALM
         </h1>
-        
+
         <div className="flex items-center justify-center gap-4">
           <div className="h-px w-16 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
           <p className="text-xl text-blue-300 font-light">Empty Resonance</p>
@@ -1551,7 +1677,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
       {/* Main container */}
       <div className="relative z-10 flex flex-col items-center w-full max-w-4xl">
         {/* Status display with enhanced UI */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.5 }}
@@ -1562,7 +1688,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
             <div className="text-2xl text-pink-300 font-bold">{level}</div>
             <div className="h-4 w-px bg-purple-500/30"></div>
             <div className="text-lg text-gray-300">Score</div>
-            <motion.div 
+            <motion.div
               key={score}
               initial={{ scale: 1 }}
               animate={{ scale: [1, 1.2, 1] }}
@@ -1572,21 +1698,22 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
               {score}
             </motion.div>
           </div>
-          
+
           <AnimatePresence mode="wait">
             {gameState === "waiting" && (
-              <motion.p 
+              <motion.p
                 key="waiting-text"
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -5 }}
                 className="text-lg text-gray-300"
               >
-                Navigate the void, collect light fragments, and find the portal to ascend to the next layer of the abyss.
+                Navigate the void, collect light fragments, and find the portal
+                to ascend to the next layer of the abyss.
               </motion.p>
             )}
             {gameState === "playing" && (
-              <motion.p 
+              <motion.p
                 key="playing-text"
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1597,7 +1724,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
               </motion.p>
             )}
             {gameState === "gameOver" && (
-              <motion.p 
+              <motion.p
                 key="gameover-text"
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1608,7 +1735,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
               </motion.p>
             )}
             {gameState === "levelComplete" && (
-              <motion.p 
+              <motion.p
                 key="success-text"
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1620,7 +1747,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
             )}
           </AnimatePresence>
         </motion.div>
-        
+
         {/* Main content area */}
         <div className="relative">
           {/* Game states */}
@@ -1628,15 +1755,15 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
             <div className="flex flex-col items-center">
               {/* Game preview display */}
               {renderGameGrid()}
-              
+
               {/* Start and Return buttons */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
                 className="mt-6 flex gap-4 justify-center"
               >
-                <motion.button 
+                <motion.button
                   onClick={startGame}
                   className="px-8 py-3 relative group overflow-hidden"
                   whileHover={{ scale: 1.05 }}
@@ -1645,10 +1772,12 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 group-hover:from-blue-500 group-hover:to-purple-500 rounded-md transition-all duration-300"></div>
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-50 transition-opacity duration-300 bg-[radial-gradient(closest-side_at_50%_50%,white,transparent)]"></div>
                   <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-                  <span className="relative text-white font-pixel text-lg tracking-wider">Enter the Void</span>
+                  <span className="relative text-white font-pixel text-lg tracking-wider">
+                    Enter the Void
+                  </span>
                 </motion.button>
-                
-                <motion.button 
+
+                <motion.button
                   onClick={onReturn}
                   className="px-6 py-3 relative group overflow-hidden"
                   whileHover={{ scale: 1.05 }}
@@ -1657,9 +1786,19 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
                   <div className="absolute inset-0 bg-black border border-purple-500/50 group-hover:bg-purple-900/20 rounded-md transition-all duration-300"></div>
                   <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-purple-500/30 to-transparent"></div>
                   <span className="relative text-white font-pixel tracking-wider flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M19 12H5"/>
-                      <path d="M12 19l-7-7 7-7"/>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M19 12H5" />
+                      <path d="M12 19l-7-7 7-7" />
                     </svg>
                     Return to Hub
                   </span>
@@ -1670,13 +1809,13 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
             renderGameGrid()
           )}
         </div>
-          
-          {/* Overlay screens */}
-          {gameState === "paused" && renderPauseScreen()}
-          {gameState === "gameOver" && renderGameOverScreen()}
-          {gameState === "levelComplete" && renderLevelCompleteScreen()}
-        </div>
-      
+
+        {/* Overlay screens */}
+        {gameState === "paused" && renderPauseScreen()}
+        {gameState === "gameOver" && renderGameOverScreen()}
+        {gameState === "levelComplete" && renderLevelCompleteScreen()}
+      </div>
+
       {/* Global styles */}
       <style jsx global>{`
         @keyframes pulse-fade {
@@ -1715,7 +1854,7 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
         }
 
         .font-pixel {
-          font-family: 'Press Start 2P', monospace;
+          font-family: "Press Start 2P", monospace;
           letter-spacing: 0.05em;
         }
       `}</style>
