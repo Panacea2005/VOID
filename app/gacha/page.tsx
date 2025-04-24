@@ -12,16 +12,13 @@ const pixelFontStyle = {
 }
 
 export default function PixelArtPage() {
-  const [canvasSize, setCanvasSize] = useState(32)
+  const [canvasSize, setCanvasSize] = useState(128)
   const [prompt, setPrompt] = useState("")
-  const [mode, setMode] = useState<"text-to-image" | "image-to-image">("text-to-image")
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [strength, setStrength] = useState(0.5)
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const bgCanvasRef = useRef<HTMLCanvasElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Handle main canvas initialization
   useEffect(() => {
@@ -45,7 +42,8 @@ export default function PixelArtPage() {
       ctx.fillStyle = "#1a1a1a"
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      ctx.strokeStyle = "#333333"
+      // Lighter, more transparent grid color
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)" // Faint white grid
       ctx.lineWidth = 1
 
       for (let x = 0; x <= gridSize; x++) {
@@ -236,36 +234,59 @@ export default function PixelArtPage() {
     }
   }, [])
 
-  // Initialize Web Audio for sound effects
-  const audioCtx = new window.AudioContext()
-  const playBeep = () => {
-    const oscillator = audioCtx.createOscillator()
-    oscillator.type = "square"
-    oscillator.frequency.setValueAtTime(440, audioCtx.currentTime)
-    oscillator.connect(audioCtx.destination)
-    oscillator.start()
-    oscillator.stop(audioCtx.currentTime + 0.05)
+  // Handle download with a larger image size
+  const handleDownload = () => {
+    if (!generatedImageUrl || !canvasRef.current) return
+
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    // Create a temporary canvas to draw the image
+    const tempCanvas = document.createElement("canvas")
+    tempCanvas.width = canvasSize
+    tempCanvas.height = canvasSize
+    const tempCtx = tempCanvas.getContext("2d")
+    if (!tempCtx) return
+
+    // Draw the generated image
+    const img = new Image()
+    img.crossOrigin = "Anonymous"
+    img.src = generatedImageUrl
+    img.onload = () => {
+      tempCtx.drawImage(img, 0, 0, canvasSize, canvasSize)
+
+      // Create a high-quality download canvas with a larger size
+      const downloadSize = 2048 // Set to 2048x2048 for a "normal" image size
+      const downloadCanvas = document.createElement("canvas")
+      downloadCanvas.width = downloadSize
+      downloadCanvas.height = downloadSize
+      const downloadCtx = downloadCanvas.getContext("2d")
+      if (!downloadCtx) return
+
+      // Draw the image, scaled up
+      downloadCtx.imageSmoothingEnabled = false // Preserve pixelated look
+      downloadCtx.drawImage(tempCanvas, 0, 0, downloadSize, downloadSize)
+
+      // Download the image without the grid to preserve colors
+      const link = document.createElement("a")
+      link.href = downloadCanvas.toDataURL("image/png", 1.0) // High quality
+      link.download = `pixel-art-${downloadSize}x${downloadSize}.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
   }
 
-  // Handle file input
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file && ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setImageFile(file)
-    } else {
-      setErrorMessage('Please upload a valid image (JPEG, PNG, or WebP)')
-      setImageFile(null)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
+  // Handle mint (placeholder)
+  const handleMint = () => {
+    alert('Minting functionality not implemented yet.')
+    // Add actual minting logic here (e.g., connect to blockchain/NFT platform)
   }
 
   // Generate pixel art and reveal pixel by pixel
   const generatePixelArt = async () => {
     if (!canvasRef.current || !prompt) return
-    if (mode === 'image-to-image' && !imageFile) {
-      setErrorMessage('Please upload an image for image-to-image mode')
-      return
-    }
     setIsGenerating(true)
     setErrorMessage("")
     const canvas = canvasRef.current
@@ -276,11 +297,6 @@ export default function PixelArtPage() {
       const formData = new FormData()
       formData.append('prompt', prompt)
       formData.append('canvasSize', canvasSize.toString())
-      formData.append('mode', mode)
-      if (mode === 'image-to-image' && imageFile) {
-        formData.append('image', imageFile)
-        formData.append('strength', strength.toString())
-      }
 
       const response = await fetch('/api/generate-pixel-art', {
         method: 'POST',
@@ -294,55 +310,48 @@ export default function PixelArtPage() {
 
       const blob = await response.blob()
       const imageUrl = URL.createObjectURL(blob)
+      setGeneratedImageUrl(imageUrl)
       const img = new Image()
       img.crossOrigin = "Anonymous"
       img.src = imageUrl
       img.onload = () => {
         const tempCanvas = document.createElement("canvas")
-        tempCanvas.width = canvas.width
-        tempCanvas.height = canvas.height
+        tempCanvas.width = canvasSize
+        tempCanvas.height = canvasSize
         const tempCtx = tempCanvas.getContext("2d")
         if (!tempCtx) return
-        tempCtx.drawImage(img, 0, 0, canvas.width, canvas.height)
-        const imageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height).data
+        tempCtx.drawImage(img, 0, 0, canvasSize, canvasSize)
+        const imageData = tempCtx.getImageData(0, 0, canvasSize, canvasSize).data
         ctx.fillStyle = "#1a1a1a"
         ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-        const pixelCount = canvas.width * canvas.height
+        const cellWidth = canvas.width / canvasSize
+        const cellHeight = canvas.height / canvasSize
+        const pixelCount = canvasSize * canvasSize
         const pixelIndices = Array.from({ length: pixelCount }, (_, i) => i)
         for (let i = pixelCount - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1))
           ;[pixelIndices[i], pixelIndices[j]] = [pixelIndices[j], pixelIndices[i]]
         }
         let pixelIndex = 0
-        const pixelsPerFrame = 100
+        const pixelsPerFrame = Math.max(100, Math.floor(canvasSize * canvasSize / 1000))
         const reveal = () => {
           for (let i = 0; i < pixelsPerFrame && pixelIndex < pixelCount; i++) {
             const idx = pixelIndices[pixelIndex]
-            const x = idx % canvas.width
-            const y = Math.floor(idx / canvas.width)
+            const x = idx % canvasSize
+            const y = Math.floor(idx / canvasSize)
             const r = imageData[idx * 4]
             const g = imageData[idx * 4 + 1]
             const b = imageData[idx * 4 + 2]
             const a = imageData[idx * 4 + 3]
             ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a / 255})`
-            ctx.fillRect(x, y, 1, 1)
-            if (pixelIndex % 500 === 0) playBeep()
+            ctx.fillRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight)
             pixelIndex++
           }
-          ctx.fillStyle = "#ffffff"
-          ctx.font = "16px 'Press Start 2P'"
-          ctx.textAlign = "center"
-          ctx.fillText(
-            `${Math.round((pixelIndex / pixelCount) * 100)}%`,
-            canvas.width / 2,
-            canvas.height - 20
-          )
           if (pixelIndex < pixelCount) {
             setTimeout(() => requestAnimationFrame(reveal), 10)
           } else {
             setIsGenerating(false)
-            URL.revokeObjectURL(imageUrl)
           }
         }
         requestAnimationFrame(reveal)
@@ -408,70 +417,13 @@ export default function PixelArtPage() {
                       style={pixelFontStyle}
                       disabled={isGenerating}
                     >
-                      <option value={16}>16x</option>
-                      <option value={32}>32x</option>
-                      <option value={64}>64x</option>
+                      <option value={128}>128x</option>
+                      <option value={356}>356x</option>
+                      <option value={512}>512x</option>
+                      <option value={1024}>1024x</option>
                     </select>
                   </div>
                 </div>
-
-                <div className="mb-4">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      value="text-to-image"
-                      checked={mode === "text-to-image"}
-                      onChange={() => setMode("text-to-image")}
-                      disabled={isGenerating}
-                      className="form-radio text-purple-500"
-                    />
-                    <span style={pixelFontStyle} className="text-sm text-white">
-                      Text-to-Image
-                    </span>
-                  </label>
-                  <label className="flex items-center space-x-2 mt-2">
-                    <input
-                      type="radio"
-                      value="image-to-image"
-                      checked={mode === "image-to-image"}
-                      onChange={() => setMode("image-to-image")}
-                      disabled={isGenerating}
-                      className="form-radio text-purple-500"
-                    />
-                    <span style={pixelFontStyle} className="text-sm text-white">
-                      Image-to-Image
-                    </span>
-                  </label>
-                </div>
-
-                {mode === "image-to-image" && (
-                  <div className="mb-4">
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={handleFileChange}
-                      ref={fileInputRef}
-                      className="w-full bg-black/50 border border-purple-500/50 rounded-md p-2 text-white text-sm"
-                      style={pixelFontStyle}
-                      disabled={isGenerating}
-                    />
-                    <div className="mt-2">
-                      <label style={pixelFontStyle} className="text-sm text-gray-400">
-                        Strength: {strength.toFixed(2)}
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={strength}
-                        onChange={(e) => setStrength(Number(e.target.value))}
-                        className="w-full"
-                        disabled={isGenerating}
-                      />
-                    </div>
-                  </div>
-                )}
 
                 <textarea
                   className="w-full h-48 bg-black/50 border border-purple-500/50 rounded-md p-4 text-white resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -483,13 +435,32 @@ export default function PixelArtPage() {
                 />
 
                 <Button
-                  className="w-full mt-6 bg-purple-900 hover:bg-purple-800 text-white border border-purple-500 rounded-md px-6 py-3 font-pixel uppercase tracking-wider"
+                  className="w-full mt-6 bg-transparent text-white border-2 border-purple-500 hover:bg-purple-500/20 rounded-none px-6 py-3 font-pixel uppercase tracking-wider"
                   style={pixelFontStyle}
                   onClick={generatePixelArt}
-                  disabled={isGenerating || !prompt || (mode === "image-to-image" && !imageFile)}
+                  disabled={isGenerating || !prompt}
                 >
-                  {isGenerating ? "Generating..." : "Generate"}
+                  {isGenerating ? "GENERATING..." : "GENERATE"}
                 </Button>
+
+                <div className="flex space-x-4 mt-4">
+                  <Button
+                    className="w-1/2 bg-transparent text-white border-2 border-purple-500 hover:bg-purple-500/20 rounded-none px-6 py-3 font-pixel uppercase tracking-wider"
+                    style={pixelFontStyle}
+                    onClick={handleDownload}
+                    disabled={!generatedImageUrl || isGenerating}
+                  >
+                    DOWNLOAD
+                  </Button>
+                  <Button
+                    className="w-1/2 bg-transparent text-white border-2 border-purple-500 hover:bg-purple-500/20 rounded-none px-6 py-3 font-pixel uppercase tracking-wider"
+                    style={pixelFontStyle}
+                    onClick={handleMint}
+                    disabled={!generatedImageUrl || isGenerating}
+                  >
+                    MINT
+                  </Button>
+                </div>
 
                 {errorMessage && (
                   <p
@@ -499,14 +470,6 @@ export default function PixelArtPage() {
                     {errorMessage}
                   </p>
                 )}
-
-                <p
-                  style={pixelFontStyle}
-                  className="text-xs text-gray-400 mt-4 text-center"
-                >
-                  Powered by Stability AI. No wallet needed.<br />
-                  Art will reveal pixel by pixel on the canvas.
-                </p>
               </div>
             </motion.div>
           </div>

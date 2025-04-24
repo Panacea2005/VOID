@@ -1,34 +1,26 @@
 export class AIPixelService {
   static async generatePixelArt(
     prompt: string,
-    canvasSize: number = 32,
-    mode: 'text-to-image' | 'image-to-image' = 'text-to-image',
-    image?: File,
-    strength?: number
+    canvasSize: number = 128
   ): Promise<Blob> {
     const apiKey = process.env.STABILITY_API_KEY
     if (!apiKey) {
       throw new Error('Stability API key is not configured')
     }
 
-    const validSizes = [16, 32, 64]
+    const validSizes = [128, 356, 512, 1024]
     if (!validSizes.includes(canvasSize)) {
-      throw new Error('Invalid canvas size. Must be 16, 32, or 64.')
+      throw new Error('Invalid canvas size. Must be 128, 356, 512, or 1024.')
     }
 
-    if (mode === 'image-to-image' && (!image || strength === undefined)) {
-      throw new Error('Image and strength are required for image-to-image mode')
-    }
-
-    const imageSize = canvasSize >= 32 ? 512 : 256
-    const enhancedPrompt = `${prompt}, pixel art, retro, 8-bit style, vibrant colors, detailed, low resolution aesthetic, sharp edges, clean palette`
+    const imageSize = canvasSize
+    const enhancedPrompt = `${prompt}, pixel art, retro, 8-bit style, vibrant colors, detailed, ${canvasSize}x${canvasSize} resolution, sharp edges, clean palette`
 
     try {
       console.log('Sending request to Stability AI:', {
         prompt: enhancedPrompt,
         width: imageSize,
         height: imageSize,
-        mode,
       })
 
       const formData = new FormData()
@@ -37,18 +29,12 @@ export class AIPixelService {
       formData.append('width', imageSize.toString())
       formData.append('height', imageSize.toString())
       formData.append('negative_prompt', 'blurry, low quality, distorted, extra pixels, oversaturated')
-      formData.append('mode', mode)
       formData.append('model', 'sd3.5-large')
       formData.append('cfg_scale', '4')
       formData.append('style_preset', 'pixel-art')
       formData.append('seed', '0')
       formData.append('stability-client-id', 'pixel-art-app')
       formData.append('stability-client-version', '1.0.0')
-
-      if (mode === 'image-to-image' && image && strength !== undefined) {
-        formData.append('image', image)
-        formData.append('strength', strength.toString())
-      }
 
       const response = await fetch('https://api.stability.ai/v2beta/stable-image/generate/core', {
         method: 'POST',
@@ -79,7 +65,7 @@ export class AIPixelService {
         throw new Error('Rate limit exceeded. Please try again later.')
       }
       if (error.message.includes('413')) {
-        throw new Error('Request size exceeds 10MiB limit. Please use a smaller image.')
+        throw new Error('Request size exceeds 10MiB limit.')
       }
       throw new Error(`Failed to generate pixel art: ${error.message}`)
     }
