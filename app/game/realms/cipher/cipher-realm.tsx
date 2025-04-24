@@ -430,10 +430,34 @@ const CipherRealm: React.FC<CipherSlidingPuzzleProps> = ({
   const tileMoveRef = useRef<HTMLAudioElement | null>(null);
   const solvedSoundRef = useRef<HTMLAudioElement | null>(null);
 
+  // Add state for combined cube collection
+  const [combinedCubeCollection, setCombinedCubeCollection] =
+    useState<any[]>(cubeCollection);
+
+  // Add handler for cube collection updates
+  const handleCubeCollectionUpdate = (collection: any[]) => {
+    console.log("Cipher Realm received cube collection:", collection.length);
+    setCombinedCubeCollection(collection);
+  };
+
   // Selected cube info
   const selectedCube =
-    cubeCollection.find((cube) => cube.id === selectedCubeId) ||
-    cubeCollection[0];
+    combinedCubeCollection.find((cube) => cube.id === selectedCubeId) ||
+    combinedCubeCollection[0];
+
+  // Helper to convert hex to rgb for rgba strings
+  const hexToRgb = (hex: string) => {
+    // Remove # if present
+    hex = hex.replace(/^#/, "");
+
+    // Parse hex values
+    const bigint = parseInt(hex, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+
+    return `${r}, ${g}, ${b}`;
+  };
 
   // Get cube color based on selected cube
   const getCubeColor = () => {
@@ -720,9 +744,9 @@ const CipherRealm: React.FC<CipherSlidingPuzzleProps> = ({
 
   // Render the intro screen
   // Complete fix for the intro screen layout to properly position the cube
-// This ensures the cube appears above the selection menu without overlapping
+  // This ensures the cube appears above the selection menu without overlapping
 
-const renderIntroScreen = () => (
+  const renderIntroScreen = () => (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white overflow-hidden p-8">
       <div className="max-w-3xl mx-auto text-center z-10 flex flex-col items-center">
         {/* Title */}
@@ -734,7 +758,7 @@ const renderIntroScreen = () => (
         >
           CIPHER PUZZLE
         </motion.h1>
-        
+
         <motion.p
           className="text-xl text-gray-300 mb-8"
           initial={{ opacity: 0 }}
@@ -743,7 +767,7 @@ const renderIntroScreen = () => (
         >
           Rearrange the mystic symbols to unlock ancient knowledge.
         </motion.p>
-  
+
         {/* Cube positioned in its own section above the selection */}
         <motion.div
           className="w-full mb-10 relative"
@@ -778,8 +802,8 @@ const renderIntroScreen = () => (
                 </motion.div>
               ))}
           </div>
-  
-          <div className="relative flex justify-center h-[200px]">   
+
+          <div className="relative flex justify-center h-[200px]">
             {/* Orbiting grid elements */}
             {[0, 1, 2, 3].map((i) => (
               <motion.div
@@ -806,7 +830,7 @@ const renderIntroScreen = () => (
             ))}
           </div>
         </motion.div>
-        
+
         {/* Level selection section with clear separation */}
         <motion.div
           className="w-full mt-2"
@@ -849,7 +873,7 @@ const renderIntroScreen = () => (
             ))}
           </div>
         </motion.div>
-        
+
         {/* Return button */}
         <motion.button
           onClick={onReturn}
@@ -1425,7 +1449,7 @@ const renderIntroScreen = () => (
                     top: "50%",
                     left: "50%",
                     transform: "translate(-50%, -50%)",
-                    background: `radial-gradient(circle, ${cubeColor}90 0%, transparent 70%)`,
+                    background: `radial-gradient(circle, ${selectedCube.colors[0]}90 0%, transparent 70%)`,
                     zIndex: -1,
                   }}
                   animate={{
@@ -1450,7 +1474,7 @@ const renderIntroScreen = () => (
                     top: "50%",
                     left: "50%",
                     transform: "translate(-50%, -50%)",
-                    background: `radial-gradient(circle, ${cubeColor} 0%, transparent 70%)`,
+                    background: `radial-gradient(circle, ${selectedCube.colors[0]} 0%, transparent 70%)`,
                     zIndex: -1,
                   }}
                   animate={{
@@ -1480,6 +1504,7 @@ const renderIntroScreen = () => (
                   cubeId={selectedCubeId}
                   isAnimated={cubeGlowing}
                   onCubeClick={() => {}}
+                  onCubeCollectionUpdate={handleCubeCollectionUpdate}
                 />
               </div>
             </div>
@@ -1702,7 +1727,7 @@ const renderIntroScreen = () => (
         }
 
         .font-pixel {
-          font-family: 'Press Start 2P', monospace;
+          font-family: "Press Start 2P", monospace;
           letter-spacing: 0.05em;
         }
       `}</style>

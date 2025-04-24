@@ -37,6 +37,7 @@ import {
   mintNFT,
 } from "@/lib/services/nftService";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { convertGLBToFile } from "@/lib/services/modelExportService";
 
 interface MaterialParams {
   color?: string;
@@ -2123,41 +2124,44 @@ export default function AIPage() {
     if (activeTab === "cube" && materialParams) {
       try {
         setIsGeneratingCube(true);
-
-        // Use the wallet adapter instead of window.solana
+  
+        // Use the wallet adapter
         console.log("Wallet status before minting:", {
-          exists: true, // The wallet adapter always exists
+          exists: true,
           isConnected: connected,
           publicKey: publicKey?.toString(),
         });
-
+  
         if (!connected || !publicKey) {
           alert("Please connect your wallet first to mint real NFTs");
           throw new Error("Wallet not connected");
         }
-
+  
         // Generate model and image file
         if (!canvasRef.current) {
           throw new Error("Canvas doesn't exist");
         }
-
+  
         // Get name and description for NFT
         const cubeId = Math.floor(Math.random() * 900000 + 100000).toString();
         const nftName = `VOID Cube ${cubeId}`;
         const nftDescription =
           materialParams.description ||
-          `A unique cube with ${materialParams.color || "custom"} color and ${
+          `A unique cube with ${materialParams.color || materialParams.gradientColors?.[0] || "custom"} color and ${
             materialParams.texturePattern || "special"
           } texture pattern.`;
-
-        // Convert canvas to file
+  
+        // Convert canvas to image file
         const imageFile = await convertCubeToFile(canvasRef.current, nftName);
         console.log("Created image file:", imageFile.name, imageFile.size);
-
-        // Prepare attributes for NFT
+  
+        // Prepare complete attributes for NFT including all material properties
         const attributes = [
           { trait_type: "Type", value: "Cube" },
-          { trait_type: "Color", value: materialParams.color || "Custom" },
+          { 
+            trait_type: "Color", 
+            value: materialParams.color || materialParams.gradientColors?.[0] || "#5d4fff" 
+          },
           {
             trait_type: "Texture",
             value: materialParams.texturePattern || "None",
@@ -2167,12 +2171,12 @@ export default function AIPage() {
             value: materialParams.animationType || "None",
           },
         ];
-
-        // Get color information to create 3D model
+  
+        // Get colors information to create 3D model
         const colors = materialParams.gradientColors || [
           materialParams.color || "#FFFFFF",
         ];
-
+  
         // Create Solana connection
         const connection = new Connection(
           process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
@@ -2180,32 +2184,43 @@ export default function AIPage() {
           "confirmed"
         );
         console.log("Solana connection created:", connection.rpcEndpoint);
-
-        // Prepare cube NFT metadata with full materialParams
-        const cubeMetadata = await getCubeNFTMetadata(
-          nftName,
-          nftDescription,
-          imageFile,
-          null, // model created automatically
-          attributes,
-          {
-            // Include full materialParams to preserve all visual properties
-            materialParams: materialParams,
-            // Also include colors separately for easier access
-            colors: materialParams.gradientColors || [
-              materialParams.color || "#FFFFFF",
-            ],
-          }
-        );
-
-        // Try primary minting method
+  
         try {
+          // First create and upload the 3D model file - this is the key fix!
+          const glbFile = await convertGLBToFile(colors, nftName, materialParams);
+          console.log("Created 3D model GLB file:", glbFile.name, glbFile.size, "bytes");
+          
+          // If we couldn't create a GLB file or it's too small, throw error
+          if (!glbFile || glbFile.size < 500) {
+            throw new Error("Generated 3D model file is invalid or too small");
+          }
+  
+          // Prepare cube NFT metadata with full materialParams
+          const cubeMetadata = await getCubeNFTMetadata(
+            nftName,
+            nftDescription,
+            imageFile,
+            glbFile, // Pass the actual GLB file
+            attributes,
+            {
+              // Include full materialParams to preserve all visual properties
+              materialParams: materialParams,
+              // Also include colors separately for easier access
+              colors: materialParams.gradientColors || [
+                materialParams.color || "#FFFFFF",
+              ],
+            }
+          );
+  
+          // Try primary minting method
           console.log(
             "Starting real NFT minting on Solana with metadata:",
-            cubeMetadata
+            cubeMetadata.name,
+            "and 3D model:",
+            cubeMetadata.model ? "yes" : "no"
           );
-
-          // Pass the wallet adapter functions instead of the window.solana object
+  
+          // Pass the wallet adapter functions
           const mintedAddress = await mintNFT(
             connection,
             {
@@ -2216,7 +2231,7 @@ export default function AIPage() {
             },
             cubeMetadata
           );
-
+  
           console.log("NFT minted successfully with address:", mintedAddress);
           alert(
             `NFT has been minted successfully! Address: ${mintedAddress}. Check your Profile or Phantom wallet.`
@@ -2224,7 +2239,7 @@ export default function AIPage() {
           return; // Exit on success
         } catch (mintError) {
           console.error("Detailed error during Metaplex minting:", mintError);
-
+  
           // Try alternative minting method
           console.log("Falling back to alternative minting method");
           try {
@@ -2244,7 +2259,7 @@ export default function AIPage() {
               },
               imageFile
             );
-
+  
             console.log(
               "NFT minted with alternative method:",
               alternativeAddress
@@ -2273,10 +2288,74 @@ export default function AIPage() {
         const errorMessage =
           error instanceof Error ? error.message : "An unknown error occurred";
         alert(`Error minting NFT: ${errorMessage}. Check console for details.`);
-
+  
         // Only store locally if explicitly requested as fallback
         if (confirm("Would you like to store this NFT locally instead?")) {
-          // Local storage fallback here...
+          try {
+            // Generate model file for local storage
+            const colors = materialParams.gradientColors || [materialParams.color || "#FFFFFF"];
+            const glbFile = await convertGLBToFile(colors, `VOID Cube Local`, materialParams);
+            console.log("Created local model file:", glbFile.name, glbFile.size);
+  
+            // Convert canvas to image
+            if (!canvasRef.current) {
+                throw new Error("Canvas element is not available");
+            }
+            const imageFile = await convertCubeToFile(canvasRef.current, `VOID Cube Local`);
+            
+            // Create NFT data for local storage
+            const cubeId = Math.floor(Math.random() * 900000 + 100000).toString();
+            const nftName = `VOID Cube ${cubeId} (Local)`;
+            const imageReader = new FileReader();
+            const modelReader = new FileReader();
+            
+            // First read the image
+            imageReader.readAsDataURL(imageFile);
+            imageReader.onload = () => {
+              const imageDataUrl = imageReader.result as string;
+              
+              // Then read the model
+              modelReader.readAsDataURL(glbFile);
+              modelReader.onload = () => {
+                const modelDataUrl = modelReader.result as string;
+                
+                // Create local NFT object
+                const localNft = {
+                  id: `local-cube-${Date.now()}`,
+                  name: nftName,
+                  description: `A locally stored cube with ${materialParams.texturePattern || "special"} texture`,
+                  image: imageDataUrl,
+                  model3d: modelDataUrl,
+                  modelViewerUrl: `https://modelviewer.dev/editor/index.html`,
+                  materialParams: materialParams,
+                  attributes: [
+                    { trait_type: "Type", value: "Cube" },
+                    { trait_type: "Color", value: materialParams.color || materialParams.gradientColors?.[0] || "#5d4fff" },
+                    { trait_type: "Texture", value: materialParams.texturePattern || "None" },
+                    { trait_type: "Animation", value: materialParams.animationType || "None" },
+                    { trait_type: "Collection", value: "VOID Cube Collection" }
+                  ],
+                  mintedAt: new Date().toISOString(),
+                  type: "cube",
+                  shapeType: "complex",
+                  local: true, // Mark as locally stored
+                  colors: colors,
+                  texture: materialParams.texturePattern,
+                  animation: materialParams.animationType
+                };
+                
+                // Save to localStorage
+                const userNfts = JSON.parse(localStorage.getItem("userNfts") || "[]");
+                userNfts.push(localNft);
+                localStorage.setItem("userNfts", JSON.stringify(userNfts));
+                
+                alert("Cube has been stored locally. View it in your Profile page.");
+              };
+            };
+          } catch (localError) {
+            console.error("Error with local storage:", localError);
+            alert("Failed to store NFT locally as well. Please try again later.");
+          }
         }
       } finally {
         setIsGeneratingCube(false);

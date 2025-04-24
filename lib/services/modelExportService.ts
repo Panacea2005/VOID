@@ -1,67 +1,49 @@
+// modelExportService.ts - Enhanced version
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 
-// Modify the createCube function to accept full material parameters
+// Enhanced to properly handle material parameters and texture patterns
 export async function createCube(colors: string[], materialParams?: any): Promise<ArrayBuffer> {
     console.log("Creating 3D model with colors and materials:", colors, materialParams);
     
-    // Ensure we have 6 colors (one for each face)
-    const faceColors = [...colors];
-    while (faceColors.length < 6) {
-        faceColors.push(faceColors[faceColors.length - 1] || "#FFFFFF");
-    }
+    // Ensure we have at least one color
+    const baseColor = colors[0] || "#ffffff";
     
-    // Create scene with better configuration
+    // Create scene
     const scene = new THREE.Scene();
     
-    // Use higher quality geometry
-    const geometry = new THREE.BoxGeometry(2, 2, 2, 32, 32, 32);
+    // Use higher quality geometry with more segments for better detail
+    const geometry = new THREE.BoxGeometry(2, 2, 2, 64, 64, 64);
     
-    // Create an array of materials, one for each face
-    const materials = faceColors.map((color, index) => {
-        // Use material parameters if provided, otherwise use defaults
-        const material = new THREE.MeshPhysicalMaterial({
-            color: new THREE.Color(color),
-            roughness: materialParams?.roughness ?? 0.5,
-            metalness: materialParams?.metalness ?? 0.3,
-            name: `cube_material_${index}`
-        });
-        
-        // Apply emissive properties if specified
-        if (materialParams?.emissiveIntensity > 0) {
-            material.emissive = new THREE.Color(materialParams.emissive || color);
-            material.emissiveIntensity = materialParams.emissiveIntensity;
-        } else {
-            material.emissive = new THREE.Color(color).multiplyScalar(0.2);
-            material.emissiveIntensity = 0.2;
-        }
-        
-        // Apply additional material properties if available
-        if (materialParams?.transparent) {
-            material.transparent = true;
-            material.opacity = materialParams.opacity ?? 1.0;
-        }
-        
-        if (materialParams?.clearcoat) {
-            material.clearcoat = materialParams.clearcoat;
-            material.clearcoatRoughness = materialParams.clearcoatRoughness ?? 0.1;
-        }
-        
-        return material;
-    });
+    // Determine if we should use a single material or multiple materials
+    let cube: THREE.Mesh;
     
-    // Create a mesh with per-face materials
-    const cube = new THREE.Mesh(geometry, materials);
+    if (materialParams?.gradientColors || materialParams?.texturePattern || 
+        materialParams?.customEffects?.includes('hologram') || 
+        materialParams?.animationType === 'flow') {
+        // For special effects like gradient, hologram, and flow - use a single material
+        const material = createSpecialMaterial(baseColor, materialParams);
+        cube = new THREE.Mesh(geometry, material);
+    } else {
+        // Create an array of materials, one for each face with slight variations
+        const materials = createFaceMaterials(colors, materialParams);
+        cube = new THREE.Mesh(geometry, materials);
+    }
     
-    // Store ALL material information in userData for easier retrieval later
+    // Store material parameters in userData for easy retrieval
     cube.userData = {
-        colors: faceColors,
-        primaryColor: faceColors[0],
+        colors: colors,
+        primaryColor: baseColor,
         materialParams: materialParams ? JSON.parse(JSON.stringify(materialParams)) : null,
         // Add texture and animation data if available
         texture: materialParams?.texturePattern || 'default',
-        animation: materialParams?.animationType || 'none'
+        animation: materialParams?.animationType || 'none',
+        // Add a mesh name for easier identification
+        meshName: "VOID_Cube"
     };
+    
+    // Add name to the mesh
+    cube.name = "VOID_Cube";
     
     scene.add(cube);
 
@@ -71,14 +53,25 @@ export async function createCube(colors: string[], materialParams?: any): Promis
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
     directionalLight.position.set(5, 5, 5);
+    directionalLight.castShadow = true;
     scene.add(directionalLight);
     
-    // Add point light to highlight cube
+    // Add point light to highlight cube edges
     const pointLight = new THREE.PointLight(0xffffff, 1.0);
     pointLight.position.set(-3, 2, 5);
     scene.add(pointLight);
+    
+    // Add a second point light from another angle
+    const pointLight2 = new THREE.PointLight(0xffffff, 0.8);
+    pointLight2.position.set(3, -2, -5);
+    scene.add(pointLight2);
 
-    // Export with proper error handling and explicit timeout
+    // If the cube has a border/wireframe, add it
+    if (materialParams?.showBorder) {
+        addWireframe(cube, materialParams);
+    }
+
+    // Export with proper error handling and timeout
     return new Promise((resolve, reject) => {
         try {
             const exporter = new GLTFExporter();
@@ -135,7 +128,8 @@ export async function createCube(colors: string[], materialParams?: any): Promis
                     animations: [],
                     onlyVisible: true,
                     embedImages: true,
-                    includeCustomExtensions: true 
+                    includeCustomExtensions: true,
+                    forceIndices: true  // Ensure indices are included for better model quality
                 }
             );
         } catch (error) {
@@ -145,7 +139,178 @@ export async function createCube(colors: string[], materialParams?: any): Promis
     });
 }
 
-// Update convertGLBToFile to accept full material parameters
+// Create materials for each face with variations
+function createFaceMaterials(colors: string[], materialParams?: any): THREE.Material[] {
+    // Ensure we have 6 colors (one for each face)
+    const faceColors = [...colors];
+    while (faceColors.length < 6) {
+        faceColors.push(faceColors[faceColors.length - 1] || "#FFFFFF");
+    }
+    
+    // Create an array of materials, one for each face
+    const materials = faceColors.map((color, index) => {
+        // Use material parameters if provided, otherwise use defaults
+        const material = new THREE.MeshPhysicalMaterial({
+            color: new THREE.Color(color),
+            roughness: materialParams?.roughness ?? 0.5,
+            metalness: materialParams?.metalness ?? 0.3,
+            name: `cube_material_${index}`
+        });
+        
+        // Apply emissive properties if specified
+        if (materialParams?.emissiveIntensity > 0) {
+            material.emissive = new THREE.Color(materialParams.emissive || color);
+            material.emissiveIntensity = materialParams.emissiveIntensity;
+        }
+        
+        // Apply additional material properties if available
+        if (materialParams?.transparent) {
+            material.transparent = true;
+            material.opacity = materialParams.opacity ?? 1.0;
+        }
+        
+        if (materialParams?.clearcoat) {
+            material.clearcoat = materialParams.clearcoat;
+            material.clearcoatRoughness = materialParams.clearcoatRoughness ?? 0.1;
+        }
+        
+        if (materialParams?.transmission) {
+            material.transmission = materialParams.transmission;
+            material.ior = materialParams.ior ?? 1.5;
+        }
+        
+        if (materialParams?.sheen) {
+            material.sheen = materialParams.sheen;
+            material.sheenColor = new THREE.Color(materialParams.sheenColor || color);
+            material.sheenRoughness = 0.3;
+        }
+        
+        if (materialParams?.iridescence) {
+            material.iridescence = materialParams.iridescence;
+            material.iridescenceIOR = materialParams.iridescenceIOR ?? 1.5;
+        }
+        
+        if (materialParams?.anisotropy) {
+            material.anisotropy = materialParams.anisotropy;
+        }
+        
+        return material;
+    });
+    
+    return materials;
+}
+
+// Create special materials for effects like hologram, gradient, etc.
+function createSpecialMaterial(baseColor: string, materialParams?: any): THREE.Material {
+    if (materialParams?.customEffects?.includes('hologram')) {
+        // For hologram, create a transparent material with emissive
+        const material = new THREE.MeshPhysicalMaterial({
+            color: new THREE.Color(baseColor),
+            roughness: 0.1,
+            metalness: 0.9,
+            transparent: true,
+            opacity: materialParams.opacity ?? 0.7,
+            transmission: 0.5,
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.1,
+            emissive: new THREE.Color(materialParams.emissive || baseColor),
+            emissiveIntensity: materialParams.emissiveIntensity ?? 1.0,
+            iridescence: 1.0,
+            iridescenceIOR: 1.5
+        });
+        return material;
+    } 
+    
+    if (materialParams?.gradientColors && materialParams.gradientColors.length >= 2) {
+        // For gradient, use the first two colors to create a customized material
+        const color1 = new THREE.Color(materialParams.gradientColors[0]);
+        const color2 = new THREE.Color(materialParams.gradientColors[1]);
+        
+        // Choose which is brighter to use as emissive
+        const brightness1 = color1.r + color1.g + color1.b;
+        const brightness2 = color2.r + color2.g + color2.b;
+        const emissiveColor = brightness1 > brightness2 ? color1 : color2;
+        
+        // Create physical material with emissive
+        const material = new THREE.MeshPhysicalMaterial({
+            color: color1,
+            roughness: materialParams.roughness ?? 0.3,
+            metalness: materialParams.metalness ?? 0.7,
+            emissive: emissiveColor,
+            emissiveIntensity: materialParams.emissiveIntensity ?? 0.3,
+            clearcoat: materialParams.clearcoat ?? 0.5,
+            clearcoatRoughness: 0.1
+        });
+        
+        return material;
+    }
+    
+    if (materialParams?.texturePattern === 'plasma' || materialParams?.animationType === 'flow') {
+        // For plasma or flow effects, create a material with high emissive and metalness
+        const material = new THREE.MeshPhysicalMaterial({
+            color: new THREE.Color(baseColor),
+            roughness: materialParams.roughness ?? 0.4,
+            metalness: materialParams.metalness ?? 0.8,
+            emissive: new THREE.Color(materialParams.emissive || baseColor),
+            emissiveIntensity: materialParams.emissiveIntensity ?? 1.0,
+            clearcoat: 0.5,
+            clearcoatRoughness: 0.1
+        });
+        return material;
+    }
+    
+    if (materialParams?.texturePattern === 'nebula') {
+        // For nebula effect, create a material with cosmic look
+        const material = new THREE.MeshPhysicalMaterial({
+            color: new THREE.Color(baseColor),
+            roughness: materialParams.roughness ?? 0.5,
+            metalness: materialParams.metalness ?? 0.7,
+            emissive: new THREE.Color(materialParams.emissive || baseColor),
+            emissiveIntensity: materialParams.emissiveIntensity ?? 0.8,
+            clearcoat: 0.3,
+            clearcoatRoughness: 0.2
+        });
+        return material;
+    }
+    
+    if (materialParams?.texturePattern === 'carbon') {
+        // For carbon fiber effect
+        const material = new THREE.MeshPhysicalMaterial({
+            color: new THREE.Color(baseColor),
+            roughness: materialParams.roughness ?? 0.2,
+            metalness: materialParams.metalness ?? 0.8,
+            clearcoat: materialParams.clearcoat ?? 1.0,
+            clearcoatRoughness: 0.1,
+            anisotropy: 1.0
+        });
+        return material;
+    }
+    
+    // Default material if no special effects
+    return new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color(baseColor),
+        roughness: materialParams?.roughness ?? 0.5,
+        metalness: materialParams?.metalness ?? 0.5,
+        emissive: materialParams?.emissive ? new THREE.Color(materialParams.emissive) : undefined,
+        emissiveIntensity: materialParams?.emissiveIntensity ?? 0
+    });
+}
+
+// Add wireframe to the cube
+function addWireframe(cube: THREE.Mesh, materialParams?: any) {
+    const wireframeGeometry = new THREE.EdgesGeometry(cube.geometry, 15);
+    const wireframeMaterial = new THREE.LineBasicMaterial({
+        color: materialParams?.borderColor || "#ffffff",
+        linewidth: materialParams?.borderWidth || 2,
+        transparent: true,
+        opacity: 0.7
+    });
+    const wireframe = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
+    wireframe.name = "VOID_Cube_Wireframe";
+    cube.add(wireframe);
+}
+
+// Convert GLB to File object with enhanced error handling
 export async function convertGLBToFile(colors: string[], name: string, materialParams?: any): Promise<File> {
     try {
         console.log("Starting to create 3D GLB model with colors and materials:", colors, materialParams);
@@ -182,30 +347,52 @@ export async function convertGLBToFile(colors: string[], name: string, materialP
         return file;
     } catch (error) {
         console.error("Error creating GLB file:", error);
-        // Create a simple cube in case of error
-        const simpleGLB = await createSimpleCube();
-        const blob = new Blob([simpleGLB], { type: 'model/gltf-binary' });
-        const fileName = `${name.replace(/\s+/g, '-').toLowerCase()}-fallback.glb`;
-        return new File([blob], fileName, { type: 'model/gltf-binary' });
+        
+        // Create a simple fallback cube in case of error
+        try {
+            const simpleGLB = await createSimpleCube(colors[0] || "#0066ff");
+            const blob = new Blob([simpleGLB], { type: 'model/gltf-binary' });
+            const fileName = `${name.replace(/\s+/g, '-').toLowerCase()}-fallback.glb`;
+            
+            const file = new File([blob], fileName, { 
+                type: 'model/gltf-binary',
+                lastModified: Date.now()
+            });
+            console.log("Created fallback GLB file:", file.name, "size:", file.size, "bytes");
+            return file;
+        } catch (fallbackError) {
+            console.error("Even fallback cube creation failed:", fallbackError);
+            // Create an empty GLB file as absolute last resort
+            const emptyGLB = new Uint8Array(256).buffer; // 256 byte empty buffer
+            const blob = new Blob([emptyGLB], { type: 'model/gltf-binary' });
+            return new File([blob], `${name.replace(/\s+/g, '-').toLowerCase()}-empty.glb`, { 
+                type: 'model/gltf-binary' 
+            });
+        }
     }
 }
 
-// Tạo một khối 3D đơn giản trong trường hợp có lỗi
-async function createSimpleCube(): Promise<ArrayBuffer> {
+// Create a simple colored cube fallback
+async function createSimpleCube(color: string = "#0066ff"): Promise<ArrayBuffer> {
     const scene = new THREE.Scene();
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const geometry = new THREE.BoxGeometry(1, 1, 1, 32, 32, 32);
     const material = new THREE.MeshStandardMaterial({
-        color: 0x5d4fff,
+        color: new THREE.Color(color),
         roughness: 0.5,
         metalness: 0.3,
-        name: "simple_cube_material" // Add name to avoid undefined issues
+        name: "simple_cube_material"
     });
 
     const cube = new THREE.Mesh(geometry, material);
+    cube.name = "VOID_Cube_Fallback";
     scene.add(cube);
 
     const light = new THREE.AmbientLight(0xffffff, 1);
     scene.add(light);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(5, 5, 5);
+    scene.add(directionalLight);
 
     return new Promise((resolve, reject) => {
         try {
@@ -242,9 +429,9 @@ async function createSimpleCube(): Promise<ArrayBuffer> {
     });
 }
 
-// Tạo và tải về file 3D model
-export async function downloadGLBFile(colors: string[], name: string): Promise<void> {
-    const glbFile = await convertGLBToFile(colors, name);
+// Download GLB file directly (utility function)
+export async function downloadGLBFile(colors: string[], name: string, materialParams?: any): Promise<void> {
+    const glbFile = await convertGLBToFile(colors, name, materialParams);
     const url = URL.createObjectURL(glbFile);
 
     const link = document.createElement('a');
@@ -252,20 +439,20 @@ export async function downloadGLBFile(colors: string[], name: string): Promise<v
     link.download = glbFile.name;
     link.click();
 
-    // Giải phóng URL để tránh rò rỉ bộ nhớ
+    // Free up URL to avoid memory leaks
     setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
-// Tạo URL để xem model
+// Create URL to view model
 export function createModelViewerUrl(glbUrl: string): string {
     return `https://modelviewer.dev/editor/index.html#src=${encodeURIComponent(glbUrl)}`;
 }
 
-// Kiểm tra xem file có phải là GLB hợp lệ không
+// Validate if file is a valid GLB
 export async function validateGLBFile(file: File): Promise<{ valid: boolean, reason?: string }> {
     return new Promise((resolve) => {
         try {
-            // Kiểm tra theo MIME type và phần mở rộng
+            // Check by MIME type and extension
             const isNameGLB = file.name.toLowerCase().endsWith('.glb');
             const isMimeTypeGLB = file.type === 'model/gltf-binary';
 
@@ -276,7 +463,7 @@ export async function validateGLBFile(file: File): Promise<{ valid: boolean, rea
                 });
             }
 
-            // Kiểm tra kích thước tối thiểu (GLB hợp lệ phải > 100 bytes)
+            // Check minimum size (valid GLB must be > 100 bytes)
             if (file.size < 100) {
                 return resolve({
                     valid: false,
@@ -284,16 +471,16 @@ export async function validateGLBFile(file: File): Promise<{ valid: boolean, rea
                 });
             }
 
-            // Đọc 20 bytes đầu tiên để kiểm tra magic number của GLB (header)
+            // Read first 20 bytes to check GLB magic header
             const reader = new FileReader();
             reader.onload = (event) => {
                 try {
                     const buffer = event.target?.result as ArrayBuffer;
                     if (!buffer) {
-                        return resolve({ valid: false, reason: 'Không thể đọc file' });
+                        return resolve({ valid: false, reason: 'Cannot read file' });
                     }
 
-                    // Kiểm tra magic header của GLB (phải bắt đầu với "glTF")
+                    // Check GLB magic header (must start with "glTF")
                     const header = new Uint8Array(buffer.slice(0, 4));
                     const magic = String.fromCharCode.apply(null, Array.from(header));
 
@@ -304,7 +491,7 @@ export async function validateGLBFile(file: File): Promise<{ valid: boolean, rea
                         });
                     }
 
-                    // Kiểm tra phiên bản
+                    // Check version
                     const version = new Uint32Array(buffer.slice(4, 8))[0];
                     if (version !== 2) {
                         return resolve({
@@ -313,7 +500,7 @@ export async function validateGLBFile(file: File): Promise<{ valid: boolean, rea
                         });
                     }
 
-                    // Nếu đã kiểm tra thành công, file được coi là hợp lệ
+                    // If all checks passed, file is valid
                     resolve({ valid: true });
                 } catch (error) {
                     resolve({
@@ -330,7 +517,7 @@ export async function validateGLBFile(file: File): Promise<{ valid: boolean, rea
                 });
             };
 
-            // Đọc 20 bytes đầu tiên của file
+            // Read first 20 bytes of file
             reader.readAsArrayBuffer(file.slice(0, 20));
 
         } catch (error) {
@@ -341,28 +528,3 @@ export async function validateGLBFile(file: File): Promise<{ valid: boolean, rea
         }
     });
 }
-
-// Chuyển đổi file không phải GLB sang GLB (công cụ trợ giúp)
-export async function convertToGLB(file: File, name?: string): Promise<File> {
-    // Nếu file đã là GLB, trả về ngay
-    const isGLB = file.name.toLowerCase().endsWith('.glb') || file.type === 'model/gltf-binary';
-    if (isGLB) {
-        // Vẫn cần đảm bảo loại MIME chính xác
-        return new File([file], file.name, { type: 'model/gltf-binary' });
-    }
-
-    // Nếu là file GLTF, cần chuyển đổi nó thành GLB
-    // Hiện tại chỉ hỗ trợ một số loại file cơ bản
-    if (file.name.toLowerCase().endsWith('.gltf') || file.type === 'model/gltf+json') {
-        console.warn("Conversion of GLTF to GLB is not supported. Please upload a GLB file directly.");
-
-        // Trả về cube mặc định với màu ngẫu nhiên
-        const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
-        return convertGLBToFile([randomColor], name || file.name.replace('.gltf', ''));
-    }
-
-    // Với các định dạng không hỗ trợ, tạo cube mẫu
-    console.warn(`Unsupported file type ${file.type} conversion to GLB. Creating a default cube.`);
-    const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
-    return convertGLBToFile([randomColor], name || 'Converted Model');
-} 

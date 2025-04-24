@@ -14,7 +14,10 @@ export async function GET(
         const texture = request.nextUrl.searchParams.get('texture') || 'default';
         const animation = request.nextUrl.searchParams.get('animation') || 'none';
         
-        console.log(`Generating cube with: color=#${color}, texture=${texture}, animation=${animation}`);
+        // NEW: Add standardCube parameter to force consistent cube rendering
+        const standardCube = request.nextUrl.searchParams.get('standardCube') === 'true';
+        
+        console.log(`Generating cube with: color=#${color}, texture=${texture}, animation=${animation}, standardCube=${standardCube}`);
         
         // Validate color is a valid hex (with or without #)
         const validColor = color.startsWith('#') ? color : `#${color}`;
@@ -24,7 +27,8 @@ export async function GET(
         const cubeBuffer = await createCubeGLB(
             isValidHex ? validColor : '#ff66cc', 
             texture,
-            animation
+            animation,
+            standardCube
         );
         
         return new NextResponse(cubeBuffer, {
@@ -44,12 +48,20 @@ export async function GET(
     }
 }
 
-async function createCubeGLB(color: string, texture: string, animation: string): Promise<ArrayBuffer> {
+async function createCubeGLB(
+    color: string, 
+    texture: string, 
+    animation: string,
+    standardCube: boolean = false
+): Promise<ArrayBuffer> {
     // Create a scene
     const scene = new THREE.Scene();
     
-    // Create cube geometry with higher detail
-    const geometry = new THREE.BoxGeometry(1, 1, 1, 32, 32, 32);
+    // Create cube geometry with appropriate detail level
+    // NEW: Use less detail for standard cubes for better performance and cleaner appearance
+    const geometry = standardCube 
+        ? new THREE.BoxGeometry(1, 1, 1, 1, 1, 1)  // Simple geometry for standard cubes
+        : new THREE.BoxGeometry(1, 1, 1, 32, 32, 32); // Higher detail for special cubes
     
     // Create materials based on color
     // Darken the color for different faces to create a gradient effect
@@ -69,25 +81,29 @@ async function createCubeGLB(color: string, texture: string, animation: string):
     const materials = colors.map(color => {
         const material = new THREE.MeshStandardMaterial({
             color: color,
-            roughness: 0.5,
-            metalness: 0.5
+            // NEW: Use consistent properties for standard cubes
+            roughness: standardCube ? 0.4 : 0.5,
+            metalness: standardCube ? 0.3 : 0.5
         });
         
         // Apply texture effects based on texture parameter
-        if (texture === 'nebula') {
-            material.emissive = color.clone().multiplyScalar(0.5);
-            material.emissiveIntensity = 0.5;
-        } else if (texture === 'glass') {
-            material.transparent = true;
-            material.opacity = 0.8;
-            material.roughness = 0.1;
-        } else if (texture === 'metal') {
-            material.metalness = 0.9;
-            material.roughness = 0.2;
-        } else if (texture === 'plasma') {
-            material.emissive = color.clone().multiplyScalar(0.7);
-            material.emissiveIntensity = 0.7;
-            material.metalness = 0.7;
+        // NEW: Only apply special texture effects if not a standard cube
+        if (!standardCube) {
+            if (texture === 'nebula') {
+                material.emissive = color.clone().multiplyScalar(0.5);
+                material.emissiveIntensity = 0.5;
+            } else if (texture === 'glass') {
+                material.transparent = true;
+                material.opacity = 0.8;
+                material.roughness = 0.1;
+            } else if (texture === 'metal') {
+                material.metalness = 0.9;
+                material.roughness = 0.2;
+            } else if (texture === 'plasma') {
+                material.emissive = color.clone().multiplyScalar(0.7);
+                material.emissiveIntensity = 0.7;
+                material.metalness = 0.7;
+            }
         }
         
         return material;
@@ -96,8 +112,14 @@ async function createCubeGLB(color: string, texture: string, animation: string):
     // Create a multi-material cube
     const cube = new THREE.Mesh(geometry, materials);
     
+    // NEW: For standard cubes, use a more precise size to match default cubes
+    if (standardCube) {
+        // Make the cube slightly larger for better visibility
+        cube.scale.set(1.2, 1.2, 1.2);
+    }
+    
     // Add animation data based on animation parameter
-    if (animation) {
+    if (animation && (!standardCube || animation === 'none')) {
         cube.userData.animation = animation;
     }
     
@@ -107,20 +129,31 @@ async function createCubeGLB(color: string, texture: string, animation: string):
     // Add base color data
     cube.userData.color = color;
     
+    // Add standardCube flag to userData
+    cube.userData.standardCube = standardCube;
+    
     scene.add(cube);
     
     // Add lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    // NEW: Enhanced lighting similar to the client-side cube rendering
+    const ambientLight = new THREE.AmbientLight(0xffffff, standardCube ? 0.8 : 0.5);
     scene.add(ambientLight);
     
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, standardCube ? 1.2 : 1);
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
     
     // Add a point light for better highlights
-    const pointLight = new THREE.PointLight(0xffffff, 1);
+    const pointLight = new THREE.PointLight(0xffffff, standardCube ? 0.8 : 1);
     pointLight.position.set(-3, 2, 5);
     scene.add(pointLight);
+    
+    // NEW: Add a secondary directional light from opposite direction for better illumination of standard cubes
+    if (standardCube) {
+        const secondaryLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        secondaryLight.position.set(-5, -5, -5);
+        scene.add(secondaryLight);
+    }
     
     // Export the scene to GLB
     return new Promise((resolve, reject) => {
