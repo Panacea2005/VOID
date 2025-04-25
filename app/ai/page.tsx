@@ -3531,6 +3531,466 @@ export default function AIPage() {
         </div>
       </section>
 
+      {/* How it works section - Enhanced with pixel styling and animations */}
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, delay: 0.6 }}
+        className="mt-20 mb-20 container mx-auto px-4"
+      >
+        <div className="text-center mb-12">
+          <PixelHeading
+            text="HOW IT WORKS"
+            className="text-2xl md:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 mb-6 font-pixel"
+          />
+          {/* Pixelated separator line */}
+          <div className="flex justify-center space-x-1 mb-4">
+            {[...Array(16)].map((_, i) => (
+              <motion.div
+                key={`pixel-separator-${i}`}
+                className="w-2 h-2 bg-purple-500"
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.2, delay: 0.1 * i }}
+              />
+            ))}
+          </div>
+          <p className="text-gray-400 max-w-2xl mx-auto font-pixel text-sm">
+            Follow these steps to create your unique digital assets
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12 relative">
+          {/* Connecting dot line in background (only visible on md and larger screens) */}
+          <div className="hidden md:block absolute top-1/2 left-0 right-0 h-1 bg-gradient-to-r from-purple-500/30 via-pink-500/30 to-blue-500/30 transform -translate-y-1/2 z-0">
+            {/* Animated particle moving along the line */}
+            <motion.div
+              className="absolute w-4 h-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 top-1/2 transform -translate-y-1/2"
+              animate={{
+                x: ["0%", "100%"],
+                scale: [1, 1.3, 1],
+              }}
+              transition={{
+                duration: 5,
+                repeat: Infinity,
+                repeatType: "reverse",
+                ease: "easeInOut",
+              }}
+            />
+          </div>
+
+          {/* Step 1 */}
+          <motion.div
+            whileHover={{ y: -5, scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300, damping: 10 }}
+            className="bg-black/50 border border-purple-500/40 p-6 rounded-lg relative overflow-hidden group z-10"
+            onMouseEnter={() => setCursorHover(true)}
+            onMouseLeave={() => setCursorHover(false)}
+          >
+            {/* Pixel border animation */}
+            <div className="absolute inset-0 border border-purple-500/0 group-hover:border-purple-500/30 transition-colors duration-300">
+              <motion.div
+                className="absolute top-0 right-0 w-8 h-[2px] bg-purple-500"
+                animate={{
+                  x: [100, 0],
+                  opacity: [0, 1],
+                }}
+                transition={{
+                  duration: 0.3,
+                  delay: 0.1,
+                }}
+              />
+              <motion.div
+                className="absolute top-0 right-0 h-8 w-[2px] bg-purple-500"
+                animate={{
+                  y: [100, 0],
+                  opacity: [0, 1],
+                }}
+                transition={{
+                  duration: 0.3,
+                  delay: 0.2,
+                }}
+              />
+              <motion.div
+                className="absolute bottom-0 left-0 w-8 h-[2px] bg-purple-500"
+                animate={{
+                  x: [-100, 0],
+                  opacity: [0, 1],
+                }}
+                transition={{
+                  duration: 0.3,
+                  delay: 0.3,
+                }}
+              />
+              <motion.div
+                className="absolute bottom-0 left-0 h-8 w-[2px] bg-purple-500"
+                animate={{
+                  y: [-100, 0],
+                  opacity: [0, 1],
+                }}
+                transition={{
+                  duration: 0.3,
+                  delay: 0.4,
+                }}
+              />
+            </div>
+
+            {/* Step number with pixelated background */}
+            <div className="relative mb-6">
+              <div className="absolute -top-2 -left-2 w-16 h-16 grid grid-cols-4 grid-rows-4 gap-[2px]">
+                {[...Array(16)].map((_, i) => (
+                  <motion.div
+                    key={`pixel-bg-1-${i}`}
+                    className={`w-full h-full ${
+                      i % 2 === 0 ? "bg-purple-900/30" : "bg-transparent"
+                    }`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2, delay: i * 0.03 }}
+                  />
+                ))}
+              </div>
+              <div className="w-12 h-12 flex items-center justify-center bg-purple-900/70 relative">
+                <motion.span
+                  className="text-2xl text-purple-400 font-pixel z-10"
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  1
+                </motion.span>
+              </div>
+            </div>
+
+            <motion.h4
+              className="text-lg mb-3 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 font-pixel"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              DESCRIBE
+            </motion.h4>
+
+            <motion.p
+              className="text-gray-400 text-sm font-pixel leading-relaxed"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              Enter a detailed prompt for your 3D cube or music track. The more
+              specific you are, the better the AI will understand your vision.
+            </motion.p>
+
+            {/* Decorative pixels */}
+            <div className="absolute bottom-2 right-2 grid grid-cols-2 grid-rows-2 gap-[2px] w-6 h-6 opacity-50 group-hover:opacity-100 transition-opacity">
+              {[...Array(4)].map((_, i) => (
+                <motion.div
+                  key={`decor-1-${i}`}
+                  className="bg-purple-500"
+                  animate={{
+                    opacity: [0.4, 1, 0.4],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    delay: i * 0.2,
+                  }}
+                />
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Step 2 */}
+          <motion.div
+            whileHover={{ y: -5, scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300, damping: 10 }}
+            className="bg-black/50 border border-pink-500/40 p-6 rounded-lg relative overflow-hidden group z-10"
+            onMouseEnter={() => setCursorHover(true)}
+            onMouseLeave={() => setCursorHover(false)}
+          >
+            {/* Pixel border animation */}
+            <div className="absolute inset-0 border border-pink-500/0 group-hover:border-pink-500/30 transition-colors duration-300">
+              <motion.div
+                className="absolute top-0 right-0 w-8 h-[2px] bg-pink-500"
+                animate={{
+                  x: [100, 0],
+                  opacity: [0, 1],
+                }}
+                transition={{
+                  duration: 0.3,
+                  delay: 0.15,
+                }}
+              />
+              <motion.div
+                className="absolute top-0 right-0 h-8 w-[2px] bg-pink-500"
+                animate={{
+                  y: [100, 0],
+                  opacity: [0, 1],
+                }}
+                transition={{
+                  duration: 0.3,
+                  delay: 0.25,
+                }}
+              />
+              <motion.div
+                className="absolute bottom-0 left-0 w-8 h-[2px] bg-pink-500"
+                animate={{
+                  x: [-100, 0],
+                  opacity: [0, 1],
+                }}
+                transition={{
+                  duration: 0.3,
+                  delay: 0.35,
+                }}
+              />
+              <motion.div
+                className="absolute bottom-0 left-0 h-8 w-[2px] bg-pink-500"
+                animate={{
+                  y: [-100, 0],
+                  opacity: [0, 1],
+                }}
+                transition={{
+                  duration: 0.3,
+                  delay: 0.45,
+                }}
+              />
+            </div>
+
+            {/* Step number with pixelated background */}
+            <div className="relative mb-6">
+              <div className="absolute -top-2 -left-2 w-16 h-16 grid grid-cols-4 grid-rows-4 gap-[2px]">
+                {[...Array(16)].map((_, i) => (
+                  <motion.div
+                    key={`pixel-bg-2-${i}`}
+                    className={`w-full h-full ${
+                      i % 2 === 0 ? "bg-pink-900/30" : "bg-transparent"
+                    }`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2, delay: i * 0.03 }}
+                  />
+                ))}
+              </div>
+              <div className="w-12 h-12 flex items-center justify-center bg-pink-900/70 relative">
+                <motion.span
+                  className="text-2xl text-pink-400 font-pixel z-10"
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
+                >
+                  2
+                </motion.span>
+              </div>
+            </div>
+
+            <motion.h4
+              className="text-lg mb-3 text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400 font-pixel"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              GENERATE
+            </motion.h4>
+
+            <motion.p
+              className="text-gray-400 text-sm font-pixel leading-relaxed"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              Our AI technology transforms your ideas into stunning 3D cubes
+              with advanced textures and animations, or unique music tracks
+              based on your specifications.
+            </motion.p>
+
+            {/* Animated cube simulation */}
+            <div className="absolute bottom-3 right-3 opacity-60 group-hover:opacity-100 transition-opacity">
+              <motion.div
+                className="w-10 h-10 border-[1px] border-pink-500 relative"
+                animate={{
+                  rotateY: [0, 180, 360],
+                  rotateX: [0, 45, 0],
+                  boxShadow: [
+                    "0 0 0px rgba(236, 72, 153, 0)",
+                    "0 0 8px rgba(236, 72, 153, 0.8)",
+                    "0 0 0px rgba(236, 72, 153, 0)",
+                  ],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+              >
+                <motion.div
+                  className="absolute inset-2 bg-pink-500/30"
+                  animate={{
+                    opacity: [0.3, 0.6, 0.3],
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                  }}
+                />
+              </motion.div>
+            </div>
+          </motion.div>
+
+          {/* Step 3 */}
+          <motion.div
+            whileHover={{ y: -5, scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300, damping: 10 }}
+            className="bg-black/50 border border-blue-500/40 p-6 rounded-lg relative overflow-hidden group z-10"
+            onMouseEnter={() => setCursorHover(true)}
+            onMouseLeave={() => setCursorHover(false)}
+          >
+            {/* Pixel border animation */}
+            <div className="absolute inset-0 border border-blue-500/0 group-hover:border-blue-500/30 transition-colors duration-300">
+              <motion.div
+                className="absolute top-0 right-0 w-8 h-[2px] bg-blue-500"
+                animate={{
+                  x: [100, 0],
+                  opacity: [0, 1],
+                }}
+                transition={{
+                  duration: 0.3,
+                  delay: 0.2,
+                }}
+              />
+              <motion.div
+                className="absolute top-0 right-0 h-8 w-[2px] bg-blue-500"
+                animate={{
+                  y: [100, 0],
+                  opacity: [0, 1],
+                }}
+                transition={{
+                  duration: 0.3,
+                  delay: 0.3,
+                }}
+              />
+              <motion.div
+                className="absolute bottom-0 left-0 w-8 h-[2px] bg-blue-500"
+                animate={{
+                  x: [-100, 0],
+                  opacity: [0, 1],
+                }}
+                transition={{
+                  duration: 0.3,
+                  delay: 0.4,
+                }}
+              />
+              <motion.div
+                className="absolute bottom-0 left-0 h-8 w-[2px] bg-blue-500"
+                animate={{
+                  y: [-100, 0],
+                  opacity: [0, 1],
+                }}
+                transition={{
+                  duration: 0.3,
+                  delay: 0.5,
+                }}
+              />
+            </div>
+
+            {/* Step number with pixelated background */}
+            <div className="relative mb-6">
+              <div className="absolute -top-2 -left-2 w-16 h-16 grid grid-cols-4 grid-rows-4 gap-[2px]">
+                {[...Array(16)].map((_, i) => (
+                  <motion.div
+                    key={`pixel-bg-3-${i}`}
+                    className={`w-full h-full ${
+                      i % 2 === 0 ? "bg-blue-900/30" : "bg-transparent"
+                    }`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2, delay: i * 0.03 }}
+                  />
+                ))}
+              </div>
+              <div className="w-12 h-12 flex items-center justify-center bg-blue-900/70 relative">
+                <motion.span
+                  className="text-2xl text-blue-400 font-pixel z-10"
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
+                >
+                  3
+                </motion.span>
+              </div>
+            </div>
+
+            <motion.h4
+              className="text-lg mb-3 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 font-pixel"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              MINT & COLLECT
+            </motion.h4>
+
+            <motion.p
+              className="text-gray-400 text-sm font-pixel leading-relaxed"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              Mint your creation as an NFT to add to your collection. Own unique
+              digital assets that can be displayed, traded, or used within the
+              VOID ecosystem.
+            </motion.p>
+
+            {/* Animated coin/NFT icon */}
+            <div className="absolute bottom-3 right-3 opacity-60 group-hover:opacity-100 transition-opacity">
+              <motion.div
+                className="w-10 h-10 border-2 border-blue-500 relative"
+                animate={{
+                  rotateY: [0, 360],
+                  boxShadow: [
+                    "0 0 0px rgba(59, 130, 246, 0)",
+                    "0 0 8px rgba(59, 130, 246, 0.8)",
+                    "0 0 0px rgba(59, 130, 246, 0)",
+                  ],
+                }}
+                transition={{
+                  rotateY: {
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "linear",
+                  },
+                  boxShadow: {
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  },
+                }}
+              >
+                <motion.div
+                  className="absolute inset-1 bg-blue-500/30"
+                  animate={{
+                    opacity: [0.3, 0.6, 0.3],
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-blue-400 font-pixel text-[8px]">
+                    NFT
+                  </span>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Interactive hint */}
+        <motion.div
+          className="text-center mt-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1, duration: 0.5 }}
+        >
+        </motion.div>
+      </motion.div>
+
       <Footer />
     </div>
   );
