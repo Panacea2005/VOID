@@ -204,7 +204,10 @@ export default function PixelArtPage() {
           ;[pixelIndices[i], pixelIndices[j]] = [pixelIndices[j], pixelIndices[i]]
         }
         let pixelIndex = 0
-        const pixelsPerFrame = Math.max(100, Math.floor(canvasSize * canvasSize / 1000))
+        // Adjusted pixelsPerFrame for faster reveal on larger sizes
+        const pixelsPerFrame = canvasSize >= 256 
+          ? Math.max(500, Math.floor(canvasSize * canvasSize / 500)) // Increased for 256, 512, 1024
+          : Math.max(100, Math.floor(canvasSize * canvasSize / 1000)) // Original for 64, 128
         const reveal = () => {
           for (let i = 0; i < pixelsPerFrame && pixelIndex < pixelCount; i++) {
             const idx = pixelIndices[pixelIndex]
@@ -341,7 +344,7 @@ export default function PixelArtPage() {
                 opacity: [0.1, 0.3, 0.1],
               }}
               transition={{
-                rotate: { duration: 20 + i * 5, repeat: Infinity, ease: "linear" },
+                rotate: { duration: 20 + 5 * 5, repeat: Infinity, ease: "linear" }, 
                 scale: { duration: 3 + i, repeat: Infinity, repeatType: "reverse" },
                 opacity: { duration: 4 + i, repeat: Infinity, repeatType: "reverse" },
               }}
@@ -592,7 +595,7 @@ export default function PixelArtPage() {
                     onMouseEnter={() => setCursorHover(true)}
                     onMouseLeave={() => setCursorHover(false)}
                   >
-                    {[128, 256, 512, 1024].map((size) => (
+                    {[64, 128, 256, 512, 1024].map((size) => (
                       <button
                         key={size}
                         onClick={() => setCanvasSize(size)}

@@ -8,9 +8,9 @@ export class AIPixelService {
       throw new Error('Stability API key is not configured')
     }
 
-    const validSizes = [128, 356, 512, 1024]
+    const validSizes = [64, 128, 256, 512, 1024]
     if (!validSizes.includes(canvasSize)) {
-      throw new Error('Invalid canvas size. Must be 128, 356, 512, or 1024.')
+      throw new Error('Invalid canvas size. Must be 64, 128, 256, 512, or 1024.')
     }
 
     const imageSize = canvasSize
