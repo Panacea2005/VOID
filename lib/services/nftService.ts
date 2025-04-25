@@ -12,14 +12,21 @@ import {
   getModelViewerUrl,
 } from "./pinataService";
 
-// Các thuộc tính metadata mở rộng để bao gồm cả thông tin collection
+// Extended properties interface to include all material parameters
 export interface ExtendedProperties {
   files: Array<{
     uri: string;
     type: string;
+    cdn?: string;
   }>;
   category: string;
-  // Các thuộc tính tùy chỉnh cho collection
+  // Material properties
+  materialParams?: any;
+  colors?: string[];
+  texture?: string;
+  animation?: string;
+  effects?: string[];
+  // Custom properties
   [key: string]: any;
 }
 
@@ -29,8 +36,9 @@ export interface NFTMetadata {
   description: string;
   image: File;
   model?: File;
-  audio?: File;
+  audio?: File | string;
   audioUrl?: string;
+  animation_url?: string; // Added this property
   attributes: Array<{
     trait_type: string;
     value: string;
@@ -38,12 +46,17 @@ export interface NFTMetadata {
   properties: ExtendedProperties;
 }
 
-// Biến để theo dõi nếu Pinata thất bại
+// Variable to track if Pinata failed
 let PINATA_FAILED = false;
 
-// Hàm upload an toàn, thử các phương pháp khác nhau nếu phương pháp chính thất bại
+// *** ENHANCED UPLOAD: Safe upload function with multiple retries and fallbacks ***
 async function safeUpload(file: File, metadata: any, retries = 3): Promise<string> {
   try {
+    // *** CRITICAL FIX: Ensure material parameters are stringified properly ***
+    if (metadata.materialParams && typeof metadata.materialParams === 'object') {
+      metadata.materialParams = JSON.stringify(metadata.materialParams);
+    }
+    
     return await uploadToPinata(file, metadata);
   } catch (error) {
     console.error("Error uploading to Pinata:", error);
@@ -64,7 +77,13 @@ async function safeUpload(file: File, metadata: any, retries = 3): Promise<strin
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = () => {
-          localStorage.setItem(`file_${mockCid}`, reader.result as string);
+          // Store file content with material parameters
+          const storageData = {
+            content: reader.result,
+            metadata: metadata,
+            timestamp: Date.now()
+          };
+          localStorage.setItem(`file_${mockCid}`, JSON.stringify(storageData));
         };
       } catch (e) {
         console.error("Error saving file to localStorage:", e);
@@ -75,21 +94,27 @@ async function safeUpload(file: File, metadata: any, retries = 3): Promise<strin
   }
 }
 
-// ID tĩnh cho collections
+// Static collection IDs
 const VOID_CUBE_COLLECTION_ID = "void-cube-collection";
 const VOID_MUSIC_COLLECTION_ID = "void-music-collection";
 
+/**
+ * *** ENHANCED FUNCTION: Mint NFT with perfect preservation of material properties ***
+ * This function has been completely reworked to ensure all material properties
+ * are preserved throughout the minting process.
+ */
 export async function mintNFT(
   connection: Connection,
   wallet: any,
   metadata: NFTMetadata
 ): Promise<string> {
   try {
-    console.log("Starting NFT minting process with metadata:", {
+    console.log("Starting NFT minting process with complete material parameters:", {
       name: metadata.name,
       description: metadata.description,
       hasImage: !!metadata.image,
       hasModel: !!metadata.model,
+      materialParams: !!metadata.properties?.materialParams,
     });
 
     // Configure connection with better options
@@ -100,25 +125,32 @@ export async function mintNFT(
       httpHeaders: { "Content-Type": "application/json" },
     });
 
-    // Upload image to IPFS
-    console.log("Uploading image to IPFS...");
+    // CRITICAL FIX: Deep clone material parameters to prevent any modification
+    const originalMaterialParams = metadata.properties?.materialParams 
+      ? JSON.parse(JSON.stringify(metadata.properties.materialParams)) 
+      : null;
+
+    // CRITICAL FIX: Upload image to IPFS with embedded material parameters
+    console.log("Uploading image to IPFS with embedded material parameters...");
     const imageIpfsHash = await safeUpload(metadata.image, {
       name: `${metadata.name}-image`,
       description: metadata.description,
       type: metadata.image.type || "image/png",
+      // Store material parameters with image for redundancy
+      materialParams: JSON.stringify(originalMaterialParams),
     });
 
     const imageUri = `ipfs://${imageIpfsHash}`;
-    console.log("Image uploaded:", imageUri);
+    console.log("Image uploaded with material parameters:", imageUri);
 
     // Variables for model data
     let modelUri = "";
     let modelType = "model/gltf-binary";
     let model3dIpfsHash = "";
 
-    // If we have a 3D model file, upload it too
+    // CRITICAL FIX: If we have a 3D model file, upload it with ALL material parameters
     if (metadata.model) {
-      console.log("Uploading 3D model...");
+      console.log("Uploading 3D model with COMPLETE material parameters...");
       
       // Make sure it has the correct MIME type
       const modelFile = metadata.model;
@@ -127,80 +159,113 @@ export async function mintNFT(
       // Set correct model MIME type
       modelType = "model/gltf-binary";
 
-      // Upload model to IPFS with material params in metadata
+      // CRITICAL FIX: Upload model to IPFS with ALL material parameters in multiple formats
       try {
         model3dIpfsHash = await safeUpload(modelFile, {
           name: `${metadata.name}-model`,
           description: `3D Model for ${metadata.name}`,
           type: modelType,
-          materialParams: JSON.stringify(metadata.properties?.materialParams || {}),
+          // Include COMPLETE material parameters in multiple formats for perfect redundancy
+          materialParams: JSON.stringify(originalMaterialParams || {}),
+          originalMaterialParams: JSON.stringify(originalMaterialParams || {}),
+          materialParamsJSON: JSON.stringify(originalMaterialParams || {}),
+          // Include key properties separately for easier access
+          texture: metadata.properties?.texture,
+          animation: metadata.properties?.animation,
+          colors: JSON.stringify(metadata.properties?.colors || []),
+          // Add extras like effects
+          effects: JSON.stringify(metadata.properties?.effects || []),
+          // Add critical rendering properties
+          emissive: metadata.properties?.materialParams?.emissive,
+          emissiveIntensity: metadata.properties?.materialParams?.emissiveIntensity,
+          customEffects: JSON.stringify(metadata.properties?.materialParams?.customEffects || []),
         });
 
         // Generate proper URIs and URLs
         modelUri = `ipfs://${model3dIpfsHash}`;
         
-        console.log("Model uploaded successfully:", {
+        console.log("Model uploaded successfully with ALL material properties:", {
           modelUri,
           model3dIpfsHash,
+          includesMaterialParams: true,
         });
       } catch (modelError) {
-        console.error("Error uploading model, continuing without it:", modelError);
+        console.error("Error uploading model, attempting simplified upload:", modelError);
+        
+        // CRITICAL FIX: Try simplified upload but still with full parameters
+        try {
+          model3dIpfsHash = await safeUpload(modelFile, {
+            name: `${metadata.name}-model-simplified`,
+            description: `3D Model for ${metadata.name} (simplified metadata)`,
+            type: modelType,
+            materialParams: JSON.stringify(originalMaterialParams || {}),
+          });
+          
+          modelUri = `ipfs://${model3dIpfsHash}`;
+          console.log("Model uploaded with simplified metadata but full parameters:", modelUri);
+        } catch (simplifiedError) {
+          console.error("Even simplified model upload failed:", simplifiedError);
+        }
       }
     }
 
-    // Prepare metadata with image and model
+    // CRITICAL FIX: Prepare COMPLETE metadata with ALL material properties in multiple locations
     const metadataWithFiles: any = {
       name: metadata.name,
       description: metadata.description,
       image: imageUri,
       attributes: metadata.attributes,
+      // CRITICAL FIX: Store material parameters at top level
+      materialParams: originalMaterialParams,
+      // CRITICAL FIX: Store key properties at top level for easier access
+      colors: metadata.properties?.colors,
+      texture: metadata.properties?.texture,
+      animation: metadata.properties?.animation,
+      // Keep collection information
       collection: {
         name: "VOID Cube Collection",
         family: "VOID Cube",
       },
+      // CRITICAL FIX: Store ALL properties from the original metadata
       properties: {
+        // Clone all original properties
+        ...(metadata.properties || {}),
+        // Override/merge specific properties to ensure they exist
         files: [
           {
             uri: imageUri,
             type: metadata.image.type || "image/png",
           },
+          // Only add model if we have one
+          ...(modelUri ? [{
+            uri: modelUri,
+            type: modelType,
+          }] : []),
         ],
-        category: "image",
-        collection: {
-          name: "VOID Cube Collection",
-          family: "VOID Cube",
-        },
+        // Ensure category is set
+        category: metadata.properties?.category || "image",
+        // CRITICAL FIX: Guarantee material parameters are included
+        materialParams: originalMaterialParams,
       },
     };
 
-    // Add model to metadata if we have one
+    // CRITICAL FIX: Add model info if we have one in multiple locations for redundancy
     if (modelUri) {
       metadataWithFiles.model = modelUri;
       metadataWithFiles.animation_url = modelUri; // Many marketplaces use this for 3D models
       
-      // Add to files array
-      metadataWithFiles.properties.files.push({
-        uri: modelUri,
-        type: modelType,
-      });
+      // Add model viewer URL
+      metadataWithFiles.model_viewer_url = getModelViewerUrl(model3dIpfsHash);
       
-      // Add extra model properties
+      // Add to properties as well
       metadataWithFiles.properties.model = modelUri;
       metadataWithFiles.properties.model_type = "glb";
-      
-      // Add material parameters for perfect reproduction
-      if (metadata.properties?.materialParams) {
-        metadataWithFiles.properties.materialParams = metadata.properties.materialParams;
-      }
-      
-      // Add colors for easier access
-      if (metadata.properties?.colors) {
-        metadataWithFiles.properties.colors = metadata.properties.colors;
-      }
+      metadataWithFiles.properties.model_viewer_url = getModelViewerUrl(model3dIpfsHash);
+      metadataWithFiles.properties.animation_url = modelUri;
     }
 
-    // Prepare metadata JSON file
-    console.log("Preparing metadata JSON...");
+    // CRITICAL FIX: Prepare metadata JSON file with ALL parameters
+    console.log("Preparing complete metadata JSON with ALL material parameters...");
     const metadataBlob = new Blob(
       [JSON.stringify(metadataWithFiles, null, 2)],
       { type: "application/json" }
@@ -211,11 +276,18 @@ export async function mintNFT(
       { type: "application/json" }
     );
 
-    // Upload metadata to IPFS
-    console.log("Uploading metadata to IPFS...");
+    // CRITICAL FIX: Upload full metadata to IPFS with material parameters attached to the metadata itself
+    console.log("Uploading complete metadata to IPFS...");
     const metadataIpfsHash = await safeUpload(metadataFile, {
       name: `${metadata.name}-metadata`,
       type: "application/json",
+      // Also include key parameters here for redundancy
+      materialParams: JSON.stringify(originalMaterialParams || {}),
+      colors: JSON.stringify(metadata.properties?.colors || []),
+      texture: metadata.properties?.texture,
+      animation: metadata.properties?.animation,
+      hasModel: !!modelUri,
+      modelUri: modelUri,
     });
     const metadataUri = `ipfs://${metadataIpfsHash}`;
 
@@ -243,7 +315,7 @@ export async function mintNFT(
           `Got blockhash: ${blockhash}, lastValidBlockHeight: ${lastValidBlockHeight}`
         );
 
-        // Create NFT with new blockhash
+        // CRITICAL FIX: Create NFT with new blockhash and COMPLETE metadata
         const { nft, response } = await metaplex.nfts().create({
           uri: metadataUri,
           name: metadata.name,
@@ -257,11 +329,39 @@ export async function mintNFT(
           ],
           collection: null, // Not using official collection
           tokenStandard: 0, // Non-Fungible Token standard
-          uses: null,
+          uses: null
         });
 
         console.log("NFT created successfully:", nft.address.toString());
         console.log("Transaction signature:", response.signature);
+
+        // CRITICAL FIX: Save the complete NFT information to localStorage for immediate access
+        try {
+          const nftData = {
+            id: nft.address.toString(),
+            name: metadata.name,
+            description: metadata.description,
+            image: getIpfsUrl(imageIpfsHash),
+            ipfsHash: imageIpfsHash,
+            mintAddress: nft.address.toString(),
+            txSignature: response.signature,
+            materialParams: originalMaterialParams,
+            model3d: modelUri ? getDirectModelUrl(model3dIpfsHash) : undefined,
+            model3dHash: model3dIpfsHash || undefined,
+            properties: metadataWithFiles.properties,
+            attributes: metadata.attributes,
+            mintedAt: new Date().toISOString(),
+            type: modelUri ? "cube" : (metadata.audioUrl ? "music" : "image"),
+          };
+          
+          // Save to localStorage
+          const userNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
+          userNfts.push(nftData);
+          localStorage.setItem('userNfts', JSON.stringify(userNfts));
+          console.log("Saved complete NFT data to localStorage");
+        } catch (storageError) {
+          console.error("Error saving NFT data to localStorage:", storageError);
+        }
 
         // Save the NFT address
         mintedNftAddress = nft.address.toString();
@@ -295,77 +395,6 @@ export async function mintNFT(
   }
 }
 
-export async function getCubeNFTMetadata(
-  name: string,
-  description: string,
-  image: File,
-  model: File | null,
-  attributes: any,
-  params: { materialParams: any; colors: string[] }
-): Promise<NFTMetadata> {
-  // Add Collection attribute if not present
-  const hasCollectionAttribute = attributes.some(
-    (attr: any) => attr.trait_type === "Collection"
-  );
-  
-  const completeAttributes = hasCollectionAttribute
-    ? attributes
-    : [
-        ...attributes,
-        {
-          trait_type: "Collection",
-          value: "VOID Cube Collection",
-        },
-      ];
-
-  // Build files array for properties, always starting with the image
-  const files = [
-    {
-      uri: "placeholder", // Will be replaced with actual URI after upload
-      type: image.type || "image/png",
-    }
-  ];
-  
-  // If we have a 3D model, add it to the files array
-  if (model) {
-    files.push({
-      uri: "placeholder-model", // Will be replaced with actual model URI after upload
-      type: "model/gltf-binary",
-    });
-  }
-
-  // Return complete metadata
-  return {
-    name,
-    symbol: "VOID",
-    description,
-    image,
-    ...(model && { model }), // Only add model if provided
-    attributes: [
-      {
-        trait_type: "Type",
-        value: "Cube",
-      },
-      ...completeAttributes,
-    ],
-    properties: {
-      files,
-      category: "image",
-      collection: {
-        name: "VOID Cube Collection",
-        family: "VOID Cube",
-      },
-      // Store material parameters in properties for perfect reproduction
-      materialParams: params.materialParams,
-      // Store colors separately for easier access
-      colors: params.colors,
-      // Add model_type property if we have a model
-      ...(model && { model_type: "glb" }),
-    },
-  };
-}
-
-
 export function verifyCubeProperties(
   originalMaterialParams: any,
   mintedNFT: any
@@ -373,6 +402,10 @@ export function verifyCubeProperties(
   preserved: boolean;
   differences?: string[];
 } {
+  console.log("Verifying property preservation:");
+  console.log("Original:", originalMaterialParams);
+  console.log("Minted:", mintedNFT?.materialParams || mintedNFT?.properties?.materialParams);
+  
   if (!originalMaterialParams || !mintedNFT) {
     return {
       preserved: false,
@@ -380,21 +413,23 @@ export function verifyCubeProperties(
     };
   }
 
-  // Get the minted material parameters
+  // *** CRITICAL FIX: Check multiple locations for material parameters ***
   const mintedParams =
-    mintedNFT.materialParams || mintedNFT.properties?.materialParams;
+    mintedNFT.materialParams || 
+    mintedNFT.properties?.materialParams || 
+    mintedNFT.originalMaterialParams;
 
   if (!mintedParams) {
     return {
       preserved: false,
-      differences: ["No material parameters found in minted NFT"],
+      differences: ["No material parameters found in minted NFT at any location"],
     };
   }
 
   // Compare original and minted parameters
   const differences: string[] = [];
 
-  // Define the critical properties to check
+  // *** ENHANCED VERIFICATION: Define the critical properties to check ***
   const criticalProperties = [
     "color",
     "metalness",
@@ -409,6 +444,13 @@ export function verifyCubeProperties(
     "sheen",
     "gradientColors",
     "texturePattern",
+    "animationType",
+    "customEffects",
+    "showBorder",
+    "borderColor",
+    "borderWidth",
+    "map",
+    "proceduralTexture"
   ];
 
   for (const prop of criticalProperties) {
@@ -464,7 +506,144 @@ export function verifyCubeProperties(
   };
 }
 
-// Tạo metadata cho NFT âm nhạc
+/**
+ * *** ENHANCED FUNCTION: Get cube NFT metadata with perfect property preservation ***
+ * This function ensures ALL material properties are preserved in the NFT metadata
+ */
+export async function getCubeNFTMetadata(
+  name: string,
+  description: string,
+  image: File,
+  model: File | null,
+  attributes: any,
+  params: { materialParams: any; colors: string[] }
+): Promise<NFTMetadata> {
+  console.log("Creating complete NFT metadata with ALL material properties");
+  
+  // *** CRITICAL FIX: Deep clone material parameters to prevent any modification ***
+  const originalMaterialParams = params.materialParams 
+    ? JSON.parse(JSON.stringify(params.materialParams))
+    : {};
+  
+  console.log("Original material parameters:", originalMaterialParams);
+  
+  // Add Collection attribute if not present
+  const hasCollectionAttribute = attributes.some(
+    (attr: any) => attr.trait_type === "Collection"
+  );
+  
+  const completeAttributes = hasCollectionAttribute
+    ? attributes
+    : [
+        ...attributes,
+        {
+          trait_type: "Collection",
+          value: "VOID Cube Collection",
+        },
+      ];
+
+  // Build files array for properties, always starting with the image
+  const files = [
+    {
+      uri: "placeholder", // Will be replaced with actual URI after upload
+      type: image.type || "image/png",
+    }
+  ];
+  
+  // If we have a 3D model, add it to the files array
+  if (model) {
+    files.push({
+      uri: "placeholder-model", // Will be replaced with actual model URI after upload
+      type: "model/gltf-binary",
+    });
+  }
+
+  // *** CRITICAL FIX: Extract special effects for attributes with enhanced properties ***
+  const specialEffects = [];
+  if (originalMaterialParams?.customEffects?.includes('hologram')) {
+    specialEffects.push("Hologram");
+  }
+  if (originalMaterialParams?.emissiveIntensity > 0) {
+    specialEffects.push("Glowing");
+  }
+  if (originalMaterialParams?.gradientColors && originalMaterialParams.gradientColors.length > 1) {
+    specialEffects.push("Gradient");
+  }
+  if (originalMaterialParams?.texturePattern) {
+    specialEffects.push(originalMaterialParams.texturePattern.charAt(0).toUpperCase() + 
+                       originalMaterialParams.texturePattern.slice(1));
+  }
+  if (originalMaterialParams?.animationType && originalMaterialParams.animationType !== 'none') {
+    specialEffects.push(originalMaterialParams.animationType.charAt(0).toUpperCase() + 
+                      originalMaterialParams.animationType.slice(1));
+  }
+  
+  // Add special effects as attribute if any exist
+  const effectsAttribute = specialEffects.length > 0 
+    ? [{ trait_type: "Effects", value: specialEffects.join(", ") }] 
+    : [];
+
+  // *** CRITICAL FIX: Full property set with ALL original material parameters preserved ***
+  const fullProperties = {
+    files,
+    category: "image",
+    collection: {
+      name: "VOID Cube Collection",
+      family: "VOID Cube",
+    },
+    // Store COMPLETE material parameters for exact reproduction
+    materialParams: originalMaterialParams,
+    // Store colors separately for easier access
+    colors: params.colors,
+    // Add texture pattern if available
+    texture: originalMaterialParams?.texturePattern,
+    // Add animation type if available
+    animation: originalMaterialParams?.animationType,
+    // Add model_type property if we have a model
+    ...(model && { model_type: "glb" }),
+    // Add emissive properties
+    emissive: originalMaterialParams?.emissive,
+    emissiveIntensity: originalMaterialParams?.emissiveIntensity,
+    // Add special effects
+    effects: specialEffects,
+    // Add border properties
+    showBorder: originalMaterialParams?.showBorder,
+    borderColor: originalMaterialParams?.borderColor,
+    borderWidth: originalMaterialParams?.borderWidth,
+    // Add other important properties
+    roughness: originalMaterialParams?.roughness,
+    metalness: originalMaterialParams?.metalness,
+    opacity: originalMaterialParams?.opacity,
+    transparent: originalMaterialParams?.transparent,
+    clearcoat: originalMaterialParams?.clearcoat,
+    // Store material properties in multiple formats for redundancy
+    materialParamsJSON: JSON.stringify(originalMaterialParams),
+  };
+
+  // Console log for verification
+  console.log("Created metadata with complete properties:", 
+            JSON.stringify(fullProperties, null, 2));
+
+  // Return complete metadata with all necessary parameters
+  return {
+    name,
+    symbol: "VOID",
+    description,
+    image,
+    ...(model && { model }), // Only add model if provided
+    attributes: [
+      {
+        trait_type: "Type",
+        value: "Cube",
+      },
+      ...completeAttributes,
+      ...effectsAttribute
+    ],
+    properties: fullProperties,
+  };
+}
+
+// Create metadata for music NFT - enhanced for reliability
 export async function getMusicNFTMetadata(
   name: string,
   description: string,
@@ -472,7 +651,13 @@ export async function getMusicNFTMetadata(
   audioUrl: string,
   attributes: any
 ): Promise<NFTMetadata> {
-  // Thêm Collection attribute nếu chưa có
+  console.log("Creating music NFT metadata with audio URL:", audioUrl);
+
+  // Convert IPFS URL to HTTP URL if needed
+  const httpAudioUrl = convertIpfsUriToHttpUrl(audioUrl);
+  console.log(`Using HTTP audio URL: ${httpAudioUrl} (original: ${audioUrl})`);
+
+  // Add Collection attribute if not present
   const hasCollectionAttribute = attributes.some(
     (attr: any) => attr.trait_type === "Collection"
   );
@@ -486,27 +671,37 @@ export async function getMusicNFTMetadata(
         },
       ];
 
+  // Add audio specific attributes
+  const audioAttributes = [
+    ...completeAttributes,
+    {
+      trait_type: "Audio",
+      value: "Yes"
+    },
+    {
+      trait_type: "Audio URL",
+      value: httpAudioUrl
+    }
+  ];
+
   return {
     name,
     symbol: "VMUSIC",
     description,
     image,
-    audioUrl,
-    attributes: [
-      {
-        trait_type: "Type",
-        value: "Music",
-      },
-      ...completeAttributes,
-    ],
+    // Store audio URL in multiple locations for maximum discoverability
+    audioUrl: httpAudioUrl,
+    audio: httpAudioUrl,
+    animation_url: httpAudioUrl,
+    attributes: audioAttributes,
     properties: {
       files: [
         {
-          uri: "placeholder",
+          uri: "placeholder", // Will be replaced with image URI after upload
           type: "image/png",
         },
         {
-          uri: audioUrl,
+          uri: httpAudioUrl,
           type: "audio/mpeg",
         },
       ],
@@ -515,11 +710,37 @@ export async function getMusicNFTMetadata(
         name: "VOID Music Collection",
         family: "VOID Music",
       },
+      audio_url: httpAudioUrl,
+      audioUrl: httpAudioUrl,
+      audio: httpAudioUrl,
+      animation_url: httpAudioUrl,
     },
   };
 }
 
-// Lấy thông tin NFT từ ví
+function convertIpfsUriToHttpUrl(uri: string): string {
+  if (!uri) return uri;
+  
+  // Already HTTP format, no conversion needed
+  if (uri.startsWith('http')) return uri;
+  
+  // Handle ipfs:// protocol
+  if (uri.startsWith('ipfs://')) {
+    const hash = uri.replace('ipfs://', '');
+    return `https://ipfs.io/ipfs/${hash}`;
+  }
+  
+  // Handle /ipfs/ paths
+  if (uri.includes('/ipfs/')) {
+    const hash = uri.split('/ipfs/')[1];
+    return `https://ipfs.io/ipfs/${hash}`;
+  }
+  
+  return uri; // Return original if not an IPFS URI
+}
+
+
+// Get NFTs from wallet - not modified as it's not part of the property preservation issue
 export async function getNFTsByOwner(
   connection: Connection,
   ownerPublicKey: PublicKey
@@ -530,7 +751,7 @@ export async function getNFTsByOwner(
       owner: ownerPublicKey,
     });
 
-    // Lọc NFTs để chỉ lấy những NFT từ dự án VOID
+    // Filter NFTs to get only VOID project NFTs
     const filteredNfts = nfts.filter(
       (nft) =>
         nft.symbol === "VOID" ||
@@ -540,17 +761,21 @@ export async function getNFTsByOwner(
         )
     );
 
-    console.log(`Tìm thấy ${filteredNfts.length} VOID NFTs trong ví`);
+    console.log(`Found ${filteredNfts.length} VOID NFTs in wallet`);
 
     return filteredNfts;
   } catch (error) {
-    console.error("Lỗi khi lấy NFTs từ ví:", error);
+    console.error("Error retrieving NFTs from wallet:", error);
 
-    // Trong trường hợp lỗi, trả về danh sách rỗng để không làm hỏng UI
+    // Return empty list in case of error to prevent UI breakage
     return [];
   }
 }
 
+/**
+ * *** NEW FUNCTION: Verify cube minting properties ***
+ * This function checks if a minted NFT has preserved all properties from the original cube
+ */
 export function verifyCubeMintingProperties(originalCube: any, mintedNft: any): { success: boolean, details: string } {
     console.log("Verifying cube properties preservation:");
     
@@ -592,8 +817,26 @@ export function verifyCubeMintingProperties(originalCube: any, mintedNft: any): 
       issues.push("3D model URL is missing from minted NFT");
     }
     
+    // Check for specific critical properties
+    const criticalProps = [
+      "texturePattern",
+      "animationType",
+      "customEffects",
+      "emissiveIntensity",
+      "showBorder",
+      "transparent"
+    ];
+    
+    for (const prop of criticalProps) {
+      if (originalMaterialParams[prop] !== undefined && 
+          mintedMaterialParams[prop] === undefined &&
+          mintedNft[prop] === undefined) {
+        issues.push(`Critical property '${prop}' is missing from minted NFT`);
+      }
+    }
+    
     return {
       success: issues.length === 0,
       details: issues.length > 0 ? issues.join(", ") : "All properties preserved successfully"
     };
-  }
+}

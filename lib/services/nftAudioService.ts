@@ -4,34 +4,54 @@ import { PublicKey } from "@solana/web3.js";
 import { Connection } from "@solana/web3.js";
 import { Metaplex } from "@metaplex-foundation/js";
 
-function getAlternativeIpfsUrls(ipfsUri: string): string[] {
-  // Extract the IPFS hash
-  let ipfsHash = ipfsUri;
-
-  // Handle ipfs:// protocol
-  if (ipfsUri.startsWith("ipfs://")) {
-    ipfsHash = ipfsUri.replace("ipfs://", "");
+function getAlternativeIpfsUrls(uri: string): string[] {
+  let hash = uri;
+  
+  // Extract hash from ipfs:// format
+  if (uri.startsWith('ipfs://')) {
+    hash = uri.replace('ipfs://', '');
   }
-  // Handle https://ipfs.io/ipfs/ style URLs
-  else if (ipfsUri.includes("/ipfs/")) {
-    ipfsHash = ipfsUri.split("/ipfs/")[1];
+  // Extract hash from HTTP URL format
+  else if (uri.includes('/ipfs/')) {
+    hash = uri.split('/ipfs/')[1];
   }
-
-  // Clean any query parameters or trailing slashes
-  ipfsHash = ipfsHash.split("?")[0].split("#")[0].replace(/\/$/, "");
-
-  // Generate alternative gateway URLs
+  
+  // Clean up hash (remove any query parameters or trailing slashes)
+  hash = hash.split('?')[0].split('#')[0].replace(/\/$/, '');
+  
+  // Return multiple gateway URLs for this hash
   return [
-    `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`,
-    `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
-    `https://ipfs.io/ipfs/${ipfsHash}`,
-    `https://dweb.link/ipfs/${ipfsHash}`,
-    `https://ipfs.filebase.io/ipfs/${ipfsHash}`,
-    `https://gateway.ipfs.io/ipfs/${ipfsHash}`,
-    `https://nftstorage.link/ipfs/${ipfsHash}`,
-    `https://w3s.link/ipfs/${ipfsHash}`,
-    `https://ipfs.cf-ipfs.com/ipfs/${ipfsHash}`,
+    `https://ipfs.io/ipfs/${hash}`,
+    `https://gateway.pinata.cloud/ipfs/${hash}`,
+    `https://cloudflare-ipfs.com/ipfs/${hash}`,
+    `https://dweb.link/ipfs/${hash}`,
+    `https://ipfs.filebase.io/ipfs/${hash}`,
+    `https://nftstorage.link/ipfs/${hash}`,
+    `https://w3s.link/ipfs/${hash}`,
+    `https://ipfs.cf-ipfs.com/ipfs/${hash}`,
   ];
+}
+
+// Convert IPFS URI to HTTP URL for browser compatibility
+function convertIpfsUriToHttpUrl(uri: string): string {
+  if (!uri) return uri;
+  
+  // Already HTTP format, no conversion needed
+  if (uri.startsWith('http')) return uri;
+  
+  // Handle ipfs:// protocol
+  if (uri.startsWith('ipfs://')) {
+    const hash = uri.replace('ipfs://', '');
+    return `https://ipfs.io/ipfs/${hash}`;
+  }
+  
+  // Handle /ipfs/ paths
+  if (uri.includes('/ipfs/')) {
+    const hash = uri.split('/ipfs/')[1];
+    return `https://ipfs.io/ipfs/${hash}`;
+  }
+  
+  return uri; // Return original if not an IPFS URI
 }
 
 /**
@@ -39,9 +59,94 @@ function getAlternativeIpfsUrls(ipfsUri: string): string[] {
  * @param nft The NFT metadata object
  * @returns Audio URL if found, null otherwise
  */
+/**
+ * Extracts audio URL from NFT metadata with comprehensive detection and IPFS conversion
+ * @param nft The NFT metadata object
+ * @returns Audio URL if found, null otherwise
+ */
 export function extractAudioUrl(nft: any): string | null {
   console.log(`Analyzing NFT for audio URL: ${nft.name || "Unknown NFT"}`);
 
+  // Special case for VOID Music NFTs with specific debugging
+  if (nft.name?.includes("VOID Music")) {
+    console.log("Found a VOID Music NFT! Analyzing in detail:", nft.name);
+
+    // CRITICAL FIX: Try to extract audioUrl directly from the NFT object
+    // This is how it's stored when minted in your application
+    if (nft.audioUrl && typeof nft.audioUrl === "string") {
+      console.log("Found direct audioUrl in VOID Music NFT:", nft.audioUrl);
+      return convertIpfsUriToHttpUrl(nft.audioUrl);
+    }
+
+    // Check for audio_url in properties (common in your mintNFT function)
+    if (nft.properties?.audio_url && typeof nft.properties.audio_url === "string") {
+      console.log("Found audio_url in properties:", nft.properties.audio_url);
+      return convertIpfsUriToHttpUrl(nft.properties.audio_url);
+    }
+
+    // Check for animation_url which is commonly used for music NFTs
+    if (nft.animation_url && typeof nft.animation_url === "string") {
+      console.log("Found animation_url in VOID Music NFT:", nft.animation_url);
+      return convertIpfsUriToHttpUrl(nft.animation_url);
+    }
+
+    // Check properties.files for audio files - common pattern in VOID Music NFTs
+    if (nft.properties?.files?.length) {
+      console.log("Checking VOID Music NFT files array with length:", nft.properties.files.length);
+      
+      // Print all files for debugging
+      nft.properties.files.forEach((file: any, index: number) => {
+        console.log(`File ${index}:`, JSON.stringify(file));
+      });
+      
+      const audioFile = nft.properties.files.find((file: any) => {
+        if (!file) return false;
+        
+        // Check type field
+        if (typeof file.type === "string" && 
+            (file.type.toLowerCase().includes("audio") || 
+             file.type.toLowerCase().includes("mp3") || 
+             file.type.toLowerCase().includes("mpeg"))) {
+          return true;
+        }
+        
+        // Check URI field
+        if (typeof file.uri === "string") {
+          const uri = file.uri.toLowerCase();
+          if (uri.endsWith(".mp3") || 
+              uri.endsWith(".wav") || 
+              uri.endsWith(".ogg") ||
+              uri.includes("/audio/") ||
+              uri.includes("music") ||
+              uri.includes("sound")) {
+            return true;
+          }
+        }
+        
+        return false;
+      });
+
+      if (audioFile) {
+        if (typeof audioFile === "string") {
+          console.log("Found audio string in files array:", audioFile);
+          return convertIpfsUriToHttpUrl(audioFile);
+        } else if (audioFile.uri) {
+          console.log("Found audio object in files array:", audioFile.uri);
+          return convertIpfsUriToHttpUrl(audioFile.uri);
+        }
+      }
+    }
+
+    // Log the entire NFT metadata for debugging
+    console.log("VOID Music NFT full metadata dump for debugging:");
+    Object.keys(nft).forEach(key => {
+      console.log(`NFT.${key}:`, typeof nft[key] === 'object' ? 
+                 JSON.stringify(nft[key]).substring(0, 100) + '...' : nft[key]);
+    });
+  }
+
+  // Continue with standard extraction for non-VOID Music NFTs
+  
   // Special case for erweima.ai API Box NFTs
   if (
     nft.animation_url?.includes("apiboxfiles.erweima.ai") ||
@@ -49,35 +154,6 @@ export function extractAudioUrl(nft: any): string | null {
   ) {
     console.log(`Found API Box audio URL:`, nft.animation_url || nft.audio);
     return nft.animation_url || nft.audio;
-  }
-
-  // Special case for VOID Music NFTs
-  if (nft.name?.includes("VOID Music")) {
-    // Check properties.files for audio files - common pattern
-    if (nft.properties?.files?.length) {
-      const audioFile = nft.properties.files.find((file: any) => {
-        if (!file) return false;
-        if (
-          typeof file.type === "string" &&
-          file.type.toLowerCase().includes("audio")
-        )
-          return true;
-        if (
-          typeof file.uri === "string" &&
-          (file.uri.endsWith(".mp3") ||
-            file.uri.endsWith(".wav") ||
-            file.uri.endsWith(".ogg") ||
-            file.uri.includes("apiboxfiles.erweima.ai"))
-        )
-          return true;
-        return false;
-      });
-
-      if (audioFile) {
-        console.log("Found audio file in properties.files:", audioFile.uri);
-        return audioFile.uri;
-      }
-    }
   }
 
   // 1. Check direct audio URL fields (common patterns)
@@ -97,7 +173,7 @@ export function extractAudioUrl(nft: any): string | null {
   for (const field of directAudioFields) {
     if (nft[field] && typeof nft[field] === "string") {
       console.log(`Found direct audio URL in ${field}:`, nft[field]);
-      return nft[field];
+      return convertIpfsUriToHttpUrl(nft[field]);
     }
   }
 
@@ -113,7 +189,7 @@ export function extractAudioUrl(nft: any): string | null {
       url.includes("/audio/")
     ) {
       console.log(`Found audio URL in animation_url:`, nft.animation_url);
-      return nft.animation_url;
+      return convertIpfsUriToHttpUrl(nft.animation_url);
     }
   }
 
@@ -159,10 +235,10 @@ export function extractAudioUrl(nft: any): string | null {
     if (audioFile) {
       if (typeof audioFile === "string") {
         console.log("Found audio string in files array:", audioFile);
-        return audioFile;
+        return convertIpfsUriToHttpUrl(audioFile);
       } else if (audioFile.uri) {
         console.log("Found audio object in files array:", audioFile.uri);
-        return audioFile.uri;
+        return convertIpfsUriToHttpUrl(audioFile.uri);
       }
     }
   }
@@ -193,10 +269,10 @@ export function extractAudioUrl(nft: any): string | null {
     if (audioFile) {
       if (typeof audioFile === "string") {
         console.log("Found audio string in files array:", audioFile);
-        return audioFile;
+        return convertIpfsUriToHttpUrl(audioFile);
       } else if (audioFile.uri) {
         console.log("Found audio object in files array:", audioFile.uri);
-        return audioFile.uri;
+        return convertIpfsUriToHttpUrl(audioFile.uri);
       }
     }
   }
@@ -219,7 +295,7 @@ export function extractAudioUrl(nft: any): string | null {
 
       if (audioAttr?.value && typeof audioAttr.value === "string") {
         console.log(`Found audio URL in attributes:`, audioAttr.value);
-        return audioAttr.value;
+        return convertIpfsUriToHttpUrl(audioAttr.value);
       }
     }
   }
@@ -231,7 +307,16 @@ export function extractAudioUrl(nft: any): string | null {
     );
     if (audioUrlMatches && audioUrlMatches.length > 0) {
       console.log("Found audio URL in description:", audioUrlMatches[0]);
-      return audioUrlMatches[0];
+      return audioUrlMatches[0]; // Already HTTP
+    }
+    
+    // Also check for IPFS URLs in description
+    const ipfsUrlMatches = nft.description.match(
+      /(ipfs:\/\/[^\s]+)/gi
+    );
+    if (ipfsUrlMatches && ipfsUrlMatches.length > 0) {
+      console.log("Found IPFS URL in description:", ipfsUrlMatches[0]);
+      return convertIpfsUriToHttpUrl(ipfsUrlMatches[0]);
     }
   }
 
@@ -287,29 +372,28 @@ export async function fetchNFTAudioTracks(
           continue;
         }
 
-        // Fetch metadata
-        console.log(`Attempting to fetch metadata from: ${nft.uri}`);
+        // CRITICAL FIX: Convert IPFS URI to HTTP URL before fetching
+        const metadataUrl = convertIpfsUriToHttpUrl(nft.uri);
+        console.log(`Attempting to fetch metadata from: ${metadataUrl} (original: ${nft.uri})`);
+        
         let response;
         let responseOk = false;
 
         // Try primary URL first
         try {
-          response = await fetch(nft.uri);
+          response = await fetch(metadataUrl);
           responseOk = response.ok;
         } catch (fetchError) {
           console.warn(
-            `Error fetching from primary URL: ${nft.uri}`,
+            `Error fetching from primary URL: ${metadataUrl}`,
             fetchError
           );
         }
 
-        // If primary URL fails and it's IPFS, try alternatives
-        if (
-          !responseOk &&
-          (nft.uri.includes("ipfs") || nft.uri.includes("/ipfs/"))
-        ) {
+        // If primary URL fails, try alternatives
+        if (!responseOk) {
           console.log(
-            `Primary IPFS URL failed, trying alternative gateways for: ${nft.uri}`
+            `Primary URL failed, trying alternative gateways for: ${nft.uri}`
           );
           const alternativeUrls = getAlternativeIpfsUrls(nft.uri);
 
@@ -349,6 +433,8 @@ export async function fetchNFTAudioTracks(
           );
           continue;
         }
+        
+        // Parse the metadata JSON
         const metadata = await response.json();
         console.log(
           `Got metadata for ${metadata.name || nft.name || "Unknown NFT"}`
@@ -398,10 +484,7 @@ export async function fetchNFTAudioTracks(
         let imageUrl = metadata.image || "";
 
         // Convert IPFS URL to HTTP URL if needed
-        if (imageUrl.startsWith("ipfs://")) {
-          const ipfsHash = imageUrl.replace("ipfs://", "");
-          imageUrl = `https://ipfs.io/ipfs/${ipfsHash}`;
-        }
+        imageUrl = convertIpfsUriToHttpUrl(imageUrl);
 
         // Use a fallback image if no image is available
         if (!imageUrl) {
@@ -433,7 +516,7 @@ export async function fetchNFTAudioTracks(
       }
     }
 
-    console.log(`Found ${audioNFTs.length} NFTs with audio content`);
+    console.log(`Found total of ${audioNFTs.length} NFTs with audio content`);
     return audioNFTs;
   } catch (error) {
     console.error("Error fetching NFT audio tracks:", error);

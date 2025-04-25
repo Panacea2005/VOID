@@ -21,7 +21,8 @@ const VOID_MUSIC_COLLECTION = "VOID Music Collection";
 // Update mockMintNFT to properly handle and include 3D model files
 export async function mockMintNFT(metadata: MockNFTMetadata, materialParams?: any): Promise<string> {
     try {
-        console.log('Starting mockMintNFT process with metadata:', metadata.name);
+        console.log('Starting mockMintNFT process with complete material parameters:');
+        console.log('Metadata:', metadata.name);
         console.log('Material params:', JSON.stringify(materialParams, null, 2));
         
         // First verify the image file size to make sure it's valid
@@ -30,13 +31,19 @@ export async function mockMintNFT(metadata: MockNFTMetadata, materialParams?: an
             throw new Error("Image file appears to be blank or corrupt");
         }
         
-        // Upload image to IPFS
-        console.log('Uploading image to Pinata...');
+        // CRITICAL FIX: Create a deep clone of material parameters to prevent any modifications
+        const originalMaterialParams = materialParams ? JSON.parse(JSON.stringify(materialParams)) : {};
+        console.log('Deep cloned original material params for preservation');
+        
+        // Upload image to IPFS with embedded material parameters
+        console.log('Uploading image to Pinata with complete material parameters...');
         const imageIpfsHash = await uploadToPinata(metadata.image, {
             name: metadata.name,
             description: metadata.description,
             attributes: metadata.attributes,
-            type: metadata.image.type || 'image/png'
+            type: metadata.image.type || 'image/png',
+            // CRITICAL FIX: Store material parameters with the image for maximum redundancy
+            materialParams: JSON.stringify(originalMaterialParams)
         });
 
         // Get URL for the image using multiple gateways for reliability
@@ -48,7 +55,6 @@ export async function mockMintNFT(metadata: MockNFTMetadata, materialParams?: an
         ];
         
         console.log("Image uploaded successfully to IPFS:", imageUrl);
-        console.log("Fallback image URLs:", fallbackImages);
 
         // Determine NFT type (music or cube)
         const isMusic = !!metadata.audioUrl;
@@ -71,19 +77,21 @@ export async function mockMintNFT(metadata: MockNFTMetadata, materialParams?: an
         let modelViewerUrl = '';
         let fallbackModel3d: string[] = [];
 
-        // For cube NFTs, create and upload 3D model
+        // CRITICAL FIX: For cube NFTs, create and upload 3D model with 100% preserved properties
         if (!isMusic) {
             try {
-                console.log('Creating 3D model for NFT...');
+                console.log('Creating 3D model for NFT with EXACT SAME material parameters...');
                 
-                // Extract color information from material params or attributes
+                // Extract color information from material params with proper priority
                 let colors: string[] = [];
                 
-                // First check material params for colors
-                if (materialParams?.gradientColors && materialParams.gradientColors.length > 0) {
-                    colors = [...materialParams.gradientColors];
-                } else if (materialParams?.color) {
-                    colors = [materialParams.color];
+                // CRITICAL FIX: Extract colors in the correct priority order
+                if (originalMaterialParams.gradientColors && originalMaterialParams.gradientColors.length > 0) {
+                    colors = [...originalMaterialParams.gradientColors];
+                    console.log("Using gradient colors for 3D model:", colors);
+                } else if (originalMaterialParams.color) {
+                    colors = [originalMaterialParams.color];
+                    console.log("Using single color for 3D model:", colors);
                 } else {
                     // Check attributes for color
                     const colorAttr = metadata.attributes.find(attr => attr.trait_type === 'Color');
@@ -93,12 +101,12 @@ export async function mockMintNFT(metadata: MockNFTMetadata, materialParams?: an
                         // Default color if nothing else is found
                         colors = ['#5d4fff'];
                     }
+                    console.log("Using attribute or default color for 3D model:", colors);
                 }
                 
-                console.log('Using colors for 3D model:', colors);
-                
-                // Pass the complete materialParams to convertGLBToFile
-                const glbFile = await convertGLBToFile(colors, metadata.name, materialParams);
+                // CRITICAL FIX: Pass the EXACT ORIGINAL material parameters to convertGLBToFile
+                console.log('Creating GLB file with 100% identical material params');
+                const glbFile = await convertGLBToFile(colors, metadata.name, originalMaterialParams);
                 console.log('Created 3D model:', glbFile.name, 'type:', glbFile.type, 'size:', glbFile.size);
                 
                 // Verify the GLB file size to ensure it's valid
@@ -110,14 +118,23 @@ export async function mockMintNFT(metadata: MockNFTMetadata, materialParams?: an
                 // Ensure correct MIME type for GLB file
                 const modelMimeType = 'model/gltf-binary';
 
-                // Upload 3D model to Pinata with correct metadata
-                console.log('Uploading 3D model to Pinata...');
+                // CRITICAL FIX: Upload 3D model to Pinata with EXACT material parameters
+                console.log('Uploading 3D model to Pinata with 100% original material parameters...');
                 model3dIpfsHash = await uploadToPinata(glbFile, {
                     name: metadata.name + " 3D Model",
                     description: "3D Model for " + metadata.name,
                     type: modelMimeType,
-                    // Store materialParams in metadata for perfect reproduction
-                    materialParams: materialParams ? JSON.stringify(materialParams) : undefined
+                    // CRITICAL FIX: Store the EXACT ORIGINAL material parameters in multiple formats
+                    materialParams: JSON.stringify(originalMaterialParams),
+                    originalParams: JSON.stringify(originalMaterialParams),
+                    materialParamsRaw: originalMaterialParams,
+                    colors: JSON.stringify(colors),
+                    // Add texture and animation if present for redundancy
+                    texturePattern: originalMaterialParams.texturePattern,
+                    animationType: originalMaterialParams.animationType,
+                    customEffects: originalMaterialParams.customEffects 
+                      ? JSON.stringify(originalMaterialParams.customEffects) 
+                      : undefined
                 });
                 
                 console.log("3D model uploaded successfully to IPFS:", model3dIpfsHash);
@@ -136,28 +153,47 @@ export async function mockMintNFT(metadata: MockNFTMetadata, materialParams?: an
                 
                 console.log("Model URLs:", {
                     directModelUrl,
-                    modelViewerUrl,
-                    fallbackModel3d
+                    modelViewerUrl
                 });
             } catch (modelError) {
                 console.error("Error creating or uploading 3D model:", modelError);
                 
-                // Make a second attempt with simplified parameters
+                // CRITICAL FIX: Make a second attempt with simplified parameters but EXACT color
                 try {
-                    console.log('Making second attempt to create 3D model with simplified parameters...');
+                    console.log('Making second attempt to create 3D model...');
                     
-                    // Extract just the color for a simpler model
-                    const colorAttr = metadata.attributes.find(attr => attr.trait_type === 'Color');
-                    const color = colorAttr?.value || '#5d4fff';
+                    // Extract color from original parameters in correct priority
+                    const color = originalMaterialParams.gradientColors 
+                        ? originalMaterialParams.gradientColors[0] 
+                        : originalMaterialParams.color || '#5d4fff';
                     
-                    // Create a simplified model with just color
-                    const glbFile = await convertGLBToFile([color], metadata.name);
+                    // Create a simplified model but still keep all possible original properties
+                    const simplifiedParams = {
+                        color: color,
+                        // Preserve key visual properties
+                        texturePattern: originalMaterialParams.texturePattern,
+                        animationType: originalMaterialParams.animationType,
+                        customEffects: originalMaterialParams.customEffects,
+                        emissive: originalMaterialParams.emissive,
+                        emissiveIntensity: originalMaterialParams.emissiveIntensity,
+                        transparent: originalMaterialParams.transparent,
+                        opacity: originalMaterialParams.opacity,
+                        metalness: originalMaterialParams.metalness,
+                        roughness: originalMaterialParams.roughness,
+                        // Store the full original params for reference
+                        originalParameters: originalMaterialParams
+                    };
                     
-                    // Upload the simplified model
+                    const glbFile = await convertGLBToFile([color], metadata.name, simplifiedParams);
+                    
+                    // Upload the simplified model with COMPLETE original parameters
                     model3dIpfsHash = await uploadToPinata(glbFile, {
                         name: metadata.name + " 3D Model (Fallback)",
                         description: "Fallback 3D Model for " + metadata.name,
-                        type: 'model/gltf-binary'
+                        type: 'model/gltf-binary',
+                        materialParams: JSON.stringify(originalMaterialParams),
+                        // Store the complete original parameters here too
+                        originalParameters: JSON.stringify(originalMaterialParams)
                     });
                     
                     // Create URLs for the 3D model
@@ -178,16 +214,16 @@ export async function mockMintNFT(metadata: MockNFTMetadata, materialParams?: an
             }
         }
 
-        // Create mock NFT with random ID and normalization
+        // Create mock NFT with random ID
         const randomId = Math.floor(Math.random() * 900000 + 100000).toString();
         const nftId = isMusic
             ? `void-music-${randomId}`
             : `void-cube-${randomId}`;
 
-        // Create a signature for tracking on Solscan
+        // Create a signature for tracking
         const txSignature = `mockTx${Date.now()}${Math.random().toString(36).substring(2, 15)}`;
 
-        // Prepare common NFT properties
+        // CRITICAL FIX: Ensure baseNftProps contains the EXACT material parameters
         const baseNftProps = {
             id: nftId,
             name: metadata.name,
@@ -215,8 +251,8 @@ export async function mockMintNFT(metadata: MockNFTMetadata, materialParams?: an
                     name: collectionName,
                     family: isMusic ? "VOID Music" : "VOID Cube"
                 },
-                // Store full material parameters for perfect reproduction
-                materialParams: materialParams
+                // CRITICAL FIX: Store EXACT material parameters
+                materialParams: originalMaterialParams
             },
             attributes: metadata.attributes,
             mintedAt: new Date().toISOString(),
@@ -247,19 +283,24 @@ export async function mockMintNFT(metadata: MockNFTMetadata, materialParams?: an
                 type: "music"
             };
         } else {
-            // Cube NFT with full 3D model and material parameters
+            // CRITICAL FIX: Cube NFT with complete 3D model and EXACT material parameters
             nftData = {
                 ...baseNftProps,
+                // Store EXACT material parameters at multiple levels for maximum redundancy
+                materialParams: originalMaterialParams,
+                originalMaterialParams: originalMaterialParams,
+                // All 3D model URLs
                 model3d: directModelUrl,
                 modelIpfsUri,
                 modelViewerUrl,
                 model3dHash: model3dIpfsHash,
                 fallbackModel3d,
                 model3dType: 'model/gltf-binary',
-                materialParams: materialParams, // Store full material parameters at top level
-                colors: metadata.attributes.find(attr => attr.trait_type === 'Color')?.value 
-                    ? [metadata.attributes.find(attr => attr.trait_type === 'Color')?.value] 
-                    : materialParams?.gradientColors || [materialParams?.color || '#5d4fff'], // Store colors directly
+                // Store colors directly in multiple ways for reliable access
+                colors: originalMaterialParams.gradientColors || 
+                  (originalMaterialParams.color ? [originalMaterialParams.color] : 
+                   [metadata.attributes.find(attr => attr.trait_type === 'Color')?.value || '#5d4fff']),
+                // Properties for visualization and rendering
                 properties: {
                   ...baseNftProps.properties,
                   files: [
@@ -271,46 +312,130 @@ export async function mockMintNFT(metadata: MockNFTMetadata, materialParams?: an
                       cdn: directModelUrl
                     }] : [])
                   ],
-                  model: modelIpfsUri, // Standard property for model
+                  model: modelIpfsUri,
                   animation_url: modelIpfsUri, // For compatibility with marketplaces
                   model_viewer_url: modelViewerUrl,
                   model_type: "glb",
-                  materialParams: materialParams, // Store in properties as well
-                  colors: metadata.attributes.find(attr => attr.trait_type === 'Color')?.value 
-                    ? [metadata.attributes.find(attr => attr.trait_type === 'Color')?.value] 
-                    : materialParams?.gradientColors || [materialParams?.color || '#5d4fff']  // Store colors in properties too
+                  // Store EXACT material parameters again
+                  materialParams: originalMaterialParams,
+                  // Special property to track that this is the exactly preserved version
+                  exactPreservation: true,
+                  // Store colors again for redundancy
+                  colors: originalMaterialParams.gradientColors || 
+                    (originalMaterialParams.color ? [originalMaterialParams.color] : 
+                     [metadata.attributes.find(attr => attr.trait_type === 'Color')?.value || '#5d4fff'])
                 },
                 type: "cube",
                 shapeType: "complex",
-                color: (metadata.attributes.find(attr => attr.trait_type === 'Color')?.value || materialParams?.color || "#5d4fff")
+                color: originalMaterialParams.color || 
+                  (originalMaterialParams.gradientColors ? originalMaterialParams.gradientColors[0] : 
+                   metadata.attributes.find(attr => attr.trait_type === 'Color')?.value || "#5d4fff")
             };
             
-            // Add texture and animation info if available
-            const textureAttr = metadata.attributes.find(attr => attr.trait_type === 'Texture');
-            if (textureAttr?.value) {
-                nftData.texture = textureAttr.value;
-                nftData.properties.texture = textureAttr.value;
-            } else if (materialParams?.texturePattern) {
-                nftData.texture = materialParams.texturePattern;
-                nftData.properties.texture = materialParams.texturePattern;
+            // CRITICAL FIX: Extract and add texture pattern if available - with multiple redundancy
+            if (originalMaterialParams.texturePattern) {
+                nftData.texture = originalMaterialParams.texturePattern;
+                nftData.properties.texture = originalMaterialParams.texturePattern;
+                nftData.texturePattern = originalMaterialParams.texturePattern;
+            } else {
+                const textureAttr = metadata.attributes.find(attr => attr.trait_type === 'Texture');
+                if (textureAttr?.value) {
+                    nftData.texture = textureAttr.value;
+                    nftData.properties.texture = textureAttr.value;
+                    nftData.texturePattern = textureAttr.value;
+                }
             }
             
-            const animationAttr = metadata.attributes.find(attr => attr.trait_type === 'Animation');
-            if (animationAttr?.value) {
-                nftData.animation = animationAttr.value;
-                nftData.properties.animation = animationAttr.value;
-            } else if (materialParams?.animationType) {
-                nftData.animation = materialParams.animationType;
-                nftData.properties.animation = materialParams.animationType;
+            // CRITICAL FIX: Extract and add animation type with multiple redundancy
+            if (originalMaterialParams.animationType) {
+                nftData.animation = originalMaterialParams.animationType;
+                nftData.properties.animation = originalMaterialParams.animationType;
+                nftData.animationType = originalMaterialParams.animationType;
+            } else {
+                const animationAttr = metadata.attributes.find(attr => attr.trait_type === 'Animation');
+                if (animationAttr?.value) {
+                    nftData.animation = animationAttr.value;
+                    nftData.properties.animation = animationAttr.value;
+                    nftData.animationType = animationAttr.value;
+                }
+            }
+            
+            // CRITICAL FIX: Add custom effects if available - with multiple redundancy
+            if (originalMaterialParams.customEffects) {
+                nftData.effects = originalMaterialParams.customEffects;
+                nftData.properties.effects = originalMaterialParams.customEffects;
+                nftData.customEffects = originalMaterialParams.customEffects;
+            }
+            
+            // CRITICAL FIX: Store any texture maps that might exist
+            if (originalMaterialParams.map) {
+                nftData.mapTexture = originalMaterialParams.map;
+                nftData.properties.mapTexture = originalMaterialParams.map;
+            }
+            
+            if (originalMaterialParams.proceduralTexture) {
+                nftData.proceduralTexture = originalMaterialParams.proceduralTexture;
+                nftData.properties.proceduralTexture = originalMaterialParams.proceduralTexture;
+            }
+            
+            // CRITICAL FIX: Store emissive properties
+            if (originalMaterialParams.emissive || originalMaterialParams.emissiveIntensity) {
+                nftData.emissive = originalMaterialParams.emissive;
+                nftData.emissiveIntensity = originalMaterialParams.emissiveIntensity;
+                nftData.properties.emissive = originalMaterialParams.emissive;
+                nftData.properties.emissiveIntensity = originalMaterialParams.emissiveIntensity;
+            }
+            
+            // CRITICAL FIX: Store border properties
+            if (originalMaterialParams.showBorder || originalMaterialParams.borderColor || originalMaterialParams.borderWidth) {
+                nftData.showBorder = originalMaterialParams.showBorder;
+                nftData.borderColor = originalMaterialParams.borderColor;
+                nftData.borderWidth = originalMaterialParams.borderWidth;
+                nftData.properties.showBorder = originalMaterialParams.showBorder;
+                nftData.properties.borderColor = originalMaterialParams.borderColor;
+                nftData.properties.borderWidth = originalMaterialParams.borderWidth;
             }
         }
 
+        // CRITICAL FIX: Final verification check
+        if (!isMusic) {
+            // Verify we preserved the original colors correctly
+            const originalColors = originalMaterialParams.gradientColors || 
+                (originalMaterialParams.color ? [originalMaterialParams.color] : null);
+            
+            const nftColors = nftData.colors;
+            
+            if (originalColors && JSON.stringify(originalColors) !== JSON.stringify(nftColors)) {
+                console.warn("Color mismatch in preserved data! Fixing...");
+                console.warn("Original:", originalColors);
+                console.warn("Preserved:", nftColors);
+                
+                // Fix the mismatch
+                nftData.colors = originalColors;
+                nftData.properties.colors = originalColors;
+                
+                // Also update color if it's a single color
+                if (originalMaterialParams.color) {
+                    nftData.color = originalMaterialParams.color;
+                }
+            }
+            
+            // Verify we preserved texture pattern correctly
+            if (originalMaterialParams.texturePattern && 
+                nftData.texture !== originalMaterialParams.texturePattern) {
+                console.warn("Texture pattern mismatch! Fixing...");
+                nftData.texture = originalMaterialParams.texturePattern;
+                nftData.properties.texture = originalMaterialParams.texturePattern;
+                nftData.texturePattern = originalMaterialParams.texturePattern;
+            }
+        }
+        
         // Save to localStorage
         const userNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
         userNfts.push(nftData);
 
         localStorage.setItem('userNfts', JSON.stringify(userNfts));
-        console.log('Saved new NFT to localStorage', nftId);
+        console.log('Saved new NFT to localStorage with 100% identical material parameters', nftId);
 
         // Update URLs to ensure all URLs work
         refreshNFTImageURLS();
@@ -321,6 +446,7 @@ export async function mockMintNFT(metadata: MockNFTMetadata, materialParams?: an
         throw error;
     }
 }
+
 
 // Get list of minted NFTs
 export function getUserNFTs() {
@@ -841,57 +967,101 @@ export async function mintRealNFT(
         name: string,
         description: string,
         attributes: Array<{ trait_type: string, value: string }>,
-        colors: string[]
+        colors: string[],
+        materialParams?: any  // Accept material parameters directly
     },
     imageFile: File
 ): Promise<string> {
     try {
-        console.log('Starting real NFT minting process...');
+        console.log('Starting real NFT minting process with complete material parameters...');
+        console.log('Material params provided:', JSON.stringify(cubeData.materialParams, null, 2));
 
-        // Create 3D model GLB file
-        console.log('Creating GLB file from cube data...');
+        // Make a deep clone of materialParams to prevent modifications
+        const originalMaterialParams = cubeData.materialParams
+            ? JSON.parse(JSON.stringify(cubeData.materialParams))
+            : {};
+
+        // Create 3D model GLB file with complete parameters
+        console.log('Creating GLB file from cube data with EXACT material parameters...');
         
-        // Extract materialParams from attributes if available
-        let materialParams: any = {};
-        const textureAttr = cubeData.attributes.find(attr => attr.trait_type === 'Texture');
-        const animationAttr = cubeData.attributes.find(attr => attr.trait_type === 'Animation');
+        // Determine material parameters to use, prioritizing directly provided params
+        let materialParams: any = originalMaterialParams;
         
-        if (textureAttr && textureAttr.value) {
-            materialParams.texturePattern = textureAttr.value;
-        }
-        
-        if (animationAttr && animationAttr.value) {
-            materialParams.animationType = animationAttr.value;
+        // If no material params were provided directly, try to extract from attributes
+        if (Object.keys(materialParams).length === 0) {
+            console.log('No material parameters provided directly, extracting from attributes...');
+            
+            // Extract texture and animation from attributes if available
+            const textureAttr = cubeData.attributes.find(attr => attr.trait_type === 'Texture');
+            const animationAttr = cubeData.attributes.find(attr => attr.trait_type === 'Animation');
+            const effectsAttr = cubeData.attributes.find(attr => attr.trait_type === 'Effects');
+            
+            materialParams = {};
+            
+            if (textureAttr && textureAttr.value && textureAttr.value !== 'None') {
+                materialParams.texturePattern = textureAttr.value.toLowerCase();
+                console.log('Extracted texture pattern from attributes:', materialParams.texturePattern);
+            }
+            
+            if (animationAttr && animationAttr.value && animationAttr.value !== 'None') {
+                materialParams.animationType = animationAttr.value.toLowerCase();
+                console.log('Extracted animation type from attributes:', materialParams.animationType);
+            }
+            
+            // Extract effects if available
+            if (effectsAttr && effectsAttr.value) {
+                const effects = effectsAttr.value.toLowerCase().split(',').map(e => e.trim());
+                
+                // Check for specific effects
+                if (effects.includes('hologram')) {
+                    materialParams.customEffects = ['hologram'];
+                }
+                
+                if (effects.includes('glowing')) {
+                    materialParams.emissiveIntensity = 1.5;
+                    // Set emissive color to match main color
+                    const colorAttr = cubeData.attributes.find(attr => attr.trait_type === 'Color');
+                    materialParams.emissive = colorAttr?.value || cubeData.colors[0] || '#ffffff';
+                }
+                
+                console.log('Extracted effects from attributes:', effects);
+            }
         }
         
         // Set some reasonable defaults based on texture type
         if (materialParams.texturePattern === 'plasma') {
-            materialParams.emissiveIntensity = 1.5;
-            materialParams.metalness = 0.7;
-            materialParams.roughness = 0.4;
+            materialParams.emissiveIntensity = materialParams.emissiveIntensity || 1.5;
+            materialParams.metalness = materialParams.metalness || 0.7;
+            materialParams.roughness = materialParams.roughness || 0.4;
         } else if (materialParams.texturePattern === 'nebula') {
-            materialParams.emissiveIntensity = 0.8;
-            materialParams.metalness = 0.6;
-            materialParams.roughness = 0.5;
-        } else if (materialParams.texturePattern === 'hologram') {
-            materialParams.customEffects = ['hologram'];
-            materialParams.opacity = 0.8;
-            materialParams.transparent = true;
+            materialParams.emissiveIntensity = materialParams.emissiveIntensity || 0.8;
+            materialParams.metalness = materialParams.metalness || 0.6;
+            materialParams.roughness = materialParams.roughness || 0.5;
+        } else if (materialParams.texturePattern === 'hologram' || 
+                materialParams.customEffects?.includes('hologram')) {
+            materialParams.customEffects = materialParams.customEffects || ['hologram'];
+            materialParams.opacity = materialParams.opacity || 0.8;
+            materialParams.transparent = materialParams.transparent || true;
         }
         
-        // Create material parameters for proper 3D model generation
+        console.log('Final material parameters for GLB creation:', 
+                 JSON.stringify(materialParams, null, 2));
+        
+        // Create GLB file with EXACT parameters
         const glbFile = await convertGLBToFile(cubeData.colors, cubeData.name, materialParams);
         console.log('GLB file created:', glbFile.name, 'type:', glbFile.type, 'size:', glbFile.size, 'bytes');
 
         // Ensure correct MIME type for GLB file
         const modelMimeType = 'model/gltf-binary';
 
-        // Upload image to IPFS first
-        console.log('Uploading image to IPFS...');
+        // Upload image to IPFS with embedded material parameters
+        console.log('Uploading image to IPFS with embedded material parameters...');
         const imageIpfsHash = await uploadToPinata(imageFile, {
             name: cubeData.name + " Image",
             description: "Image for " + cubeData.name,
-            type: imageFile.type || 'image/png'
+            type: imageFile.type || 'image/png',
+            // Embed material parameters with the image
+            materialParams: JSON.stringify(materialParams)
         });
         const imageUri = `ipfs://${imageIpfsHash}`;
         const imageUrl = getIpfsUrl(imageIpfsHash);
@@ -901,19 +1071,29 @@ export async function mintRealNFT(
             `https://ipfs.filebase.io/ipfs/${imageIpfsHash}`
         ];
 
-        // Upload 3D model to IPFS with correct content type
-        console.log('Uploading 3D model to IPFS...');
+        // Upload 3D model to IPFS with ALL material parameters
+        console.log('Uploading 3D model to IPFS with complete material parameters...');
         const model3dIpfsHash = await uploadToPinata(glbFile, {
             name: cubeData.name + " 3D Model",
             description: "3D Model for " + cubeData.name,
             type: modelMimeType,
-            materialParams: JSON.stringify(materialParams)  // Include material params in metadata
+            // Include material parameters in multiple formats for maximum redundancy
+            materialParams: JSON.stringify(materialParams),
+            originalMaterialParams: JSON.stringify(materialParams), 
+            materialParamsRaw: materialParams,
+            // Add key properties directly for easier access
+            colors: JSON.stringify(cubeData.colors),
+            texturePattern: materialParams.texturePattern,
+            animationType: materialParams.animationType,
+            customEffects: materialParams.customEffects 
+              ? JSON.stringify(materialParams.customEffects) 
+              : undefined
         });
 
         // Create standard IPFS URI
         const modelIpfsUri = `ipfs://${model3dIpfsHash}`;
 
-        // Create URLs for viewers
+        // Create URLs for viewers with multiple gateways for reliability
         const directModelUrl = getDirectModelUrl(model3dIpfsHash);
         const modelViewerUrl = getModelViewerUrl(model3dIpfsHash);
 
@@ -928,24 +1108,33 @@ export async function mintRealNFT(
         if (!hasCollection) {
             cubeData.attributes.push({
                 trait_type: 'Collection',
-                value: VOID_CUBE_COLLECTION
+                value: "VOID Cube Collection"
             });
         }
 
-        // Prepare complete metadata with all necessary fields for proper 3D model rendering
+        // Prepare complete metadata with ALL material parameters in multiple locations
         const nftMetadata: any = {
             name: cubeData.name,
             symbol: "VOID",
             description: cubeData.description,
             image: imageUri,
-            model: modelIpfsUri, // Add model field - important for 3D NFTs
+            // Store model for 3D rendering
+            model: modelIpfsUri,
             animation_url: modelIpfsUri, // Many marketplaces use this field for 3D models
             external_url: modelViewerUrl, // URL to view model externally
+            // Store material parameters at top level
+            materialParams: materialParams,
+            // Store colors at top level
+            colors: cubeData.colors,
+            // Store texture and animation at top level
+            texturePattern: materialParams.texturePattern,
+            animationType: materialParams.animationType,
             attributes: cubeData.attributes,
             collection: {
-                name: VOID_CUBE_COLLECTION,
+                name: "VOID Cube Collection",
                 family: "VOID Cube"
             },
+            // Store all properties in properties object
             properties: {
                 files: [
                     {
@@ -963,25 +1152,141 @@ export async function mintRealNFT(
                 model_type: "glb",
                 model_viewer_url: modelViewerUrl,
                 model: modelIpfsUri,
+                // Store complete material parameters in properties
+                materialParams: materialParams,
+                // Store colors in properties
+                colors: cubeData.colors,
+                // Store key visual properties in properties
+                texture: materialParams.texturePattern,
+                animation: materialParams.animationType,
+                customEffects: materialParams.customEffects,
+                // Add collection information
                 collection: {
-                    name: VOID_CUBE_COLLECTION,
+                    name: "VOID Cube Collection",
                     family: "VOID Cube"
-                },
-                // Include material parameters for perfect reproduction
-                materialParams: materialParams
+                }
             }
         };
 
+        // Add special properties for specific types of materials
+        // For emissive materials
+        if (materialParams.emissiveIntensity && materialParams.emissiveIntensity > 0) {
+            nftMetadata.emissive = materialParams.emissive || cubeData.colors[0];
+            nftMetadata.emissiveIntensity = materialParams.emissiveIntensity;
+            nftMetadata.properties.emissive = materialParams.emissive || cubeData.colors[0];
+            nftMetadata.properties.emissiveIntensity = materialParams.emissiveIntensity;
+        }
+
+        // For materials with border
+        if (materialParams.showBorder) {
+            nftMetadata.showBorder = materialParams.showBorder;
+            nftMetadata.borderColor = materialParams.borderColor;
+            nftMetadata.borderWidth = materialParams.borderWidth;
+            nftMetadata.properties.showBorder = materialParams.showBorder;
+            nftMetadata.properties.borderColor = materialParams.borderColor;
+            nftMetadata.properties.borderWidth = materialParams.borderWidth;
+        }
+
+        // For materials with transparency
+        if (materialParams.transparent) {
+            nftMetadata.transparent = materialParams.transparent;
+            nftMetadata.opacity = materialParams.opacity;
+            nftMetadata.properties.transparent = materialParams.transparent;
+            nftMetadata.properties.opacity = materialParams.opacity;
+        }
+
+        // For materials with special reflective properties
+        if (materialParams.metalness !== undefined) {
+            nftMetadata.metalness = materialParams.metalness;
+            nftMetadata.properties.metalness = materialParams.metalness;
+        }
+        
+        if (materialParams.roughness !== undefined) {
+            nftMetadata.roughness = materialParams.roughness;
+            nftMetadata.properties.roughness = materialParams.roughness;
+        }
+
+        // For materials with iridescence
+        if (materialParams.iridescence) {
+            nftMetadata.iridescence = materialParams.iridescence;
+            nftMetadata.iridescenceIOR = materialParams.iridescenceIOR;
+            nftMetadata.properties.iridescence = materialParams.iridescence;
+            nftMetadata.properties.iridescenceIOR = materialParams.iridescenceIOR;
+        }
+
+        // For materials with clearcoat
+        if (materialParams.clearcoat) {
+            nftMetadata.clearcoat = materialParams.clearcoat;
+            nftMetadata.clearcoatRoughness = materialParams.clearcoatRoughness;
+            nftMetadata.properties.clearcoat = materialParams.clearcoat;
+            nftMetadata.properties.clearcoatRoughness = materialParams.clearcoatRoughness;
+        }
+
+        // For materials with sheen
+        if (materialParams.sheen) {
+            nftMetadata.sheen = materialParams.sheen;
+            nftMetadata.sheenColor = materialParams.sheenColor;
+            nftMetadata.properties.sheen = materialParams.sheen;
+            nftMetadata.properties.sheenColor = materialParams.sheenColor;
+        }
+
+        // For materials with anisotropy
+        if (materialParams.anisotropy) {
+            nftMetadata.anisotropy = materialParams.anisotropy;
+            nftMetadata.properties.anisotropy = materialParams.anisotropy;
+        }
+
+        // For materials with transmission (glass-like)
+        if (materialParams.transmission) {
+            nftMetadata.transmission = materialParams.transmission;
+            nftMetadata.ior = materialParams.ior;
+            nftMetadata.properties.transmission = materialParams.transmission;
+            nftMetadata.properties.ior = materialParams.ior;
+        }
+
+        // For materials with texture maps
+        if (materialParams.map) {
+            nftMetadata.mapTexture = materialParams.map;
+            nftMetadata.properties.mapTexture = materialParams.map;
+        }
+        
+        if (materialParams.proceduralTexture) {
+            nftMetadata.proceduralTexture = materialParams.proceduralTexture;
+            nftMetadata.properties.proceduralTexture = materialParams.proceduralTexture;
+        }
+
         // Log detailed information for debugging
-        console.log('NFT Metadata prepared:', {
+        console.log('NFT Metadata prepared with complete material parameters:', {
             name: nftMetadata.name,
             imageUri,
             modelUri: modelIpfsUri,
-            hasModel3D: !!model3dIpfsHash
+            hasModel3D: !!model3dIpfsHash,
+            hasMaterialParams: !!nftMetadata.materialParams,
+            materialParamsKeys: Object.keys(materialParams)
         });
 
-        // Mint real NFT
-        console.log('Minting NFT with prepared metadata...');
+        // Create a metadata JSON file with all properties
+        const metadataJson = JSON.stringify(nftMetadata, null, 2);
+        const metadataBlob = new Blob([metadataJson], { type: 'application/json' });
+        const metadataFile = new File([metadataBlob], `${cubeData.name.replace(/\s+/g, '-')}-metadata.json`, {
+            type: 'application/json'
+        });
+
+        // Upload complete metadata to IPFS
+        console.log('Uploading complete metadata JSON to IPFS...');
+        const metadataIpfsHash = await uploadToPinata(metadataFile, {
+            name: `${cubeData.name}-metadata`,
+            description: `Metadata for ${cubeData.name}`,
+            type: 'application/json',
+            // Also include material parameters here for redundancy
+            materialParams: JSON.stringify(materialParams)
+        });
+        
+        const metadataUri = `ipfs://${metadataIpfsHash}`;
+        console.log('Metadata uploaded to IPFS:', metadataUri);
+
+        // Mint real NFT with complete metadata
+        console.log('Minting NFT with complete material parameters...');
 
         // Convert metadata to format for NFT service
         const solanaMetadata = {
@@ -989,14 +1294,16 @@ export async function mintRealNFT(
             symbol: nftMetadata.symbol,
             description: nftMetadata.description,
             image: imageFile, // Pass original file rather than URI
-            model: glbFile, // Pass original GLB file
+            model: glbFile, // Pass original GLB file with ALL properties
             attributes: nftMetadata.attributes,
-            properties: nftMetadata.properties
+            properties: nftMetadata.properties,
+            // Add URI to the complete metadata
+            uri: metadataUri
         };
 
-        // Call actual NFT minting function
+        // Call actual NFT minting function with complete metadata
         const mintedNftAddress = await mintNFT(connection, wallet, solanaMetadata);
-        console.log('Successfully minted NFT, address:', mintedNftAddress);
+        console.log('Successfully minted NFT with address:', mintedNftAddress);
 
         // Get latest transaction information
         let txSignature;
@@ -1017,7 +1324,7 @@ export async function mintRealNFT(
             console.log('Using mock transaction signature after error:', txSignature);
         }
 
-        // Save information to localStorage for immediate UI display
+        // Save complete information to localStorage for immediate UI display
         const nftData = {
             id: mintedNftAddress,
             name: cubeData.name,
@@ -1043,27 +1350,114 @@ export async function mintRealNFT(
             price: 1.0 + Math.random() * 2,
             owner: wallet.publicKey.toString(),
             collection: {
-                name: VOID_CUBE_COLLECTION,
+                name: "VOID Cube Collection",
                 family: "VOID Cube"
             },
             symbol: "VOID",
-            // Add material parameters at root level
+            // Store ALL material parameters at multiple levels
             materialParams: materialParams,
-            // Add color data at root level
+            originalMaterialParams: materialParams,
+            // Store colors, texture and animation at root level
             colors: cubeData.colors,
-            // Add texture and animation at root level
             texture: materialParams.texturePattern,
-            animation: materialParams.animationType
+            animation: materialParams.animationType,
+            // Store special effects
+            customEffects: materialParams.customEffects,
+            // Store emissive properties
+            emissive: materialParams.emissive,
+            emissiveIntensity: materialParams.emissiveIntensity,
+            // Store border properties
+            showBorder: materialParams.showBorder,
+            borderColor: materialParams.borderColor,
+            borderWidth: materialParams.borderWidth,
+            // Store material properties
+            metalness: materialParams.metalness,
+            roughness: materialParams.roughness,
+            transparent: materialParams.transparent,
+            opacity: materialParams.opacity,
+            // Store advanced properties
+            clearcoat: materialParams.clearcoat,
+            clearcoatRoughness: materialParams.clearcoatRoughness,
+            iridescence: materialParams.iridescence,
+            transmission: materialParams.transmission,
+            sheen: materialParams.sheen,
+            // Store URI to complete metadata
+            metadataUri: metadataUri,
+            metadataIpfsHash: metadataIpfsHash
         };
 
-        // Save to localStorage
-        const userNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
-        userNfts.push(nftData);
-        localStorage.setItem('userNfts', JSON.stringify(userNfts));
+        // Save to localStorage with verification
+        try {
+            const userNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
+            userNfts.push(nftData);
+            localStorage.setItem('userNfts', JSON.stringify(userNfts));
+            console.log('Saved complete NFT data to localStorage');
+            
+            // Verify that material parameters were preserved
+            const storedNfts = JSON.parse(localStorage.getItem('userNfts') || '[]');
+            const savedNft = storedNfts.find((nft: any) => nft.id === mintedNftAddress);
+            
+            if (savedNft && savedNft.materialParams) {
+                console.log('Material parameters successfully preserved in localStorage');
+                
+                // Verify key properties match
+                const keyProps = ['texturePattern', 'animationType', 'customEffects', 'emissiveIntensity'];
+                const mismatches = keyProps.filter(prop => 
+                    materialParams[prop] !== undefined && 
+                    JSON.stringify(savedNft.materialParams[prop]) !== JSON.stringify(materialParams[prop])
+                );
+                
+                if (mismatches.length > 0) {
+                    console.warn('Found property mismatches in saved NFT:', mismatches);
+                    
+                    // Fix the mismatches
+                    const fixedNfts = storedNfts.map((nft: any) => {
+                        if (nft.id === mintedNftAddress) {
+                            return {
+                                ...nft,
+                                materialParams: materialParams,
+                                originalMaterialParams: materialParams
+                            };
+                        }
+                        return nft;
+                    });
+                    
+                    localStorage.setItem('userNfts', JSON.stringify(fixedNfts));
+                    console.log('Fixed property mismatches in localStorage');
+                }
+            } else {
+                console.warn('Material parameters may not have been properly saved to localStorage');
+                
+                // Try to fix by re-saving
+                const fixedNfts = storedNfts.filter((nft: any) => nft.id !== mintedNftAddress);
+                fixedNfts.push({
+                    ...nftData,
+                    materialParams: materialParams,
+                    originalMaterialParams: materialParams
+                });
+                
+                localStorage.setItem('userNfts', JSON.stringify(fixedNfts));
+                console.log('Attempted to fix missing material parameters in localStorage');
+            }
+        } catch (storageError) {
+            console.error('Error working with localStorage:', storageError);
+        }
 
+        // Return the minted NFT address
         return mintedNftAddress;
     } catch (error) {
         console.error('Error minting real NFT:', error);
-        throw error;
+        
+        // Try to provide helpful error message
+        let errorMessage = 'Unknown error during NFT minting';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        } else if (error && typeof error === 'object') {
+            errorMessage = JSON.stringify(error);
+        }
+        
+        throw new Error(`NFT minting failed: ${errorMessage}`);
     }
 }
