@@ -68,6 +68,7 @@ export default function Navigation() {
     { name: "ART", path: "/art" },
     { name: "AI", path: "/ai" },
     { name: "MARKET", path: "/market" },
+    { name: "RUBIKS", path: "/rubiks" },
   ]
 
   const handleWalletClick = () => {

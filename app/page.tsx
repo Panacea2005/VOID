@@ -517,71 +517,117 @@ const FloatingParticles = () => {
   );
 };
 
-// Enhanced Scrolling Text Section for "NEXT EVOLUTION"
 const ScrollingTextSection = () => {
   const { scrollYProgress } = useScroll();
-
-  // Scroll-based animations for the text lines with more extreme movement
-  const textLine1X = useTransform(scrollYProgress, [0.05, 0.2], [0, -500]);
-  const textLine2X = useTransform(scrollYProgress, [0.05, 0.2], [0, 500]);
-  const textLine3X = useTransform(scrollYProgress, [0.05, 0.2], [0, -700]);
-  const textLine4X = useTransform(scrollYProgress, [0.05, 0.2], [0, 600]);
-  const textLine5X = useTransform(scrollYProgress, [0.05, 0.2], [0, -550]);
-
-  // Smoother movement with spring physics
-  const smoothLine1X = useSpring(textLine1X, { stiffness: 100, damping: 30 });
-  const smoothLine2X = useSpring(textLine2X, { stiffness: 100, damping: 30 });
-  const smoothLine3X = useSpring(textLine3X, { stiffness: 100, damping: 30 });
-  const smoothLine4X = useSpring(textLine4X, { stiffness: 100, damping: 30 });
-  const smoothLine5X = useSpring(textLine5X, { stiffness: 100, damping: 30 });
-
-  // Animation for content reveal
+  const [hoverText, setHoverText] = useState<number | null>(null);
+  const sectionRef = useRef(null);
+  
+  // More extreme scroll-based animations with varied ranges for staggered effect
+  const textLine1X = useTransform(scrollYProgress, [0.05, 0.25], [0, -800]);
+  const textLine2X = useTransform(scrollYProgress, [0.08, 0.28], [0, 700]);
+  const textLine3X = useTransform(scrollYProgress, [0.12, 0.32], [0, -900]);
+  const textLine4X = useTransform(scrollYProgress, [0.15, 0.35], [0, 800]);
+  const textLine5X = useTransform(scrollYProgress, [0.18, 0.38], [0, -750]);
+  
+  // Background parallax effects
+  const bgParallax1 = useTransform(scrollYProgress, [0, 1], [0, -100]);
+  const bgParallax2 = useTransform(scrollYProgress, [0, 1], [0, -200]);
+  
+  // Rotation and scale effects for enhanced dynamism
+  const rotation1 = useTransform(scrollYProgress, [0.05, 0.25], [0, -2]);
+  const rotation2 = useTransform(scrollYProgress, [0.08, 0.28], [0, 1.5]);
+  const rotation3 = useTransform(scrollYProgress, [0.12, 0.32], [0, -1.8]);
+  const scale1 = useTransform(scrollYProgress, [0.1, 0.3], [1, 1.05]);
+  
+  // Smoother movement with spring physics - varied settings for more organic feeling
+  const smoothLine1X = useSpring(textLine1X, { stiffness: 90, damping: 20 });
+  const smoothLine2X = useSpring(textLine2X, { stiffness: 80, damping: 25 });
+  const smoothLine3X = useSpring(textLine3X, { stiffness: 70, damping: 20 });
+  const smoothLine4X = useSpring(textLine4X, { stiffness: 75, damping: 15 });
+  const smoothLine5X = useSpring(textLine5X, { stiffness: 85, damping: 30 });
+  
+  const smoothRotation1 = useSpring(rotation1, { stiffness: 60, damping: 15 });
+  const smoothRotation2 = useSpring(rotation2, { stiffness: 60, damping: 15 });
+  const smoothRotation3 = useSpring(rotation3, { stiffness: 60, damping: 15 });
+  const smoothScale1 = useSpring(scale1, { stiffness: 70, damping: 20 });
+  
+  // Enhanced animation for content reveal with sequence
   const contentOpacity = useTransform(scrollYProgress, [0.05, 0.15], [0, 1]);
   const contentY = useTransform(scrollYProgress, [0.05, 0.15], [100, 0]);
-
+  
+  // Glitch effect state for random text distortion
+  const [glitchIndices, setGlitchIndices] = useState<number[]>([]);
+  
+  // Letters for glitch effect
+  const glitchLetters = "01XYZABC#$@%&!?*";
+  
+  useEffect(() => {
+    const glitchInterval = setInterval(() => {
+      // Random number of characters to glitch (1-5)
+      const numGlitches = Math.floor(Math.random() * 5) + 1;
+      
+      // Create random indices
+      const newGlitchIndices = Array.from({ length: numGlitches }, () => 
+        Math.floor(Math.random() * 20)
+      );
+      
+      setGlitchIndices(newGlitchIndices);
+      
+      // Reset after a short time
+      setTimeout(() => {
+        setGlitchIndices([]);
+      }, 200);
+    }, 2000);
+    
+    return () => clearInterval(glitchInterval);
+  }, []);
+  
+  // Function to apply glitch effect to text
+  const applyGlitchEffect = (text: string, lineIndex: number) => {
+    if (glitchIndices.length === 0) return text;
+    
+    return text.split('').map((char, i) => {
+      // Check if this character should be glitched
+      if (glitchIndices.includes((i + lineIndex * 5) % 20) && char !== ' ') {
+        // Replace with a random glitch character
+        return glitchLetters[Math.floor(Math.random() * glitchLetters.length)];
+      }
+      return char;
+    }).join('');
+  };
+  
+  // Scrolling progress indicator
+  const progressBarWidth = useTransform(
+    scrollYProgress, 
+    [0.05, 0.4], 
+    ["0%", "100%"]
+  );
+  
+  // Text lines with more varied and intriguing content
+  const textLines = [
+    "NEW ERA OF GAMING. DIGITAL EVOLUTION. NEW AGE",
+    "BORDERLESS EXPERIENCE. BEYOND DIMENSIONS.",
+    "VOID UNIVERSE. INFINITE POSSIBILITIES. VOID",
+    "REALITY REDEFINED. PERCEPTION ALTERED. GAMING",
+    "BEYOND EXISTENCE. TRANSCEND REALITY. EVOLVE."
+  ];
+  
   return (
-    <section className="relative py-32 bg-black overflow-hidden">
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        {/* Text rows that move horizontally as user scrolls */}
-        <motion.div
-          className="whitespace-nowrap text-[150px] leading-none font-bold text-gray-900 opacity-80 py-4 font-pixel"
-          style={{ x: smoothLine1X }}
-        >
-          NEW AGE OF GAMING. NEW AGE OF GAMING. NEW AGE
-        </motion.div>
-
-        <motion.div
-          className="whitespace-nowrap text-[150px] leading-none font-bold text-gray-900 opacity-80 py-4 font-pixel"
-          style={{ x: smoothLine2X }}
-        >
-          BORDERLESS EXPERIENCE. BORDERLESS EXPERIENCE.
-        </motion.div>
-
-        <motion.div
-          className="whitespace-nowrap text-[150px] leading-none font-bold text-gray-900 opacity-80 py-4 font-pixel"
-          style={{ x: smoothLine3X }}
-        >
-          VOID UNIVERSE. VOID UNIVERSE. VOID UNIVERSE.
-        </motion.div>
-
-        <motion.div
-          className="whitespace-nowrap text-[150px] leading-none font-bold text-gray-900 opacity-80 py-4 font-pixel"
-          style={{ x: smoothLine4X }}
-        >
-          GAMING REDEFINED. GAMING REDEFINED. GAMING
-        </motion.div>
-
-        <motion.div
-          className="whitespace-nowrap text-[150px] leading-none font-bold text-gray-900 opacity-80 py-4 font-pixel"
-          style={{ x: smoothLine5X }}
-        >
-          BEYOND REALITY. BEYOND REALITY. BEYOND REALITY.
-        </motion.div>
-      </div>
-
-      {/* Enhanced visual elements */}
-      <div className="absolute inset-0 z-5">
-        {/* Animated grid overlay */}
+    <section 
+      ref={sectionRef}
+      className="relative py-32 bg-black overflow-hidden"
+    >
+      {/* Background gradients with parallax */}
+      <motion.div 
+        className="absolute inset-0 bg-gradient-to-b from-black to-purple-950/30 z-0 opacity-70"
+        style={{ y: bgParallax1 }}
+      />
+      
+      <motion.div 
+        className="absolute inset-0 z-0 overflow-hidden"
+        style={{ y: bgParallax2 }}
+      >
+        {/* Animated mesh grid background */}
         <div className="absolute inset-0 grid grid-cols-[repeat(40,1fr)] grid-rows-[repeat(40,1fr)] opacity-20">
           {Array.from({ length: 1600 }).map((_, i) => (
             <motion.div
@@ -604,26 +650,235 @@ const ScrollingTextSection = () => {
             />
           ))}
         </div>
-
-        {/* Animated particles */}
-        {Array.from({ length: 20 }).map((_, i) => (
+      </motion.div>
+      
+      {/* Enhanced vertical light beams */}
+      <div className="absolute inset-0 z-1 overflow-hidden">
+        {Array.from({ length: 5 }).map((_, i) => (
           <motion.div
-            key={`particle-${i}`}
-            className="absolute rounded-none bg-purple-500"
+            key={`beam-${i}`}
+            className="absolute top-0 bottom-0 w-px bg-gradient-to-b from-purple-500/0 via-purple-500/30 to-purple-500/0"
             style={{
-              width: `${4 + Math.random() * 8}px`,
-              height: `${4 + Math.random() * 8}px`,
+              left: `${15 + i * 18}%`,
+              opacity: 0.4 + (i % 3) * 0.2,
+            }}
+            animate={{
+              opacity: [0.2, 0.6, 0.2],
+              height: ["70%", "90%", "70%"],
+            }}
+            transition={{
+              duration: 8 + i * 2,
+              repeat: Infinity,
+              repeatType: "reverse",
+              ease: "easeInOut",
+              delay: i * 0.5,
+            }}
+          />
+        ))}
+      </div>
+      
+      {/* Digital scan line effect */}
+      <motion.div 
+        className="absolute inset-0 z-2 pointer-events-none overflow-hidden"
+        initial={{ opacity: 0.15 }}
+        animate={{ opacity: [0.15, 0.2, 0.15] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      >
+        {Array.from({ length: 50 }).map((_, i) => (
+          <motion.div 
+            key={`scanline-${i}`}
+            className="w-full h-px bg-gradient-to-r from-purple-500/0 via-purple-500/30 to-purple-500/0"
+            style={{ 
+              top: `${i * 2}%`,
+              position: 'absolute',
+              boxShadow: '0 0 2px rgba(168, 85, 247, 0.3)',
+              filter: 'blur(0.5px)'
+            }}
+          />
+        ))}
+      </motion.div>
+      
+      <div className="absolute inset-0 z-5 overflow-hidden">
+        {/* Text rows that move horizontally as user scrolls - enhanced with rotation and scale */}
+        <motion.div
+          className="whitespace-nowrap text-[160px] leading-none font-bold text-gray-900 opacity-70 py-4 font-pixel transform-gpu"
+          style={{ 
+            x: smoothLine1X, 
+            rotate: smoothRotation1,
+            scale: smoothScale1,
+            transformOrigin: "left center"
+          }}
+          onMouseEnter={() => setHoverText(0)}
+          onMouseLeave={() => setHoverText(null)}
+        >
+          <motion.span
+            animate={hoverText === 0 ? {
+              color: ["#111111", "#332244", "#111111"],
+            } : {}}
+            transition={{ duration: 1.5 }}
+          >
+            {applyGlitchEffect(textLines[0], 0)}
+          </motion.span>
+        </motion.div>
+
+        <motion.div
+          className="whitespace-nowrap text-[160px] leading-none font-bold text-gray-900 opacity-70 py-4 font-pixel transform-gpu"
+          style={{ 
+            x: smoothLine2X, 
+            rotate: smoothRotation2,
+            transformOrigin: "right center" 
+          }}
+          onMouseEnter={() => setHoverText(1)}
+          onMouseLeave={() => setHoverText(null)}
+        >
+          <motion.span
+            animate={hoverText === 1 ? {
+              color: ["#111111", "#442266", "#111111"],
+            } : {}}
+            transition={{ duration: 1.5 }}
+          >
+            {applyGlitchEffect(textLines[1], 1)}
+          </motion.span>
+        </motion.div>
+
+        <motion.div
+          className="whitespace-nowrap text-[160px] leading-none font-bold text-gray-900 opacity-70 py-4 font-pixel transform-gpu"
+          style={{ 
+            x: smoothLine3X, 
+            rotate: smoothRotation3,
+            scale: smoothScale1,
+            transformOrigin: "left center" 
+          }}
+          onMouseEnter={() => setHoverText(2)}
+          onMouseLeave={() => setHoverText(null)}
+        >
+          <motion.span
+            animate={hoverText === 2 ? {
+              color: ["#111111", "#663399", "#111111"],
+            } : {}}
+            transition={{ duration: 1.5 }}
+          >
+            {applyGlitchEffect(textLines[2], 2)}
+          </motion.span>
+        </motion.div>
+
+        <motion.div
+          className="whitespace-nowrap text-[160px] leading-none font-bold text-gray-900 opacity-70 py-4 font-pixel transform-gpu"
+          style={{ 
+            x: smoothLine4X,
+            transformOrigin: "right center" 
+          }}
+          onMouseEnter={() => setHoverText(3)}
+          onMouseLeave={() => setHoverText(null)}
+        >
+          <motion.span
+            animate={hoverText === 3 ? {
+              color: ["#111111", "#442266", "#111111"],
+            } : {}}
+            transition={{ duration: 1.5 }}
+          >
+            {applyGlitchEffect(textLines[3], 3)}
+          </motion.span>
+        </motion.div>
+
+        <motion.div
+          className="whitespace-nowrap text-[160px] leading-none font-bold text-gray-900 opacity-70 py-4 font-pixel transform-gpu"
+          style={{ 
+            x: smoothLine5X,
+            transformOrigin: "left center" 
+          }}
+          onMouseEnter={() => setHoverText(4)}
+          onMouseLeave={() => setHoverText(null)}
+        >
+          <motion.span
+            animate={hoverText === 4 ? {
+              color: ["#111111", "#332244", "#111111"],
+            } : {}}
+            transition={{ duration: 1.5 }}
+          >
+            {applyGlitchEffect(textLines[4], 4)}
+          </motion.span>
+        </motion.div>
+      </div>
+      
+      {/* Enhanced animated particles - more variety and animation types */}
+      <div className="absolute inset-0 z-4 overflow-hidden pointer-events-none">
+        {/* Square particles */}
+        {Array.from({ length: 15 }).map((_, i) => (
+          <motion.div
+            key={`square-particle-${i}`}
+            className="absolute bg-purple-500"
+            style={{
+              width: `${3 + Math.random() * 7}px`,
+              height: `${3 + Math.random() * 7}px`,
               top: `${Math.random() * 100}%`,
               left: `${Math.random() * 100}%`,
               opacity: 0.3 + Math.random() * 0.4,
+              boxShadow: '0 0 3px rgba(168, 85, 247, 0.6)',
+            }}
+            animate={{
+              x: [0, Math.random() * 150 - 75],
+              y: [0, Math.random() * 150 - 75],
+              opacity: [0.3, 0.7, 0.3],
+              rotate: [0, Math.random() * 180],
+            }}
+            transition={{
+              duration: 5 + Math.random() * 5,
+              repeat: Infinity,
+              repeatType: "reverse",
+            }}
+          />
+        ))}
+        
+        {/* Line particles */}
+        {Array.from({ length: 12 }).map((_, i) => (
+          <motion.div
+            key={`line-particle-${i}`}
+            className="absolute bg-pink-500"
+            style={{
+              width: `${1 + Math.random() * 2}px`,
+              height: `${10 + Math.random() * 20}px`,
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              opacity: 0.3 + Math.random() * 0.3,
+              boxShadow: '0 0 3px rgba(236, 72, 153, 0.5)',
+            }}
+            animate={{
+              x: [0, Math.random() * 120 - 60],
+              y: [0, Math.random() * 120 - 60],
+              opacity: [0.3, 0.6, 0.3],
+              rotate: [0, 360],
+              scale: [1, 1 + Math.random() * 0.5, 1],
+            }}
+            transition={{
+              duration: 7 + Math.random() * 4,
+              repeat: Infinity,
+              repeatType: "reverse",
+            }}
+          />
+        ))}
+        
+        {/* Circle particles */}
+        {Array.from({ length: 8 }).map((_, i) => (
+          <motion.div
+            key={`circle-particle-${i}`}
+            className="absolute rounded-full bg-blue-500"
+            style={{
+              width: `${4 + Math.random() * 6}px`,
+              height: `${4 + Math.random() * 6}px`,
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              opacity: 0.3 + Math.random() * 0.3,
+              boxShadow: '0 0 4px rgba(59, 130, 246, 0.5)',
             }}
             animate={{
               x: [0, Math.random() * 100 - 50],
               y: [0, Math.random() * 100 - 50],
-              opacity: [0.3, 0.7, 0.3],
+              opacity: [0.3, 0.6, 0.3],
+              scale: [1, 1.5, 1],
             }}
             transition={{
-              duration: 5 + Math.random() * 5,
+              duration: 6 + Math.random() * 5,
               repeat: Infinity,
               repeatType: "reverse",
             }}
@@ -634,69 +889,207 @@ const ScrollingTextSection = () => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="flex justify-center items-center min-h-[80vh]">
           <motion.div
-            className="max-w-4xl text-center"
+            className="max-w-4xl text-center relative"
             style={{
               opacity: contentOpacity,
               y: contentY,
             }}
           >
+            {/* Digital glitch effect overlay */}
+            <motion.div 
+              className="absolute -inset-10 opacity-10 pointer-events-none"
+              animate={{
+                background: [
+                  "radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, rgba(0, 0, 0, 0) 70%)",
+                  "radial-gradient(circle, rgba(168, 85, 247, 0.2) 0%, rgba(0, 0, 0, 0) 70%)",
+                  "radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, rgba(0, 0, 0, 0) 70%)",
+                ]
+              }}
+              transition={{ duration: 3, repeat: Infinity }}
+            />
+            
             <PixelHeading
               text="THE NEXT STAGE"
-              className="text-7xl md:text-8xl font-black tracking-tighter mb-10 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600"
+              className="text-7xl md:text-8xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-blue-500 to-pink-600"
             />
+            
+            {/* Enhanced animated separator with particles */}
+            <div className="relative h-2 mx-auto mb-10 overflow-hidden">
+              <motion.div
+                className="h-2 bg-gradient-to-r from-purple-500 via-blue-500 to-pink-500"
+                initial={{ width: "0%" }}
+                whileInView={{ width: "80%" }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
+                viewport={{ once: true }}
+              />
+              
+              {/* Animated light beam on the line */}
+              <motion.div
+                className="absolute top-0 left-0 h-full w-20 bg-white/70 blur-sm"
+                animate={{ 
+                  x: ["-100%", "500%"],
+                  opacity: [0, 1, 0]
+                }}
+                transition={{ 
+                  duration: 2.5, 
+                  repeat: Infinity,
+                  repeatDelay: 1
+                }}
+              />
+              
+              {/* Floating particles above line */}
+              {Array.from({ length: 5 }).map((_, i) => (
+                <motion.div
+                  key={`line-dot-${i}`}
+                  className="absolute bg-white rounded-full w-1 h-1"
+                  style={{
+                    left: `${15 + i * 15}%`,
+                    top: i % 2 === 0 ? -4 : 4
+                  }}
+                  animate={{
+                    y: [0, i % 2 === 0 ? -5 : 5, 0],
+                    opacity: [0.5, 1, 0.5],
+                    boxShadow: [
+                      '0 0 2px rgba(255, 255, 255, 0.3)', 
+                      '0 0 4px rgba(255, 255, 255, 0.6)',
+                      '0 0 2px rgba(255, 255, 255, 0.3)'
+                    ]
+                  }}
+                  transition={{
+                    duration: 1.5 + i * 0.5,
+                    repeat: Infinity,
+                    delay: i * 0.2
+                  }}
+                />
+              ))}
+            </div>
 
-            {/* Animated underline */}
-            <motion.div
-              className="h-2 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto mb-10"
-              initial={{ width: "0%" }}
-              whileInView={{ width: "80%" }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              viewport={{ once: true }}
-            />
+            {/* Enhanced description text */}
+            <div className="mb-12 relative">
+              <motion.p 
+                className="text-2xl text-white/90 font-pixel leading-relaxed"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                viewport={{ once: true }}
+              >
+                VOID transcends conventional boundaries, merging art, technology, and perception. Shape the universe through your choices and forge a path uniquely your own.
+              </motion.p>
+              
+              {/* Enhanced subtle digital noise overlay */}
+              <motion.div 
+                className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-10"
+                animate={{
+                  backgroundPosition: ['0% 0%', '100% 100%']
+                }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                style={{
+                  backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 250 250\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")',
+                  backgroundSize: '150px 150px'
+                }}
+              />
+            </div>
 
-            <p className="text-2xl text-white/90 mb-12 font-pixel leading-relaxed">
-              VOID redefines the boundaries between art, technology, and gaming,
-              creating a universe where your choices shape the very fabric of
-              reality.
-            </p>
-
+            {/* Enhanced feature cards with more interactive elements */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
               {[
                 {
                   icon: "✧",
                   title: "IMMERSIVE",
-                  desc: "Experience like never before",
+                  desc: "Experience a sensory revolution",
+                  color: "from-purple-400 to-blue-500",
+                  delay: 0
                 },
                 {
                   icon: "⬡",
                   title: "INNOVATIVE",
-                  desc: "Cutting-edge technology",
+                  desc: "Powered by quantum algorithms",
+                  color: "from-pink-500 to-purple-500",
+                  delay: 0.2
                 },
                 {
                   icon: "⟐",
                   title: "INTERACTIVE",
-                  desc: "Shape your own journey",
+                  desc: "Your decisions reshape reality",
+                  color: "from-blue-500 to-purple-500",
+                  delay: 0.4
                 },
               ].map((item, i) => (
                 <motion.div
                   key={i}
-                  className="bg-black/50 border border-purple-500/30 p-6 backdrop-blur-sm"
+                  className="relative group bg-black/60 border border-purple-500/40 p-6 backdrop-blur-sm overflow-hidden"
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.2 }}
+                  transition={{ delay: item.delay, duration: 0.8 }}
+                  whileHover={{ 
+                    y: -5,
+                    boxShadow: '0 10px 30px -10px rgba(168, 85, 247, 0.3)',
+                    borderColor: 'rgba(168, 85, 247, 0.6)'
+                  }}
                 >
-                  <div className="text-3xl mb-4 text-purple-400">
-                    {item.icon}
+                  {/* Background glow effect */}
+                  <motion.div 
+                    className="absolute -inset-px rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0"
+                    animate={{
+                      background: [
+                        `radial-gradient(circle at center, rgba(168, 85, 247, 0.15) 0%, rgba(0, 0, 0, 0) 70%)`,
+                        `radial-gradient(circle at center, rgba(168, 85, 247, 0.25) 0%, rgba(0, 0, 0, 0) 70%)`,
+                        `radial-gradient(circle at center, rgba(168, 85, 247, 0.15) 0%, rgba(0, 0, 0, 0) 70%)`,
+                      ]
+                    }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                  
+                  <div className="relative z-10">
+                    <motion.div 
+                      className={`text-3xl mb-4 bg-gradient-to-r ${item.color} text-transparent bg-clip-text`}
+                      whileHover={{ scale: 1.2, rotate: 360 }}
+                      transition={{ duration: 0.6 }}
+                    >
+                      {item.icon}
+                    </motion.div>
+                    
+                    <h3 className="text-xl mb-2 font-pixel text-white">
+                      {item.title}
+                    </h3>
+                    
+                    <p className="text-sm text-gray-400 font-pixel">
+                      {item.desc}
+                    </p>
+                    
+                    {/* Interactive corner elements */}
+                    <motion.div 
+                      className="absolute top-0 right-0 w-0 h-0 border-t-8 border-r-8 border-transparent border-r-purple-500/0 group-hover:border-r-purple-500/70 transition-colors duration-500"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                    />
+                    
+                    <motion.div 
+                      className="absolute bottom-0 left-0 w-0 h-0 border-b-8 border-l-8 border-transparent border-l-purple-500/0 group-hover:border-l-purple-500/70 transition-colors duration-500"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                    />
                   </div>
-                  <h3 className="text-xl mb-2 font-pixel text-white">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm text-gray-400 font-pixel">
-                    {item.desc}
-                  </p>
                 </motion.div>
               ))}
+            </div>
+            
+            {/* New: Interactive scrolling progress indicator */}
+            <div className="relative h-1 mx-auto w-40 mt-16 overflow-hidden">
+              <div className="w-full h-full bg-gray-800/50"></div>
+              <motion.div 
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500"
+                style={{ width: progressBarWidth }}
+              />
+              
+              <motion.div 
+                className="absolute -top-2 h-4 w-1 bg-white/80 rounded-full shadow-lg shadow-purple-500/50"
+                style={{ left: progressBarWidth }}
+              />
+              
+              <div className="absolute -top-8 left-0 text-xs font-mono text-purple-400">SECTOR_01</div>
+              <div className="absolute -top-8 right-0 text-xs font-mono text-purple-400">SECTOR_02</div>
             </div>
           </motion.div>
         </div>
