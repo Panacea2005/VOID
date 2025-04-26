@@ -87,7 +87,7 @@ const RealmCard: React.FC<RealmCardProps> = ({ name, poem, description, color, m
 
         {/* Interactive elements */}
         <div className="mt-4 pt-4 border-t border-purple-900/30 flex justify-between items-center">
-          <Link href="/app/realm">
+          <Link href="/realm">
             <motion.div
               className={`px-3 py-1 text-xs ${colorClass.text} border ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1 cursor-pointer`}
               animate={{ y: isHovered ? 0 : 10, opacity: isHovered ? 1 : 0 }}
@@ -818,7 +818,7 @@ export default function RealmsDocsPage() {
                 </p>
 
                 <div className="mt-8">
-                  <Link href="/app/realm">
+                  <Link href="/realm">
                     <Button
                       size="lg"
                       className="bg-purple-500 hover:bg-purple-600 text-white rounded-none font-pixel"
