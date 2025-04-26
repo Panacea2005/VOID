@@ -343,6 +343,7 @@ export default function Footer() {
                 { name: "REALM", path: "/realm" },
                 { name: "GAME", path: "/game" },
                 { name: "ABOUT", path: "/about" },
+                { name: "RUBIKS", path: "/rubiks" },
               ].map((link, index) => (
                 <FooterLink key={link.path} href={link.path} index={index}>
                   {link.name}
@@ -360,6 +361,7 @@ export default function Footer() {
                 { name: "MARKET", path: "/market" },
                 { name: "GALLERY", path: "/gallery" },
                 { name: "ART", path: "/art" },
+                { name: "CANVAS", path: "/canvas" },
               ].map((link, index) => (
                 <FooterLink key={link.path} href={link.path} index={index}>
                   {link.name}
