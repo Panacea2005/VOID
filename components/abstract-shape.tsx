@@ -4,7 +4,7 @@ import { motion } from "framer-motion"
 
 type AbstractShapeProps = {
   className?: string
-  type: "circle" | "square" | "triangle" | "complex" | "wave" | "grid" | "dots" | "noise" | "loading" | "gamepad"
+  type: "circle" | "square" | "triangle" | "complex" | "wave" | "grid" | "dots" | "noise" | "loading" | "gamepad"| "cube"
   animate?: boolean
   color?: "purple" | "pink" | "blue"
 }
