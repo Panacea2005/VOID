@@ -229,9 +229,9 @@ export default function InteractiveBanner() {
                 size={110}
                 cubeId="cosmic-void"
                 onCubeChange={() => {}}
-                interactable={true}
-                onCubeInteractionStart={() => setIsInteracting(true)}
-                onCubeInteractionEnd={() => setIsInteracting(false)}
+                interactable={false}
+                onCubeInteractionStart={() => {}}
+                onCubeInteractionEnd={() => {}}
                 onCubeClick={() => {}}
               />
             </motion.div>

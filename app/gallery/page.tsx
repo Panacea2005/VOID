@@ -1149,31 +1149,6 @@ export default function GalleryPage() {
               />
             ))}
           </div>
-          
-          {/* Cube Selection Notification */}
-          <AnimatePresence>
-            {activeCube && (
-              <motion.div
-                className="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-black/80 border border-purple-500 px-6 py-4 rounded-md z-50 backdrop-blur-md font-pixel"
-                initial={{ y: 50, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 50, opacity: 0 }}
-                transition={{ type: "spring", damping: 20 }}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 relative">
-                    <div className="absolute inset-0 bg-purple-500/20 rounded-full animate-ping"></div>
-                    <div className="relative w-full h-full flex items-center justify-center">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20 6L9 17L4 12" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                  </div>
-                  <p className="text-white">Cube added to your collection!</p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </section>
 

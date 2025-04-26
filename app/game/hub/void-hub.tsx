@@ -1889,22 +1889,18 @@ interface VoidHubProps {
   onExit?: () => void;
 }
 
-const VoidHub: React.FC<VoidHubProps> = ({
-  onSelectRealm,
-  onCubeChange,
-  selectedCubeId = "pink-neon",
-  onExit,
-}) => {
+// Updated VoidHub component to fit on a single screen without scrolling
+const VoidHub = ({ onSelectRealm, onCubeChange, selectedCubeId = "pink-neon", onExit }: VoidHubProps) => {
   const [selectedRealm, setSelectedRealm] = useState(realms[0]);
   const [isEntering, setIsEntering] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // NEW - Add state to store the selected cube's colors and properties
-  const [selectedCubeColors, setSelectedCubeColors] = useState<string[]>([]);
-  const [selectedCubeGlow, setSelectedCubeGlow] = useState<string>("");
-  const [selectedCubeBorder, setSelectedCubeBorder] = useState<string>("");
+  // State for selected cube properties
+  const [selectedCubeColors, setSelectedCubeColors] = useState([]);
+  const [selectedCubeGlow, setSelectedCubeGlow] = useState("");
+  const [selectedCubeBorder, setSelectedCubeBorder] = useState("");
 
-  // Add a ref to access and store the combined cube collection (default + NFTs)
+  // Reference for combined cube collection with proper typing
   const combinedCubeCollectionRef = useRef<any[]>([]);
 
   // Log the selected cube ID for debugging
@@ -1930,7 +1926,7 @@ const VoidHub: React.FC<VoidHubProps> = ({
 
   // Handle mouse movement
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMouseMove = (e: { clientX: number; clientY: number; }) => {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
@@ -1945,7 +1941,7 @@ const VoidHub: React.FC<VoidHubProps> = ({
   }, [mouseX, mouseY]);
 
   // Handle realm selection
-  const selectRealm = (realm: (typeof realms)[0]) => {
+  const selectRealm = (realm: typeof realms[0]) => {
     setSelectedRealm(realm);
     audio.changeTrack(realm.id);
   };
@@ -1967,11 +1963,11 @@ const VoidHub: React.FC<VoidHubProps> = ({
 
   // Add this function to update cube data
   const updateSelectedCubeData = useCallback(
-    (cubeId: string, cubeCollection: any[]) => {
+    (cubeId: any, cubeCollection: any[]) => {
       console.log("Updating selected cube data for ID:", cubeId);
 
       // Find the cube in the combined collection
-      const selectedCube = cubeCollection.find((cube) => cube.id === cubeId);
+      const selectedCube = cubeCollection.find((cube: { id: any; }) => cube.id === cubeId);
 
       if (selectedCube) {
         console.log(
@@ -2021,7 +2017,7 @@ const VoidHub: React.FC<VoidHubProps> = ({
 
   return (
     <div
-      className="relative min-h-screen bg-black text-white font-pixel overflow-hidden"
+      className="relative h-screen bg-black text-white font-pixel overflow-hidden flex flex-col"
       ref={containerRef}
     >
       {/* Animated particle background */}
@@ -2034,17 +2030,19 @@ const VoidHub: React.FC<VoidHubProps> = ({
         ></div>
       </div>
 
-      {/* Interactive 3D Cube - MODIFIED to capture cube collection */}
-      <RealmCube
-        position="corner"
-        size={80}
-        primaryColor={selectedRealm.color.split(" ")[1]}
-        cubeId={selectedCubeId}
-        onCubeChange={handleCubeChange}
-        onCubeCollectionUpdate={handleCubeCollectionUpdate} // Add this line
-      />
+      {/* Interactive 3D Cube - Moved higher up */}
+      <div className="absolute top-8 right-8 z-20">
+        <RealmCube
+          position="corner"
+          size={80} /* Reduced size */
+          primaryColor={selectedRealm.color.split(" ")[1]}
+          cubeId={selectedCubeId}
+          onCubeChange={handleCubeChange}
+          onCubeCollectionUpdate={handleCubeCollectionUpdate}
+        />
+      </div>
 
-      {/* Enhanced Realm Entry Animation - MODIFIED to use the selected cube colors */}
+      {/* Enhanced Realm Entry Animation */}
       <AnimatePresence>
         {isEntering && (
           <motion.div
@@ -2089,35 +2087,34 @@ const VoidHub: React.FC<VoidHubProps> = ({
                   style={{ transformStyle: "preserve-3d" }}
                 >
                   {/* 6 faces of the cube */}
-                  {/* 6 faces of the cube */}
-{['front', 'back', 'right', 'left', 'top', 'bottom'].map((side, index) => {
-  const transforms = [
-    `translateZ(20px)`,
-    `rotateY(180deg) translateZ(20px)`,
-    `rotateY(90deg) translateZ(20px)`,
-    `rotateY(-90deg) translateZ(20px)`,
-    `rotateX(90deg) translateZ(20px)`,
-    `rotateX(-90deg) translateZ(20px)`
-  ];
-  
-  // Use the stored selected cube colors
-  const defaultColors = ["#ff00ff", "#ec4899", "#f472b6", "#e879f9", "#d946ef", "#c026d3"];
-  const colors = selectedCubeColors.length > 0 ? selectedCubeColors : defaultColors;
-  
-  return (
-    <div
-      key={side}
-      className="absolute w-full h-full"
-      style={{ 
-        transform: transforms[index],
-        backgroundColor: colors[index],
-        boxShadow: selectedCubeGlow || "0 0 20px rgba(236, 72, 153, 0.6)",
-        border: `1px solid ${selectedCubeBorder || "rgba(255, 255, 255, 0.3)"}`,
-        backfaceVisibility: 'hidden'
-      }}
-    />
-  );
-})}
+                  {['front', 'back', 'right', 'left', 'top', 'bottom'].map((side, index) => {
+                    const transforms = [
+                      `translateZ(20px)`,
+                      `rotateY(180deg) translateZ(20px)`,
+                      `rotateY(90deg) translateZ(20px)`,
+                      `rotateY(-90deg) translateZ(20px)`,
+                      `rotateX(90deg) translateZ(20px)`,
+                      `rotateX(-90deg) translateZ(20px)`
+                    ];
+                    
+                    // Use the stored selected cube colors
+                    const defaultColors = ["#ff00ff", "#ec4899", "#f472b6", "#e879f9", "#d946ef", "#c026d3"];
+                    const colors = selectedCubeColors.length > 0 ? selectedCubeColors : defaultColors;
+                    
+                    return (
+                      <div
+                        key={side}
+                        className="absolute w-full h-full"
+                        style={{ 
+                          transform: transforms[index],
+                          backgroundColor: colors[index],
+                          boxShadow: selectedCubeGlow || "0 0 20px rgba(236, 72, 153, 0.6)",
+                          border: `1px solid ${selectedCubeBorder || "rgba(255, 255, 255, 0.3)"}`,
+                          backfaceVisibility: 'hidden'
+                        }}
+                      />
+                    );
+                  })}
                 </div>
 
                 {/* Light rays emanating from the cube as it expands */}
@@ -2135,22 +2132,22 @@ const VoidHub: React.FC<VoidHubProps> = ({
                   }}
                 >
                   {Array.from({ length: 12 }).map((_, i) => {
-  const rotation = i * 30;
-  // Use the primary color from selected cube
-  const primaryColor = selectedCubeColors.length > 0 ? selectedCubeColors[0] : "#ff00ff";
-  
-  return (
-    <div
-      key={`ray-${i}`}
-      className="absolute top-1/2 left-1/2 h-px w-[200px] origin-left"
-      style={{
-        background: `linear-gradient(to right, ${primaryColor}, transparent)`,
-        transform: `translateX(-50%) translateY(-50%) rotate(${rotation}deg)`,
-        boxShadow: `0 0 10px ${primaryColor}`
-      }}
-    />
-  );
-})}
+                    const rotation = i * 30;
+                    // Use the primary color from selected cube
+                    const primaryColor = selectedCubeColors.length > 0 ? selectedCubeColors[0] : "#ff00ff";
+                    
+                    return (
+                      <div
+                        key={`ray-${i}`}
+                        className="absolute top-1/2 left-1/2 h-px w-[200px] origin-left"
+                        style={{
+                          background: `linear-gradient(to right, ${primaryColor}, transparent)`,
+                          transform: `translateX(-50%) translateY(-50%) rotate(${rotation}deg)`,
+                          boxShadow: `0 0 10px ${primaryColor}`
+                        }}
+                      />
+                    );
+                  })}
                 </motion.div>
               </motion.div>
 
@@ -2177,200 +2174,203 @@ const VoidHub: React.FC<VoidHubProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Main Content - Using Realm Page Layout */}
-      <section className="relative pt-32 pb-16 min-h-screen flex flex-col">
-        <div className="container mx-auto px-4 relative z-10 flex-grow flex flex-col">
-          <div className="max-w-7xl mx-auto w-full flex-grow flex flex-col">
-            {/* Page Title */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              className="text-center mb-8"
+      {/* Main Content - Redesigned to fit 100% screen height */}
+      <div className="flex flex-col justify-between h-full py-4 px-4 relative z-10">
+        {/* Page Title - Made smaller and moved up */}
+        <div className="mt-2 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <PixelHeading
+              text="VOID RESONANCE"
+              className="text-4xl md:text-5xl font-black tracking-tighter mb-2 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
+            />
+            <motion.p
+              className="text-base md:text-lg text-gray-300 max-w-3xl mx-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.8 }}
             >
-              <PixelHeading
-                text="VOID RESONANCE"
-                className="text-6xl md:text-7xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
-              />
-              <motion.p
-                className="text-xl text-gray-300 max-w-3xl mx-auto"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3, duration: 0.8 }}
-              >
-                Select a realm to begin your journey through the VOID universe
-              </motion.p>
-            </motion.div>
+              Select a realm to begin your journey
+            </motion.p>
+          </motion.div>
+        </div>
 
-            {/* Realm Navigation - Horizontal Scrolling Menu */}
-            <div className="flex justify-center mb-16">
-              <motion.div
-                className="flex gap-2 md:gap-4 py-2 px-4 bg-black/40 backdrop-blur-md border border-purple-500/20 rounded-full"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 0.6 }}
-              >
-                {realms.map((realm) => (
-                  <motion.button
-                    key={realm.id}
-                    onClick={() => selectRealm(realm)}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={cn(
-                      "relative flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300",
-                      selectedRealm.id === realm.id
-                        ? "bg-gradient-to-r from-purple-900/50 to-purple-800/40 text-white shadow-lg shadow-purple-900/20"
-                        : "bg-transparent hover:bg-purple-950/30 text-gray-400 hover:text-white"
-                    )}
-                  >
-                    <RealmIcon
-                      realm={realm}
-                      isSelected={selectedRealm.id === realm.id}
+        {/* Middle section with realm navigation and content */}
+        <div className="flex-grow flex flex-col items-center justify-center">
+          {/* Realm Navigation - Horizontal Scrolling Menu */}
+          <div className="flex justify-center mb-5">
+            <motion.div
+              className="flex gap-2 py-2 px-4 bg-black/40 backdrop-blur-md border border-purple-500/20 rounded-full"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
+            >
+              {realms.map((realm) => (
+                <motion.button
+                  key={realm.id}
+                  onClick={() => selectRealm(realm)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={cn(
+                    "relative flex items-center gap-2 px-3 py-1 rounded-full transition-all duration-300",
+                    selectedRealm.id === realm.id
+                      ? "bg-gradient-to-r from-purple-900/50 to-purple-800/40 text-white shadow-lg shadow-purple-900/20"
+                      : "bg-transparent hover:bg-purple-950/30 text-gray-400 hover:text-white"
+                  )}
+                >
+                  <RealmIcon
+                    realm={realm}
+                    isSelected={selectedRealm.id === realm.id}
+                  />
+                  <span className="hidden sm:inline text-xs">{realm.name}</span>
+                  {selectedRealm.id === realm.id && (
+                    <motion.div
+                      className="absolute inset-0 rounded-full border-2 border-purple-500/50"
+                      layoutId="selected-realm"
+                      transition={{
+                        type: "spring",
+                        bounce: 0.2,
+                        duration: 0.6,
+                      }}
                     />
-                    <span className="hidden sm:inline">{realm.name}</span>
-                    {selectedRealm.id === realm.id && (
-                      <motion.div
-                        className="absolute inset-0 rounded-full border-2 border-purple-500/50"
-                        layoutId="selected-realm"
-                        transition={{
-                          type: "spring",
-                          bounce: 0.2,
-                          duration: 0.6,
-                        }}
-                      />
+                  )}
+                </motion.button>
+              ))}
+            </motion.div>
+          </div>
+
+          {/* Main Content Area - Repositioned with models on right and pushed down */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-6xl">
+            <AnimatePresence mode="wait">
+              {/* Left Content - Realm Details */}
+              <motion.div
+                key={`realm-content-${selectedRealm.id}`}
+                initial={{ opacity: 0, x: -50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 50 }}
+                transition={{ duration: 0.5 }}
+                className="order-1 flex flex-col"
+              >
+                {/* Realm Title */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <PixelHeading
+                    text={selectedRealm.name}
+                    className={`text-5xl md:text-6xl font-bold mb-1 text-transparent bg-clip-text bg-gradient-to-r ${selectedRealm.color}`}
+                  />
+                  <p
+                    className={`text-transparent bg-clip-text bg-gradient-to-r ${selectedRealm.brightColor} text-lg md:text-xl mb-3`}
+                  >
+                    {selectedRealm.theme}
+                  </p>
+                </motion.div>
+
+                {/* Enter Realm Button and Info */}
+                <motion.div
+                  className="p-5 bg-black/50 backdrop-blur-md border border-purple-900/50 relative overflow-hidden group mt-3"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2, duration: 0.5 }}
+                >
+                  <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
+
+                  <p className="text-gray-300 text-sm leading-relaxed mb-6 max-h-28 overflow-y-auto">
+                    {selectedRealm.description}
+                  </p>
+
+                  {/* Enter Button */}
+                  <motion.button
+                    onClick={enterRealm}
+                    disabled={isEntering}
+                    className="w-full py-3 px-4 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 font-bold text-white text-base shadow-lg shadow-purple-600/20 disabled:opacity-50 transition-all hover:shadow-xl hover:shadow-purple-600/40"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {isEntering ? (
+                      <span className="flex items-center justify-center">
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        ENTERING {selectedRealm.name}...
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center">
+                        ENTER {selectedRealm.name}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="ml-2"
+                        >
+                          <path d="m9 18 6-6-6-6"></path>
+                        </svg>
+                      </span>
                     )}
                   </motion.button>
-                ))}
+
+                  <motion.div
+                    className={`absolute -bottom-1 -right-1 w-20 h-20 bg-gradient-to-tl ${selectedRealm.color} opacity-20 rounded-tl-full`}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: [0, 1.2, 1] }}
+                    transition={{ delay: 0.5, duration: 1 }}
+                  />
+                </motion.div>
               </motion.div>
-            </div>
 
-            {/* Main Content Area */}
-            <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-              <AnimatePresence mode="wait">
-                {/* Left Content */}
-                <motion.div
-                  key={`realm-content-${selectedRealm.id}`}
-                  initial={{ opacity: 0, x: -50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 50 }}
-                  transition={{ duration: 0.5 }}
-                  className="order-2 md:order-1 flex flex-col"
-                >
-                  {/* Realm Title */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <PixelHeading
-                      text={selectedRealm.name}
-                      className={`text-6xl md:text-7xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r ${selectedRealm.color}`}
-                    />
-                    <p
-                      className={`text-transparent bg-clip-text bg-gradient-to-r ${selectedRealm.brightColor} text-xl mb-8`}
-                    >
-                      {selectedRealm.theme}
-                    </p>
-                  </motion.div>
-
-                  {/* Enter Realm Button and Info */}
-                  <motion.div
-                    className="p-6 bg-black/50 backdrop-blur-md border border-purple-900/50 relative overflow-hidden group"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2, duration: 0.5 }}
-                  >
-                    <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
-                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
-
-                    <p className="text-gray-300 leading-relaxed mb-6">
-                      {selectedRealm.description}
-                    </p>
-
-                    {/* Enter Button */}
-                    <motion.button
-                      onClick={enterRealm}
-                      disabled={isEntering}
-                      className="w-full py-4 px-6 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 font-bold text-white shadow-lg shadow-purple-600/20 disabled:opacity-50 transition-all hover:shadow-xl hover:shadow-purple-600/40"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      {isEntering ? (
-                        <span className="flex items-center justify-center">
-                          <svg
-                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                          ENTERING {selectedRealm.name}...
-                        </span>
-                      ) : (
-                        <span className="flex items-center justify-center">
-                          ENTER {selectedRealm.name}
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="ml-2"
-                          >
-                            <path d="m9 18 6-6-6-6"></path>
-                          </svg>
-                        </span>
-                      )}
-                    </motion.button>
-
-                    <motion.div
-                      className={`absolute -bottom-1 -right-1 w-20 h-20 bg-gradient-to-tl ${selectedRealm.color} opacity-20 rounded-tl-full`}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: [0, 1.2, 1] }}
-                      transition={{ delay: 0.5, duration: 1 }}
-                    />
-                  </motion.div>
-                </motion.div>
-
-                {/* 3D Model Visualization */}
-                <motion.div
-                  key={`realm-model-${selectedRealm.id}`}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.5 }}
-                  className="order-1 md:order-2 aspect-square relative"
-                >
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <RealmModel
-                      realm={selectedRealm}
-                      mouseX={mouseX}
-                      mouseY={mouseY}
-                    />
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            </div>
+              {/* Right Content - 3D Model Visualization - Pushed down slightly */}
+              <motion.div
+                key={`realm-model-${selectedRealm.id}`}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.5 }}
+                className="order-2 aspect-square relative h-full max-h-[55vh] flex items-center justify-center pt-8" // Added pt-8 to push down
+              >
+                <div className="w-full h-full flex items-center justify-center">
+                  <RealmModel
+                    realm={selectedRealm}
+                    mouseX={mouseX}
+                    mouseY={mouseY}
+                  />
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
-      </section>
+
+        {/* Empty space at the bottom for better spacing */}
+        <div className="h-4"></div>
+      </div>
 
       {/* Global styles for 3D transformations */}
       <style jsx global>{`

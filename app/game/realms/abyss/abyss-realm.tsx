@@ -1049,7 +1049,6 @@ const AbyssRealm: React.FC<AbyssRealmProps> = ({
                   }}
                 />
               ))}
-              {renderGameGrid()}
             </div>
           </motion.div>
         )}

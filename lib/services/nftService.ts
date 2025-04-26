@@ -94,6 +94,69 @@ async function safeUpload(file: File, metadata: any, retries = 3): Promise<strin
   }
 }
 
+export async function getPixelArtNFTMetadata(
+  name: string,
+  description: string,
+  image: File,
+  attributes: any[],
+  params: { 
+    prompt?: string;
+    canvasSize?: number;
+    [key: string]: any; 
+  }
+): Promise<NFTMetadata> {
+  console.log("Creating pixel art NFT metadata with params:", params);
+  
+  // Add Collection attribute if not present
+  const hasCollectionAttribute = attributes.some(
+    (attr: any) => attr.trait_type === "Collection"
+  );
+  
+  const completeAttributes = hasCollectionAttribute
+    ? attributes
+    : [
+        ...attributes,
+        {
+          trait_type: "Collection",
+          value: "VOID Art Collection",
+        },
+      ];
+
+  // Build files array for properties, starting with the image
+  const files = [
+    {
+      uri: "placeholder", // Will be replaced with actual URI after upload
+      type: image.type || "image/png",
+    }
+  ];
+
+  // Full property set with all pixel art parameters preserved
+  const fullProperties: ExtendedProperties = {
+    files,
+    category: "image",
+    collection: {
+      name: "VOID Art Collection",
+      family: "VOID Art",
+    },
+    // Store pixel art parameters
+    pixelArtParams: params || {},
+    // Store prompt if available
+    prompt: params.prompt,
+    // Store canvas size if available
+    canvasSize: params.canvasSize,
+  };
+
+  // Return complete metadata
+  return {
+    name,
+    symbol: "VART",
+    description,
+    image,
+    attributes: completeAttributes,
+    properties: fullProperties,
+  };
+}
+
 // Static collection IDs
 const VOID_CUBE_COLLECTION_ID = "void-cube-collection";
 const VOID_MUSIC_COLLECTION_ID = "void-music-collection";
