@@ -118,11 +118,6 @@ export default function CanvasPage() {
     color: string;
   } | null>(null);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
-  const [activeColorTab, setActiveColorTab] = useState("palette");
-  const [selectedGradient, setSelectedGradient] = useState<string[]>(
-    GRADIENT_PRESETS[0]
-  );
-  const [gradientPosition, setGradientPosition] = useState(0);
   const [refreshCanvas, setRefreshCanvas] = useState(0);
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -151,52 +146,10 @@ export default function CanvasPage() {
 
   // Add custom color to history
   const addToColorHistory = (color: string) => {
-    if (!colorHistory.includes(color)) {
+    if (colorHistory[0] !== color) {
       setColorHistory((prev) => [color, ...prev.slice(0, 9)]);
     }
   };
-
-  // Calculate color from gradient position
-  const getColorFromGradient = (position: number) => {
-    if (selectedGradient.length === 1) return selectedGradient[0];
-
-    const segmentCount = selectedGradient.length - 1;
-    const segmentLength = 100 / segmentCount;
-    const segmentIndex = Math.min(
-      Math.floor(position / segmentLength),
-      segmentCount - 1
-    );
-    const segmentPosition =
-      (position - segmentIndex * segmentLength) / segmentLength;
-
-    const startColor = selectedGradient[segmentIndex];
-    const endColor = selectedGradient[segmentIndex + 1];
-
-    // Simple linear interpolation between colors
-    const r1 = parseInt(startColor.slice(1, 3), 16);
-    const g1 = parseInt(startColor.slice(3, 5), 16);
-    const b1 = parseInt(startColor.slice(5, 7), 16);
-
-    const r2 = parseInt(endColor.slice(1, 3), 16);
-    const g2 = parseInt(endColor.slice(3, 5), 16);
-    const b2 = parseInt(endColor.slice(5, 7), 16);
-
-    const r = Math.round(r1 + (r2 - r1) * segmentPosition);
-    const g = Math.round(g1 + (g2 - g1) * segmentPosition);
-    const b = Math.round(b1 + (b2 - b1) * segmentPosition);
-
-    return `#${r.toString(16).padStart(2, "0")}${g
-      .toString(16)
-      .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
-  };
-
-  // Update selected color when gradient position changes
-  useEffect(() => {
-    if (activeColorTab === "gradient") {
-      const color = getColorFromGradient(gradientPosition);
-      setSelectedColor(color);
-    }
-  }, [gradientPosition, selectedGradient, activeColorTab]);
 
   // Effect for handling cursor movements
   useEffect(() => {
@@ -594,200 +547,48 @@ export default function CanvasPage() {
     return (
       <div className="mb-6">
         <div className="bg-black/50 border border-purple-900/50 rounded-md p-4 backdrop-blur-sm">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center mb-3">
             <h4 className="text-gray-300 text-sm font-pixel">COLOR</h4>
 
-            {/* Current color display */}
-            <div className="flex items-center gap-2">
-              <div
-                className="w-8 h-8 rounded-md border border-gray-700"
-                style={{ backgroundColor: selectedColor }}
+            {/* Current color display - simplified */}
+            <div
+              className="w-8 h-8 rounded-md border border-gray-700"
+              style={{ backgroundColor: selectedColor }}
+            />
+          </div>
+
+          {/* Color picker wrapper with proper spacing */}
+          <div className="color-picker-container mb-4">
+            {/* Circular saturation picker */}
+            <div
+              ref={colorPickerRef}
+              className="saturation-circle-wrapper mb-3"
+            >
+              <HexColorPicker
+                color={selectedColor}
+                onChange={(color) => {
+                  setSelectedColor(color);
+                  setCustomColor(color);
+                  addToColorHistory(color);
+                }}
               />
-              <div className="font-mono text-sm text-gray-300 uppercase">
-                {selectedColor}
-              </div>
             </div>
           </div>
 
-          {/* Color picker tabs */}
-          <div className="mb-4 flex">
-            <button
-              className={`px-4 py-2 text-xs ${
-                activeColorTab === "palette"
-                  ? "bg-purple-900/50 text-purple-300 border-b-2 border-purple-500"
-                  : "text-gray-400 hover:text-gray-300"
-              }`}
-              onClick={() => setActiveColorTab("palette")}
-            >
-              PALETTE
-            </button>
-            <button
-              className={`px-4 py-2 text-xs ${
-                activeColorTab === "gradient"
-                  ? "bg-purple-900/50 text-purple-300 border-b-2 border-purple-500"
-                  : "text-gray-400 hover:text-gray-300"
-              }`}
-              onClick={() => setActiveColorTab("gradient")}
-            >
-              GRADIENT
-            </button>
-            <button
-              className={`px-4 py-2 text-xs ${
-                activeColorTab === "picker"
-                  ? "bg-purple-900/50 text-purple-300 border-b-2 border-purple-500"
-                  : "text-gray-400 hover:text-gray-300"
-              }`}
-              onClick={() => setActiveColorTab("picker")}
-            >
-              CUSTOM
-            </button>
-            <button
-              className={`px-4 py-2 text-xs ${
-                activeColorTab === "history"
-                  ? "bg-purple-900/50 text-purple-300 border-b-2 border-purple-500"
-                  : "text-gray-400 hover:text-gray-300"
-              }`}
-              onClick={() => setActiveColorTab("history")}
-            >
-              HISTORY
-            </button>
+          {/* Simplified hex input field */}
+          <div className="flex items-center bg-black/40 rounded border border-gray-800 px-2">
+            <div className="text-gray-400 text-sm mr-1">#</div>
+            <HexColorInput
+              color={selectedColor}
+              onChange={(color) => {
+                setSelectedColor(`#${color}`);
+                setCustomColor(`#${color}`);
+                addToColorHistory(`#${color}`);
+              }}
+              className="flex-1 bg-transparent border-0 py-2 text-sm text-white focus:outline-none"
+              prefixed={false}
+            />
           </div>
-
-          {/* Color palette tab content */}
-          {activeColorTab === "palette" && (
-            <div className="flex flex-wrap gap-2">
-              {COLORS.map((color) => (
-                <motion.button
-                  key={color}
-                  className={`w-8 h-8 rounded-md ${
-                    selectedColor === color ? "ring-2 ring-white" : ""
-                  }`}
-                  style={{ backgroundColor: color }}
-                  onClick={() => setSelectedColor(color)}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  onMouseEnter={() => setCursorHover(true)}
-                  onMouseLeave={() => setCursorHover(false)}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Gradient selector tab content */}
-          {activeColorTab === "gradient" && (
-            <div>
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                {GRADIENT_PRESETS.map((gradient, index) => (
-                  <button
-                    key={index}
-                    className={`h-8 rounded-md overflow-hidden ${
-                      JSON.stringify(selectedGradient) ===
-                      JSON.stringify(gradient)
-                        ? "ring-2 ring-white"
-                        : ""
-                    }`}
-                    onClick={() => setSelectedGradient(gradient)}
-                    onMouseEnter={() => setCursorHover(true)}
-                    onMouseLeave={() => setCursorHover(false)}
-                  >
-                    <div
-                      className="w-full h-full"
-                      style={{
-                        background: `linear-gradient(to right, ${gradient.join(
-                          ", "
-                        )})`,
-                      }}
-                    />
-                  </button>
-                ))}
-              </div>
-
-              <div className="mb-2 relative h-8 rounded-md overflow-hidden">
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background: `linear-gradient(to right, ${selectedGradient.join(
-                      ", "
-                    )})`,
-                  }}
-                />
-                <Slider
-                  defaultValue={[0]}
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={[gradientPosition]}
-                  onValueChange={(value) => setGradientPosition(value[0])}
-                  className="relative z-10"
-                />
-              </div>
-
-              <div className="flex justify-between text-xs text-gray-400">
-                <span>{selectedGradient[0]}</span>
-                <span>{selectedGradient[selectedGradient.length - 1]}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Custom color picker tab content */}
-          {activeColorTab === "picker" && (
-            <div>
-              <div ref={colorPickerRef} className="mb-4">
-                <HexColorPicker
-                  color={customColor}
-                  onChange={(color) => {
-                    setCustomColor(color);
-                    setSelectedColor(color);
-                  }}
-                  style={{ width: "100%" }}
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="text-sm text-gray-300">#</div>
-                <HexColorInput
-                  color={customColor}
-                  onChange={(color) => {
-                    setCustomColor(color);
-                    setSelectedColor(color);
-                  }}
-                  className="flex-1 bg-black/50 border border-gray-700 rounded px-2 py-1 text-sm text-white"
-                  prefixed={false}
-                />
-                <button
-                  className="px-3 py-1 bg-purple-900/50 hover:bg-purple-900/80 text-purple-300 text-sm rounded"
-                  onClick={() => addToColorHistory(customColor)}
-                >
-                  SAVE
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Color history tab content */}
-          {activeColorTab === "history" && (
-            <div className="flex flex-wrap gap-2">
-              {colorHistory.map((color) => (
-                <motion.button
-                  key={color}
-                  className={`w-8 h-8 rounded-md ${
-                    selectedColor === color ? "ring-2 ring-white" : ""
-                  }`}
-                  style={{ backgroundColor: color }}
-                  onClick={() => setSelectedColor(color)}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  onMouseEnter={() => setCursorHover(true)}
-                  onMouseLeave={() => setCursorHover(false)}
-                />
-              ))}
-              {colorHistory.length === 0 && (
-                <div className="text-sm text-gray-400 py-2">
-                  Your color history will appear here
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     );
@@ -1049,7 +850,7 @@ export default function CanvasPage() {
                         TOOLS
                       </h3>
 
-                      {/* Color picker */}
+                      {/* Color picker - simplified */}
                       {renderColorPicker()}
 
                       {/* Zoom controls */}
@@ -1081,7 +882,7 @@ export default function CanvasPage() {
                           step={1}
                           value={[pixelSize]}
                           onValueChange={handleZoom}
-                          className="mb-4"
+                          className="mb-2"
                         />
                         <div className="flex justify-between text-xs text-gray-500">
                           <span>2px</span>
@@ -1092,7 +893,7 @@ export default function CanvasPage() {
                       {/* Reset view button */}
                       <Button
                         onClick={resetView}
-                        className="w-full bg-purple-900/30 backdrop-blur-sm border border-purple-500/50 hover:bg-purple-900/50 text-purple-300 rounded-md px-4 py-3 text-sm font-pixel tracking-wide flex items-center justify-center gap-2"
+                        className="w-full bg-purple-900/30 backdrop-blur-sm border border-purple-500/50 hover:bg-purple-900/50 text-purple-300 rounded-md px-4 py-3 text-sm font-pixel tracking-wide flex items-center justify-center gap-2 mb-6"
                         onMouseEnter={() => setCursorHover(true)}
                         onMouseLeave={() => setCursorHover(false)}
                       >
@@ -1115,8 +916,8 @@ export default function CanvasPage() {
                         RESET VIEW
                       </Button>
 
-                      {/* Instructions */}
-                      <div className="mt-6 pt-6 border-t border-purple-900/30">
+                      {/* Instructions - simplified */}
+                      <div className="mb-6">
                         <h4 className="text-gray-300 mb-4 text-sm flex items-center">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -1138,36 +939,30 @@ export default function CanvasPage() {
                           </svg>
                           INSTRUCTIONS
                         </h4>
-                        <ul className="text-sm text-gray-300 space-y-3 bg-black/20 p-4 rounded-md border border-purple-900/30">
+                        <ul className="text-sm text-gray-300 space-y-2 bg-black/20 p-4 rounded-md border border-purple-900/30">
                           <li className="flex items-center">
-                            <div className="w-6 h-6 rounded-full bg-purple-900/50 text-purple-300 flex items-center justify-center mr-2">
+                            <div className="w-5 h-5 rounded-full bg-purple-900/50 text-purple-300 flex items-center justify-center mr-2 text-xs">
                               1
                             </div>
                             Click to place a pixel
                           </li>
                           <li className="flex items-center">
-                            <div className="w-6 h-6 rounded-full bg-purple-900/50 text-purple-300 flex items-center justify-center mr-2">
+                            <div className="w-5 h-5 rounded-full bg-purple-900/50 text-purple-300 flex items-center justify-center mr-2 text-xs">
                               2
                             </div>
-                            CTRL + drag or middle-click to pan
+                            CTRL + drag to pan
                           </li>
                           <li className="flex items-center">
-                            <div className="w-6 h-6 rounded-full bg-purple-900/50 text-purple-300 flex items-center justify-center mr-2">
+                            <div className="w-5 h-5 rounded-full bg-purple-900/50 text-purple-300 flex items-center justify-center mr-2 text-xs">
                               3
                             </div>
-                            Use the slider to zoom
-                          </li>
-                          <li className="flex items-center">
-                            <div className="w-6 h-6 rounded-full bg-purple-900/50 text-purple-300 flex items-center justify-center mr-2">
-                              4
-                            </div>
-                            Connect wallet to save pixels
+                            Use slider to zoom
                           </li>
                         </ul>
                       </div>
 
-                      {/* Canvas statistics */}
-                      <div className="mt-6 pt-6 border-t border-purple-900/30">
+                      {/* Canvas statistics - simplified */}
+                      <div>
                         <h4 className="text-gray-300 mb-4 text-sm flex items-center">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -1777,46 +1572,6 @@ export default function CanvasPage() {
             }}
           />
         </div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-4xl mx-auto bg-black/30 backdrop-blur-md border border-purple-900/50 p-10 rounded-lg">
-            <div className="text-center">
-              <h2 className="text-3xl md:text-4xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 font-pixel">
-                JOIN THE VOID COLLECTIVE
-              </h2>
-              <p className="text-lg text-gray-300 mb-8">
-                Connect your wallet and become part of our growing community of
-                pixel artists. Create, collaborate, and leave your mark on the
-                VOID canvas.
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-md px-8 py-4 text-lg font-pixel tracking-wide"
-                  onMouseEnter={() => setCursorHover(true)}
-                  onMouseLeave={() => setCursorHover(false)}
-                >
-                  Connect Wallet
-                </Button>
-                <Button
-                  className="bg-transparent border-2 border-purple-500 hover:bg-purple-900/30 text-white rounded-md px-8 py-4 text-lg font-pixel tracking-wide"
-                  onMouseEnter={() => setCursorHover(true)}
-                  onMouseLeave={() => setCursorHover(false)}
-                  asChild
-                >
-                  <Button
-                    className="bg-transparent border-2 border-purple-500 hover:bg-purple-900/30 text-white rounded-md px-8 py-4 text-lg font-pixel tracking-wide"
-                    onMouseEnter={() => setCursorHover(true)}
-                    onMouseLeave={() => setCursorHover(false)}
-                    onClick={() => router.push("/gallery")}
-                  >
-                    Explore Gallery
-                  </Button>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
       </section>
 
       <Footer />
@@ -1850,34 +1605,280 @@ export default function CanvasPage() {
           scrollbar-color: rgba(139, 92, 246, 0.3) rgba(0, 0, 0, 0.2);
         }
 
-        /* React Color Picker Customization */
+        /* Container styles to ensure proper layout */
+        .color-picker-container {
+          position: relative;
+          width: 100%;
+        }
+
+        .saturation-circle-wrapper {
+          width: 100%;
+          max-width: 200px;
+          height: auto;
+          margin: 0 auto;
+        }
+
+        /* Make the saturation picker properly circular */
         .react-colorful {
           width: 100% !important;
-          height: 180px !important;
-          border-radius: 4px !important;
-          background: rgba(0, 0, 0, 0.2) !important;
-          padding: 10px !important;
+          height: auto !important; /* Allow proper height calculation */
+          position: relative !important;
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 12px !important;
+          border-radius: 0 !important; /* Reset to fix weird rendering */
+          background: transparent !important;
+          padding: 0 !important;
+          box-shadow: none !important;
         }
 
+        /* Make the saturation area circular */
         .react-colorful__saturation {
-          border-radius: 4px !important;
-          border-bottom: none !important;
-          margin-bottom: 10px !important;
-          box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.2) !important;
+          aspect-ratio: 1/1 !important; /* Force 1:1 ratio for circle */
+          border-radius: 50% !important;
+          box-shadow: 0 0 10px rgba(0, 0, 0, 0.3) !important;
+          border: 2px solid rgba(30, 30, 30, 0.6) !important;
+          overflow: hidden !important;
+          margin-bottom: 12px !important;
         }
 
+        /* Keep the hue slider outside the circle as a bar below */
         .react-colorful__hue {
-          height: 20px !important;
-          border-radius: 4px !important;
-          box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.2) !important;
+          width: 100% !important;
+          height: 16px !important;
+          border-radius: 8px !important;
+          box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4) !important;
+          border: 1px solid rgba(30, 30, 30, 0.6) !important;
         }
 
+        /* Adjust the pointers/handles */
         .react-colorful__pointer {
-          width: 20px !important;
-          height: 20px !important;
-          border-width: 2px !important;
-          border-color: white !important;
-          box-shadow: 0 0 5px rgba(0, 0, 0, 0.4) !important;
+          width: 16px !important;
+          height: 16px !important;
+          border: 2px solid white !important;
+          box-shadow: 0 0 2px rgba(0, 0, 0, 0.6) !important;
+        }
+
+        /* Hex input field styling */
+        .focus\:outline-none:focus {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
+        /* Style for color picker overall layout */
+        .color-picker-panel {
+          background-color: rgba(0, 0, 0, 0.5);
+          border: 1px solid rgba(139, 92, 246, 0.5);
+          border-radius: 8px;
+          overflow: hidden;
+        }
+
+        /* Style for the color square display */
+        .color-display-square {
+          width: 32px;
+          height: 32px;
+          border-radius: 4px;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+          transition: all 0.2s ease;
+        }
+
+        .color-display-square:hover {
+          transform: scale(1.1);
+          border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        /* Canvas styles */
+        .canvas-container {
+          position: relative;
+          overflow: hidden;
+          background-color: rgba(0, 0, 0, 0.2);
+          border: 1px solid rgba(139, 92, 246, 0.5);
+          border-radius: 8px;
+        }
+
+        /* Canvas grid background */
+        .canvas-grid-bg {
+          background-image: linear-gradient(
+              to right,
+              rgba(34, 34, 34, 0.5) 1px,
+              transparent 1px
+            ),
+            linear-gradient(
+              to bottom,
+              rgba(34, 34, 34, 0.5) 1px,
+              transparent 1px
+            );
+          background-size: 8px 8px;
+        }
+
+        /* Pixel styles */
+        .canvas-pixel {
+          position: absolute;
+          border: 1px solid rgba(0, 0, 0, 0.1);
+          transition: transform 0.1s ease;
+        }
+
+        .canvas-pixel:hover {
+          z-index: 10;
+          transform: scale(1.1);
+        }
+
+        /* Hover indicator */
+        .pixel-hover-indicator {
+          position: absolute;
+          border: 2px solid white;
+          pointer-events: none;
+          z-index: 100;
+          box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Tools panel */
+        .tools-panel {
+          background-color: rgba(0, 0, 0, 0.3);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(139, 92, 246, 0.5);
+          border-radius: 8px;
+        }
+
+        /* Zoom and tool controls */
+        .zoom-slider {
+          height: 8px;
+          background: rgba(20, 20, 20, 0.6);
+          border-radius: 4px;
+        }
+
+        .zoom-slider-thumb {
+          width: 16px;
+          height: 16px;
+          background: rgba(139, 92, 246, 0.8);
+          border: 2px solid white;
+          border-radius: 50%;
+          box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+          cursor: pointer;
+        }
+
+        /* Canvas info section */
+        .canvas-info-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          background-color: rgba(0, 0, 0, 0.2);
+          border-radius: 6px;
+          padding: 12px;
+        }
+
+        .info-label {
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 12px;
+          margin-bottom: 4px;
+        }
+
+        .info-value {
+          color: white;
+          font-weight: bold;
+          font-size: 14px;
+        }
+
+        /* Reset view button */
+        .reset-view-button {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          width: 100%;
+          padding: 10px 0;
+          background-color: rgba(139, 92, 246, 0.3);
+          backdrop-filter: blur(5px);
+          border: 1px solid rgba(139, 92, 246, 0.5);
+          border-radius: 6px;
+          color: rgba(139, 92, 246, 0.9);
+          font-family: "Pixel", monospace;
+          font-size: 14px;
+          letter-spacing: 0.5px;
+          transition: all 0.2s ease;
+        }
+
+        .reset-view-button:hover {
+          background-color: rgba(139, 92, 246, 0.4);
+          transform: translateY(-1px);
+        }
+
+        .reset-view-button:active {
+          transform: translateY(1px);
+        }
+
+        /* Instructions section */
+        .instructions-list {
+          list-style-type: none;
+          padding: 0;
+          margin: 0;
+        }
+
+        .instruction-item {
+          display: flex;
+          align-items: center;
+          margin-bottom: 8px;
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        .instruction-number {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 20px;
+          height: 20px;
+          background-color: rgba(139, 92, 246, 0.3);
+          color: rgba(139, 92, 246, 0.9);
+          border-radius: 50%;
+          margin-right: 8px;
+          font-size: 11px;
+        }
+
+        /* Specific for PixelCanvas page */
+        .font-pixel {
+          font-family: "Press Start 2P", monospace;
+          letter-spacing: 0.05em;
+        }
+
+        /* Section headers */
+        .section-header {
+          display: flex;
+          align-items: center;
+          font-size: 18px;
+          font-weight: bold;
+          color: white;
+          margin-bottom: 16px;
+        }
+
+        .section-header svg {
+          margin-right: 8px;
+        }
+
+        /* Position indicator */
+        .position-indicator {
+          position: absolute;
+          bottom: 16px;
+          left: 16px;
+          background-color: rgba(0, 0, 0, 0.7);
+          backdrop-filter: blur(5px);
+          padding: 8px 12px;
+          border-radius: 6px;
+          border: 1px solid rgba(139, 92, 246, 0.3);
+          color: rgba(255, 255, 255, 0.8);
+          font-family: monospace;
+          font-size: 13px;
+          display: flex;
+          align-items: center;
+        }
+
+        .position-indicator .color-square {
+          width: 12px;
+          height: 12px;
+          border-radius: 2px;
+          margin-right: 6px;
+          border: 1px solid rgba(255, 255, 255, 0.3);
         }
       `}</style>
     </div>

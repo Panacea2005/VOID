@@ -1,63 +1,63 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
-import AbstractShape from "./abstract-shape"
-import { Button } from "@/components/ui/button"
-import { useWallet } from "@solana/wallet-adapter-react"
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui"
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import AbstractShape from "./abstract-shape";
+import { Button } from "@/components/ui/button";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
 export default function Navigation() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [showLeftScroll, setShowLeftScroll] = useState(false)
-  const [showRightScroll, setShowRightScroll] = useState(false)
-  const navScrollRef = useRef<HTMLDivElement>(null)
-  const pathname = usePathname()
-  const router = useRouter()
-  const { connected, publicKey, disconnect } = useWallet()
+  const [isOpen, setIsOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [showLeftScroll, setShowLeftScroll] = useState(false);
+  const [showRightScroll, setShowRightScroll] = useState(false);
+  const navScrollRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+  const router = useRouter();
+  const { connected, publicKey, disconnect } = useWallet();
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10)
-    }
+      setIsScrolled(window.scrollY > 10);
+    };
 
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Close menu when route changes
   useEffect(() => {
-    setIsOpen(false)
-  }, [pathname])
+    setIsOpen(false);
+  }, [pathname]);
 
   // Check if nav scroll buttons should be visible
   useEffect(() => {
     const checkScroll = () => {
       if (navScrollRef.current) {
-        const { scrollLeft, scrollWidth, clientWidth } = navScrollRef.current
-        setShowLeftScroll(scrollLeft > 0)
-        setShowRightScroll(scrollLeft < scrollWidth - clientWidth - 10)
+        const { scrollLeft, scrollWidth, clientWidth } = navScrollRef.current;
+        setShowLeftScroll(scrollLeft > 0);
+        setShowRightScroll(scrollLeft < scrollWidth - clientWidth - 10);
       }
-    }
+    };
 
-    checkScroll()
-    window.addEventListener("resize", checkScroll)
+    checkScroll();
+    window.addEventListener("resize", checkScroll);
 
-    const navElement = navScrollRef.current
+    const navElement = navScrollRef.current;
     if (navElement) {
-      navElement.addEventListener("scroll", checkScroll)
+      navElement.addEventListener("scroll", checkScroll);
     }
 
     return () => {
-      window.removeEventListener("resize", checkScroll)
+      window.removeEventListener("resize", checkScroll);
       if (navElement) {
-        navElement.removeEventListener("scroll", checkScroll)
+        navElement.removeEventListener("scroll", checkScroll);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   const navLinks = [
     { name: "HOME", path: "/" },
@@ -70,29 +70,32 @@ export default function Navigation() {
     { name: "MARKET", path: "/market" },
     { name: "RUBIKS", path: "/rubiks" },
     { name: "CANVAS", path: "/canvas" },
-  ]
+  ];
 
   const handleWalletClick = () => {
     if (connected) {
-      router.push("/profile")
+      router.push("/profile");
     }
-  }
+  };
 
   const scrollNav = (direction: "left" | "right") => {
     if (navScrollRef.current) {
-      const scrollAmount = 200
-      const currentScroll = navScrollRef.current.scrollLeft
+      const scrollAmount = 200;
+      const currentScroll = navScrollRef.current.scrollLeft;
       navScrollRef.current.scrollTo({
-        left: direction === "left" ? currentScroll - scrollAmount : currentScroll + scrollAmount,
+        left:
+          direction === "left"
+            ? currentScroll - scrollAmount
+            : currentScroll + scrollAmount,
         behavior: "smooth",
-      })
+      });
     }
-  }
+  };
 
   // Format wallet address
   const shortenAddress = (address: string, chars = 4) => {
-    return `${address.slice(0, chars)}...${address.slice(-chars)}`
-  }
+    return `${address.slice(0, chars)}...${address.slice(-chars)}`;
+  };
 
   const menuVariants = {
     closed: {
@@ -119,13 +122,13 @@ export default function Navigation() {
         delayChildren: 0.2,
       },
     },
-  }
+  };
 
   const itemVariants = {
     closed: { opacity: 0, x: -20 },
     open: { opacity: 1, x: 0 },
-  }
-  
+  };
+
   // 2D Pixel Menu Icon
   const PixelMenuIcon = ({ isOpen }: { isOpen: boolean }) => (
     <div className="w-8 h-8 grid grid-cols-4 grid-rows-4 gap-0.5">
@@ -134,19 +137,19 @@ export default function Navigation() {
         className="col-span-4 bg-purple-500"
         animate={isOpen ? { scaleX: 0.6, x: 5 } : { scaleX: 1, x: 0 }}
       ></motion.div>
-      
+
       {/* Row 2 - Spacing */}
       <div className="col-span-4 h-1"></div>
-      
+
       {/* Row 3 */}
       <motion.div
         className="col-span-4 bg-purple-500"
         animate={isOpen ? { scaleX: 0.8, x: 2.5 } : { scaleX: 1, x: 0 }}
       ></motion.div>
-      
+
       {/* Row 4 - Spacing */}
       <div className="col-span-4 h-1"></div>
-      
+
       {/* Row 5 */}
       <motion.div
         className="col-span-4 bg-purple-500"
@@ -154,48 +157,64 @@ export default function Navigation() {
       ></motion.div>
     </div>
   );
-  
+
   // 2D Pixel Arrow
   const PixelArrow = ({ direction }: { direction: "left" | "right" }) => (
     <div className="w-5 h-5 grid grid-cols-5 grid-rows-5 gap-0.5">
       {Array.from({ length: 25 }).map((_, i) => {
         const row = Math.floor(i / 5);
         const col = i % 5;
-        
+
         // Left arrow pattern
-        const isLeftArrowBlock = direction === "left" && (
-          (row === 2 && col <= 3) || 
-          (row === 1 && col === 1) || 
-          (row === 3 && col === 1) ||
-          (row === 0 && col === 2) ||
-          (row === 4 && col === 2)
-        );
-        
+        const isLeftArrowBlock =
+          direction === "left" &&
+          ((row === 2 && col <= 3) ||
+            (row === 1 && col === 1) ||
+            (row === 3 && col === 1) ||
+            (row === 0 && col === 2) ||
+            (row === 4 && col === 2));
+
         // Right arrow pattern
-        const isRightArrowBlock = direction === "right" && (
-          (row === 2 && col >= 1) || 
-          (row === 1 && col === 3) || 
-          (row === 3 && col === 3) ||
-          (row === 0 && col === 2) ||
-          (row === 4 && col === 2)
-        );
-        
+        const isRightArrowBlock =
+          direction === "right" &&
+          ((row === 2 && col >= 1) ||
+            (row === 1 && col === 3) ||
+            (row === 3 && col === 3) ||
+            (row === 0 && col === 2) ||
+            (row === 4 && col === 2));
+
         return (
-          <div 
-            key={i} 
-            className={`${(isLeftArrowBlock || isRightArrowBlock) 
-              ? 'bg-purple-400' 
-              : 'bg-transparent'}`}
+          <div
+            key={i}
+            className={`${
+              isLeftArrowBlock || isRightArrowBlock
+                ? "bg-purple-400"
+                : "bg-transparent"
+            }`}
           />
         );
       })}
     </div>
   );
-  
+
   // 2D Pixel Void/Black Hole
-  const PixelVoidCube = ({ primaryColor = "#9C27B0", accentColor = "#E040FB", size = 24 }: { primaryColor?: string, accentColor?: string, size?: number }) => (
+  const PixelVoidCube = ({
+    primaryColor = "#9C27B0",
+    accentColor = "#E040FB",
+    size = 24,
+  }: {
+    primaryColor?: string;
+    accentColor?: string;
+    size?: number;
+  }) => (
     <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 20 20"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
         {/* Outer dark ring - darkest purple */}
         <rect x="6" y="0" width="8" height="1" fill="#4A1442" />
         <rect x="4" y="1" width="2" height="1" fill="#4A1442" />
@@ -227,10 +246,10 @@ export default function Navigation() {
         <rect x="2" y="14" width="2" height="2" fill="#9C27B0" />
         <rect x="16" y="14" width="2" height="2" fill="#9C27B0" />
         <rect x="4" y="16" width="12" height="2" fill="#9C27B0" />
-        
+
         {/* Inner circle - lighter purple */}
         <rect x="4" y="4" width="12" height="12" fill="#AB47BC" />
-        
+
         {/* Inner shape - bright magenta */}
         <rect x="6" y="3" width="8" height="1" fill="#E040FB" />
         <rect x="5" y="4" width="1" height="1" fill="#E040FB" />
@@ -253,7 +272,7 @@ export default function Navigation() {
         <rect x="9" y="14" width="2" height="1" fill="#E040FB" />
         <rect x="9" y="15" width="2" height="1" fill="#E040FB" />
         <rect x="9" y="16" width="2" height="1" fill="#E040FB" />
-        
+
         {/* Center void - black */}
         <rect x="6" y="6" width="8" height="4" fill="#000000" />
         <rect x="7" y="10" width="6" height="1" fill="#000000" />
@@ -267,15 +286,18 @@ export default function Navigation() {
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.5 }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-6 py-4 ${isScrolled || isOpen ? "bg-black/80 backdrop-blur-md" : "bg-transparent"
-          }`}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-6 py-4 ${
+          isScrolled || isOpen
+            ? "bg-black/80 backdrop-blur-md"
+            : "bg-transparent"
+        }`}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link
-            href="/"
-            className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 z-50 font-pixel"
-          >
-            VOID
+          <Link href="/" className="flex items-center z-50 group">
+            {/* Logo using PixelVoidCube scaled to match text height */}
+            <div className="mr-2 transition-transform duration-200 group-hover:scale-110">
+              <img src="/favicon.png" alt="VOID Logo" className="h-8 mr-2" />
+            </div>
           </Link>
 
           <div className="flex items-center space-x-4">
@@ -322,19 +344,19 @@ export default function Navigation() {
                 <motion.div
                   key={i}
                   className="absolute"
-                  initial={{ 
-                    x: Math.random() * window.innerWidth, 
+                  initial={{
+                    x: Math.random() * window.innerWidth,
                     y: Math.random() * window.innerHeight,
-                    opacity: 0 
+                    opacity: 0,
                   }}
-                  animate={{ 
+                  animate={{
                     x: [
                       Math.random() * window.innerWidth - 50,
-                      Math.random() * window.innerWidth + 50
+                      Math.random() * window.innerWidth + 50,
                     ],
                     y: [
                       Math.random() * window.innerHeight - 50,
-                      Math.random() * window.innerHeight + 50
+                      Math.random() * window.innerHeight + 50,
                     ],
                     opacity: [0, 0.4, 0],
                   }}
@@ -342,19 +364,19 @@ export default function Navigation() {
                     duration: Math.random() * 10 + 5,
                     repeat: Infinity,
                     repeatType: "reverse",
-                    ease: "linear"
+                    ease: "linear",
                   }}
                 >
-                  <div 
+                  <div
                     className="w-3 h-3 bg-purple-500/30"
                     style={{
-                      boxShadow: "0 0 8px rgba(168, 85, 247, 0.5)"
+                      boxShadow: "0 0 8px rgba(168, 85, 247, 0.5)",
                     }}
                   />
                 </motion.div>
               ))}
             </div>
-            
+
             <div className="max-w-7xl w-full mx-auto px-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div className="flex flex-col justify-center">
@@ -372,20 +394,23 @@ export default function Navigation() {
                       ref={navScrollRef}
                       className="flex flex-col space-y-6 overflow-y-auto max-h-[60vh] pr-4 scrollbar-hide no-scrollbar"
                       style={{
-                        scrollbarWidth: 'none', /* Firefox */
-                        msOverflowStyle: 'none' /* IE and Edge */
+                        scrollbarWidth: "none" /* Firefox */,
+                        msOverflowStyle: "none" /* IE and Edge */,
                       }}
                     >
                       {navLinks.map((link, index) => (
-                        <motion.div 
-                          key={link.path} 
+                        <motion.div
+                          key={link.path}
                           variants={itemVariants}
                           custom={index}
                         >
                           <Link
                             href={link.path}
-                            className={`group relative text-5xl md:text-7xl font-black tracking-tighter transition-colors duration-300 font-pixel flex items-center ${pathname === link.path ? "text-purple-400" : "text-white hover:text-purple-300"
-                              }`}
+                            className={`group relative text-5xl md:text-7xl font-black tracking-tighter transition-colors duration-300 font-pixel flex items-center ${
+                              pathname === link.path
+                                ? "text-purple-400"
+                                : "text-white hover:text-purple-300"
+                            }`}
                           >
                             {/* Pixel indicator for current page */}
                             <div className="w-10 h-10 mr-4 flex justify-center items-center">
@@ -399,32 +424,34 @@ export default function Navigation() {
                                 </motion.div>
                               )}
                             </div>
-                            
-                            <motion.span 
+
+                            <motion.span
                               className="relative z-10"
                               whileHover={{ x: 5 }}
                               transition={{ type: "spring", stiffness: 300 }}
                             >
                               {link.name}
                             </motion.span>
-                            
-                            <motion.span 
+
+                            <motion.span
                               className="absolute -left-8 top-2 text-sm text-purple-500 font-pixel"
                               initial={{ opacity: 0 }}
                               whileHover={{ opacity: 1 }}
                             >
                               0{index + 1}
                             </motion.span>
-                            
+
                             {/* Animated underline */}
-                            <motion.div 
+                            <motion.div
                               className="absolute -bottom-2 left-0 h-2 bg-purple-500"
-                              initial={{ width: pathname === link.path ? "100%" : "0%" }}
+                              initial={{
+                                width: pathname === link.path ? "100%" : "0%",
+                              }}
                               whileHover={{ width: "100%" }}
                               transition={{ duration: 0.2 }}
-                              style={{ 
+                              style={{
                                 width: pathname === link.path ? "100%" : "0%",
-                                left: "40px" 
+                                left: "40px",
                               }}
                             />
                           </Link>
@@ -443,40 +470,40 @@ export default function Navigation() {
                   </div>
                 </div>
 
-                <motion.div 
-                  variants={itemVariants} 
+                <motion.div
+                  variants={itemVariants}
                   className="hidden md:flex items-center justify-center"
                 >
                   <div className="relative">
                     {/* Large 2D pixel black hole */}
                     <motion.div
                       initial={{ scale: 0 }}
-                      animate={{ 
+                      animate={{
                         scale: [0, 1.1, 1],
                       }}
-                      transition={{ 
+                      transition={{
                         duration: 0.5,
-                        ease: "easeOut" 
+                        ease: "easeOut",
                       }}
                       className="w-64 h-64 flex items-center justify-center"
                     >
                       <motion.div
-                        animate={{ 
+                        animate={{
                           scale: [1, 1.05, 1],
                         }}
-                        transition={{ 
-                          scale: { 
+                        transition={{
+                          scale: {
                             duration: 2,
                             repeat: Infinity,
                             repeatType: "reverse",
-                            ease: "easeInOut" 
-                          }
+                            ease: "easeInOut",
+                          },
                         }}
                       >
                         <PixelVoidCube size={200} />
                       </motion.div>
                     </motion.div>
-                    
+
                     {/* Decorative smaller pixel elements */}
                     {[1, 2, 3, 4].map((i) => (
                       <motion.div
@@ -487,20 +514,25 @@ export default function Navigation() {
                           left: `${Math.cos(i * 1.5) * 100 + 120}px`,
                         }}
                         initial={{ opacity: 0 }}
-                        animate={{ 
+                        animate={{
                           opacity: [0, 0.8, 0],
                           x: [0, Math.random() * 20 - 10],
-                          y: [0, Math.random() * 20 - 10]
+                          y: [0, Math.random() * 20 - 10],
                         }}
                         transition={{
                           duration: 3 + i,
                           delay: i * 0.5,
                           repeat: Infinity,
-                          repeatType: "reverse"
+                          repeatType: "reverse",
                         }}
                       >
-                        <div className={`w-${i+2} h-${i+2} bg-purple-500/50`}
-                             style={{ width: `${i*4 + 4}px`, height: `${i*4 + 4}px` }} />
+                        <div
+                          className={`w-${i + 2} h-${i + 2} bg-purple-500/50`}
+                          style={{
+                            width: `${i * 4 + 4}px`,
+                            height: `${i * 4 + 4}px`,
+                          }}
+                        />
                       </motion.div>
                     ))}
                   </div>
@@ -516,13 +548,13 @@ export default function Navigation() {
         .no-scrollbar::-webkit-scrollbar {
           display: none;
         }
-        
+
         /* Hide scrollbar for IE, Edge and Firefox */
         .no-scrollbar {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
+          -ms-overflow-style: none; /* IE and Edge */
+          scrollbar-width: none; /* Firefox */
         }
       `}</style>
     </>
-  )
+  );
 }
