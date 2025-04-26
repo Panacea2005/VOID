@@ -1342,17 +1342,17 @@ const RealmCube: React.FC<RealmCubeProps> = ({
     const loadNFTCubesFromBlockchain = async () => {
       try {
         setIsLoadingNFTs(true);
-
+    
         // First try to load from wallet
         if (wallet.connected && wallet.publicKey) {
           try {
             // Get the public key from the connected wallet
             const publicKey = wallet.publicKey;
-
+    
             // Import libraries dynamically
             const { Connection, PublicKey } = await import("@solana/web3.js");
             const { Metaplex } = await import("@metaplex-foundation/js");
-
+    
             // Set up connection
             const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || "devnet";
             const endpoint =
@@ -1360,28 +1360,28 @@ const RealmCube: React.FC<RealmCubeProps> = ({
                 ? "https://api.mainnet-beta.solana.com"
                 : "https://api.devnet.solana.com";
             const connection = new Connection(endpoint);
-
+    
             // Initialize Metaplex
             const metaplex = Metaplex.make(connection);
-
+    
             console.log(
               `Loading NFTs from blockchain for wallet: ${publicKey.toString()}`
             );
-
+    
             // Fetch NFTs owned by this wallet
             const nfts = await metaplex.nfts().findAllByOwner({
               owner: new PublicKey(publicKey),
             });
-
+    
             console.log(`Found ${nfts.length} total NFTs in wallet`);
-
+    
             // Process all NFTs - we'll filter cube-specific ones later
             if (nfts.length > 0) {
               // Process in batches to avoid overwhelming the network
               const batchSize = 5;
               const allNfts = [];
               const cubeNfts: any[] = [];
-
+    
               // Process in batches
               for (let i = 0; i < nfts.length; i += batchSize) {
                 const batch = nfts.slice(i, i + batchSize);
@@ -1390,19 +1390,19 @@ const RealmCube: React.FC<RealmCubeProps> = ({
                     nfts.length / batchSize
                   )}`
                 );
-
+    
                 const batchResults = await Promise.all(
                   batch.map(async (nft) => {
                     try {
                       // Try to fetch metadata if available
                       let metadata = null;
-
+    
                       if (nft.uri) {
                         try {
                           console.log(`Fetching metadata from: ${nft.uri}`);
                           // Use our improved metadata fetching function
                           metadata = await fetchMetadataWithRetry(nft.uri);
-
+    
                           if (metadata) {
                             console.log(
                               `Got metadata for: ${
@@ -1423,7 +1423,7 @@ const RealmCube: React.FC<RealmCubeProps> = ({
                           );
                         }
                       }
-
+    
                       // Use JSON data if it's already available in the nft object
                       if (!metadata && nft.json) {
                         metadata = nft.json;
@@ -1433,20 +1433,9 @@ const RealmCube: React.FC<RealmCubeProps> = ({
                           }`
                         );
                       }
-
+    
                       // Create basic NFT object with all available data
-                      const processedNft: {
-                        id: string;
-                        name: any;
-                        description: any;
-                        image: any;
-                        attributes: any;
-                        metadata: any;
-                        json: any;
-                        mintAddress: string;
-                        uri: string;
-                        isCube?: boolean;
-                      } = {
+                      const processedNft = {
                         id: nft.address.toString(),
                         name:
                           metadata?.name ||
@@ -1460,44 +1449,168 @@ const RealmCube: React.FC<RealmCubeProps> = ({
                         json: nft.json || metadata || {},
                         mintAddress: nft.address.toString(),
                         uri: nft.uri,
+                        isCube: false, // Initialize with a default value
                       };
-
-                      // Enhanced VOID cube detection - check various patterns
-                      const isCube =
-                        // Check name
-                        (processedNft.name?.includes("VOID") &&
-                          processedNft.name?.includes("Cube")) ||
-                        // Check collection name
-                        processedNft.metadata?.collection?.name?.includes(
-                          "VOID Cube"
-                        ) ||
-                        // Check collection family
-                        processedNft.metadata?.collection?.family?.includes(
-                          "VOID Cube"
-                        ) ||
-                        // Check properties.collection
-                        processedNft.metadata?.properties?.collection?.name?.includes(
-                          "VOID Cube"
-                        ) ||
-                        // Check explicit type in attributes
-                        processedNft.attributes?.some(
-                          (attr: any) =>
-                            (attr.trait_type === "Type" &&
-                              attr.value === "Cube") ||
-                            (attr.trait_type === "Collection" &&
-                              attr.value?.includes("VOID Cube"))
-                        );
-
+    
+                      // IMPROVED VOID CUBE DETECTION - Excludes both Music and Pixel Art
+                      const isCube = (() => {
+                        // STEP 1: EXPLICIT EXCLUSION RULES - Fast reject for non-cube NFTs
+                        
+                        // Quick exclude for music/audio/pixel NFTs based on name
+                        if (processedNft.name) {
+                          const nameLower = processedNft.name.toLowerCase();
+                          // Skip music/audio NFTs explicitly
+                          if (nameLower.includes("music") || 
+                              nameLower.includes("audio") || 
+                              nameLower.includes("sound")) {
+                            console.log(`Skipping music/audio NFT: ${processedNft.name}`);
+                            return false;
+                          }
+                          
+                          // Skip pixel art NFTs explicitly
+                          if (nameLower.includes("pixel") || 
+                              nameLower.includes("pixl") ||
+                              nameLower.includes("8bit") || 
+                              nameLower.includes("8-bit")) {
+                            console.log(`Skipping pixel art NFT: ${processedNft.name}`);
+                            return false;
+                          }
+                        }
+                        
+                        // Check metadata description/symbols for pixel art indications
+                        if (processedNft.metadata) {
+                          // Check description
+                          if (processedNft.metadata.description) {
+                            const descLower = processedNft.metadata.description.toLowerCase();
+                            if (descLower.includes("pixel art") || 
+                                descLower.includes("pixelated") || 
+                                descLower.includes("8-bit") ||
+                                (descLower.includes("void") && descLower.includes("pixel"))) {
+                              console.log(`Skipping pixel art NFT from description: ${processedNft.name}`);
+                              return false;
+                            }
+                          }
+                          
+                          // Check collection details for pixel art
+                          if (processedNft.metadata.collection?.name) {
+                            const collName = processedNft.metadata.collection.name.toLowerCase();
+                            if (collName.includes("pixel") || 
+                                collName.includes("pixl") ||
+                                (collName.includes("void") && !collName.includes("cube"))) {
+                              console.log(`Skipping non-cube VOID collection NFT: ${processedNft.name}`);
+                              return false;
+                            }
+                          }
+                          
+                          // Check for music-related symbols
+                          if (processedNft.metadata.symbol) {
+                            const symbol = processedNft.metadata.symbol.toLowerCase();
+                            if (symbol.includes("music") || symbol.includes("audio")) {
+                              console.log(`Skipping music NFT by symbol: ${processedNft.name}`);
+                              return false;
+                            }
+                          }
+                        }
+                        
+                        // Check attributes for pixel art tags
+                        if (processedNft.attributes && Array.isArray(processedNft.attributes)) {
+                          const hasPixelAttribute = processedNft.attributes.some(
+                            (attr) => 
+                              (attr.trait_type === "Type" && 
+                                (attr.value === "Pixel" || attr.value === "Pixel Art" || attr.value === "2D")) ||
+                              (attr.trait_type === "Style" && 
+                                (attr.value === "Pixel" || attr.value === "Pixel Art" || attr.value === "2D")) ||
+                              (attr.trait_type === "Collection" && 
+                                typeof attr.value === "string" &&
+                                (attr.value.toLowerCase().includes("pixel") || 
+                                 attr.value.toLowerCase().includes("pixl")))
+                          );
+                          
+                          if (hasPixelAttribute) {
+                            console.log(`Skipping pixel art NFT by attributes: ${processedNft.name}`);
+                            return false;
+                          }
+                        }
+                        
+                        // STEP 2: POSITIVE CUBE IDENTIFICATION - Only after passing exclusion rules
+                        
+                        // Check name - using regex to match "VOID Cube" pattern exactly
+                        if (processedNft.name) {
+                          const nameLower = processedNft.name.toLowerCase();
+                          if (/\bvoid\s*cube\b/i.test(nameLower)) {
+                            console.log(`Found VOID Cube NFT by name: ${processedNft.name}`);
+                            return true;
+                          }
+                        }
+                        
+                        // Check collection name - must explicitly contain "cube"
+                        if (processedNft.metadata?.collection?.name) {
+                          const collName = processedNft.metadata.collection.name.toLowerCase();
+                          if (/\bvoid\s*cube\b/i.test(collName)) {
+                            console.log(`Found VOID Cube NFT by collection name: ${processedNft.metadata.collection.name}`);
+                            return true;
+                          }
+                        }
+                        
+                        // Check explicit type in attributes - only exact matches
+                        if (processedNft.attributes && Array.isArray(processedNft.attributes)) {
+                          // Check for Type = Cube attribute
+                          const hasTypeAttribute = processedNft.attributes.some(
+                            (attr) => attr.trait_type === "Type" && attr.value === "Cube"
+                          );
+                          
+                          // Check for Collection attribute that contains VOID Cube specifically
+                          const hasCollectionAttribute = processedNft.attributes.some(
+                            (attr) => 
+                              attr.trait_type === "Collection" && 
+                              typeof attr.value === "string" &&
+                              /\bvoid\s*cube\b/i.test(attr.value)
+                          );
+                          
+                          // Check for explicit "isCube" attribute
+                          const hasIsCubeAttribute = processedNft.attributes.some(
+                            (attr) => 
+                              (attr.trait_type === "isCube" && attr.value === true) ||
+                              (attr.trait_type === "IsCube" && attr.value === true)
+                          );
+                          
+                          if (hasTypeAttribute || hasCollectionAttribute || hasIsCubeAttribute) {
+                            console.log(`Found VOID Cube NFT by attributes check: ${processedNft.name}`);
+                            return true;
+                          }
+                        }
+                        
+                        // Check for 3D model properties which would indicate a cube
+                        if (processedNft.metadata?.properties?.files) {
+                          const files = processedNft.metadata.properties.files;
+                          if (Array.isArray(files)) {
+                            const has3DModel = files.some(file => 
+                              file.type === "glb" || 
+                              file.type === "gltf" || 
+                              (file.type === "model" && !file.uri?.toLowerCase().includes("pixel"))
+                            );
+                            
+                            if (has3DModel && processedNft.name?.toLowerCase().includes("void")) {
+                              console.log(`Found VOID Cube NFT by 3D model file: ${processedNft.name}`);
+                              return true;
+                            }
+                          }
+                        }
+                        
+                        // If none of the positive identification rules matched, it's not a cube
+                        return false;
+                      })();
+    
                       // Add isCube flag to the processedNft
                       processedNft.isCube = isCube;
-
+    
                       if (isCube) {
-                        console.log(
-                          `Found VOID Cube NFT: ${processedNft.name}`
-                        );
+                        console.log(`Found VOID Cube NFT: ${processedNft.name}`);
                         cubeNfts.push(processedNft);
+                      } else {
+                        console.log(`Skipping non-cube NFT: ${processedNft.name}`);
                       }
-
+    
                       // Add to all NFTs
                       allNfts.push(processedNft);
                       return processedNft;
@@ -1511,15 +1624,15 @@ const RealmCube: React.FC<RealmCubeProps> = ({
                   })
                 );
               }
-
+    
               console.log(
-                `Successfully processed ${allNfts.length} NFTs, found ${cubeNfts.length} cubes`
+                `Successfully processed ${allNfts.length} total NFTs, found ${cubeNfts.length} VOID Cube NFTs`
               );
-
-              // Convert NFTs to cube format
+    
+              // Convert Cube NFTs to cube format
               const nftCubes = await convertNFTsToCubes(cubeNfts);
               console.log(`Converted ${nftCubes.length} NFTs into RealmCubes`);
-
+    
               if (nftCubes.length > 0) {
                 // Combine default and NFT cubes
                 setCombinedCubeCollection([...cubeCollection, ...nftCubes]);
@@ -1533,7 +1646,7 @@ const RealmCube: React.FC<RealmCubeProps> = ({
         } else {
           console.log("No wallet connected or not initialized yet");
         }
-
+    
         // If we get here, we couldn't load from blockchain or there were no cubes
         // Either show no NFT cubes or create mock ones for testing
         console.log("Creating mock NFT cubes for testing");
@@ -1573,7 +1686,7 @@ const RealmCube: React.FC<RealmCubeProps> = ({
             isNFT: true,
           },
         ];
-
+    
         setCombinedCubeCollection([...cubeCollection, ...mockNftCubes]);
       } catch (error) {
         console.error("Error in NFT loading process:", error);

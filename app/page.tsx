@@ -161,17 +161,23 @@ const PixelVoidCube = ({ className }: { className?: string }) => {
   return (
     <div className={`relative ${className}`}>
       {/* SVG Void Cube - Enhanced with animation capabilities */}
-      <svg width="100%" height="100%" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg
+        width="100%"
+        height="100%"
+        viewBox="0 0 20 20"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
         {/* Animated outer dark ring - darkest purple */}
         <motion.g
-          animate={{ 
+          animate={{
             scale: [1, 1.02, 1],
-            opacity: [0.9, 1, 0.9]
+            opacity: [0.9, 1, 0.9],
           }}
           transition={{
             duration: 3,
             repeat: Infinity,
-            repeatType: "reverse"
+            repeatType: "reverse",
           }}
         >
           <rect x="6" y="0" width="8" height="1" fill="#4A1442" />
@@ -198,13 +204,13 @@ const PixelVoidCube = ({ className }: { className?: string }) => {
 
         {/* Main circle - purple */}
         <motion.g
-          animate={{ 
-            scale: [1, 1.01, 1]
+          animate={{
+            scale: [1, 1.01, 1],
           }}
           transition={{
             duration: 2,
             repeat: Infinity,
-            repeatType: "reverse"
+            repeatType: "reverse",
           }}
         >
           <rect x="4" y="2" width="12" height="2" fill="#9C27B0" />
@@ -216,20 +222,20 @@ const PixelVoidCube = ({ className }: { className?: string }) => {
           <rect x="16" y="14" width="2" height="2" fill="#9C27B0" />
           <rect x="4" y="16" width="12" height="2" fill="#9C27B0" />
         </motion.g>
-        
+
         {/* Inner circle - lighter purple */}
         <rect x="4" y="4" width="12" height="12" fill="#AB47BC" />
-        
+
         {/* Inner shape - bright magenta - with pulse animation */}
         <motion.g
-          animate={{ 
+          animate={{
             opacity: [0.9, 1, 0.9],
-            scale: [1, 1.03, 1]
+            scale: [1, 1.03, 1],
           }}
           transition={{
             duration: 2.5,
             repeat: Infinity,
-            repeatType: "reverse"
+            repeatType: "reverse",
           }}
         >
           <rect x="6" y="3" width="8" height="1" fill="#E040FB" />
@@ -254,17 +260,17 @@ const PixelVoidCube = ({ className }: { className?: string }) => {
           <rect x="9" y="15" width="2" height="1" fill="#E040FB" />
           <rect x="9" y="16" width="2" height="1" fill="#E040FB" />
         </motion.g>
-        
+
         {/* Center void - black - with subtle animation */}
         <motion.g
-          animate={{ 
+          animate={{
             scale: [1, 1.1, 1],
-            opacity: [0.9, 1, 0.9]
+            opacity: [0.9, 1, 0.9],
           }}
           transition={{
             duration: 4,
             repeat: Infinity,
-            repeatType: "reverse"
+            repeatType: "reverse",
           }}
         >
           <rect x="6" y="6" width="8" height="4" fill="#000000" />
@@ -284,37 +290,37 @@ const PixelVoidCube = ({ className }: { className?: string }) => {
               top: `${20 + Math.random() * 60}%`,
               left: `${20 + Math.random() * 60}%`,
               opacity: 0.5 + Math.random() * 0.5,
-              boxShadow: '0 0 4px rgba(168, 85, 247, 0.8)'
+              boxShadow: "0 0 4px rgba(168, 85, 247, 0.8)",
             }}
             animate={{
               y: [-(Math.random() * 20), Math.random() * 20],
               x: [-(Math.random() * 20), Math.random() * 20],
-              opacity: [0.5, 1, 0.5]
+              opacity: [0.5, 1, 0.5],
             }}
             transition={{
               duration: 2 + Math.random() * 3,
               repeat: Infinity,
               repeatType: "reverse",
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
           />
         ))}
       </div>
-      
+
       {/* Enhanced glow effect */}
-      <motion.div 
+      <motion.div
         className="absolute inset-0 rounded-full pointer-events-none"
-        animate={{ 
+        animate={{
           boxShadow: [
-            '0 0 0px rgba(168, 85, 247, 0)', 
-            '0 0 20px rgba(168, 85, 247, 0.3)', 
-            '0 0 0px rgba(168, 85, 247, 0)'
-          ]
+            "0 0 0px rgba(168, 85, 247, 0)",
+            "0 0 20px rgba(168, 85, 247, 0.3)",
+            "0 0 0px rgba(168, 85, 247, 0)",
+          ],
         }}
-        transition={{ 
+        transition={{
           duration: 3,
           repeat: Infinity,
-          repeatType: "reverse"
+          repeatType: "reverse",
         }}
       />
     </div>
@@ -521,109 +527,114 @@ const ScrollingTextSection = () => {
   const { scrollYProgress } = useScroll();
   const [hoverText, setHoverText] = useState<number | null>(null);
   const sectionRef = useRef(null);
-  
+
   // More extreme scroll-based animations with varied ranges for staggered effect
   const textLine1X = useTransform(scrollYProgress, [0.05, 0.25], [0, -800]);
   const textLine2X = useTransform(scrollYProgress, [0.08, 0.28], [0, 700]);
   const textLine3X = useTransform(scrollYProgress, [0.12, 0.32], [0, -900]);
   const textLine4X = useTransform(scrollYProgress, [0.15, 0.35], [0, 800]);
   const textLine5X = useTransform(scrollYProgress, [0.18, 0.38], [0, -750]);
-  
+
   // Background parallax effects
   const bgParallax1 = useTransform(scrollYProgress, [0, 1], [0, -100]);
   const bgParallax2 = useTransform(scrollYProgress, [0, 1], [0, -200]);
-  
+
   // Rotation and scale effects for enhanced dynamism
   const rotation1 = useTransform(scrollYProgress, [0.05, 0.25], [0, -2]);
   const rotation2 = useTransform(scrollYProgress, [0.08, 0.28], [0, 1.5]);
   const rotation3 = useTransform(scrollYProgress, [0.12, 0.32], [0, -1.8]);
   const scale1 = useTransform(scrollYProgress, [0.1, 0.3], [1, 1.05]);
-  
+
   // Smoother movement with spring physics - varied settings for more organic feeling
   const smoothLine1X = useSpring(textLine1X, { stiffness: 90, damping: 20 });
   const smoothLine2X = useSpring(textLine2X, { stiffness: 80, damping: 25 });
   const smoothLine3X = useSpring(textLine3X, { stiffness: 70, damping: 20 });
   const smoothLine4X = useSpring(textLine4X, { stiffness: 75, damping: 15 });
   const smoothLine5X = useSpring(textLine5X, { stiffness: 85, damping: 30 });
-  
+
   const smoothRotation1 = useSpring(rotation1, { stiffness: 60, damping: 15 });
   const smoothRotation2 = useSpring(rotation2, { stiffness: 60, damping: 15 });
   const smoothRotation3 = useSpring(rotation3, { stiffness: 60, damping: 15 });
   const smoothScale1 = useSpring(scale1, { stiffness: 70, damping: 20 });
-  
+
   // Enhanced animation for content reveal with sequence
   const contentOpacity = useTransform(scrollYProgress, [0.05, 0.15], [0, 1]);
   const contentY = useTransform(scrollYProgress, [0.05, 0.15], [100, 0]);
-  
+
   // Glitch effect state for random text distortion
   const [glitchIndices, setGlitchIndices] = useState<number[]>([]);
-  
+
   // Letters for glitch effect
   const glitchLetters = "01XYZABC#$@%&!?*";
-  
+
   useEffect(() => {
     const glitchInterval = setInterval(() => {
       // Random number of characters to glitch (1-5)
       const numGlitches = Math.floor(Math.random() * 5) + 1;
-      
+
       // Create random indices
-      const newGlitchIndices = Array.from({ length: numGlitches }, () => 
+      const newGlitchIndices = Array.from({ length: numGlitches }, () =>
         Math.floor(Math.random() * 20)
       );
-      
+
       setGlitchIndices(newGlitchIndices);
-      
+
       // Reset after a short time
       setTimeout(() => {
         setGlitchIndices([]);
       }, 200);
     }, 2000);
-    
+
     return () => clearInterval(glitchInterval);
   }, []);
-  
+
   // Function to apply glitch effect to text
   const applyGlitchEffect = (text: string, lineIndex: number) => {
     if (glitchIndices.length === 0) return text;
-    
-    return text.split('').map((char, i) => {
-      // Check if this character should be glitched
-      if (glitchIndices.includes((i + lineIndex * 5) % 20) && char !== ' ') {
-        // Replace with a random glitch character
-        return glitchLetters[Math.floor(Math.random() * glitchLetters.length)];
-      }
-      return char;
-    }).join('');
+
+    return text
+      .split("")
+      .map((char, i) => {
+        // Check if this character should be glitched
+        if (glitchIndices.includes((i + lineIndex * 5) % 20) && char !== " ") {
+          // Replace with a random glitch character
+          return glitchLetters[
+            Math.floor(Math.random() * glitchLetters.length)
+          ];
+        }
+        return char;
+      })
+      .join("");
   };
-  
+
   // Scrolling progress indicator
   const progressBarWidth = useTransform(
-    scrollYProgress, 
-    [0.05, 0.4], 
+    scrollYProgress,
+    [0.05, 0.4],
     ["0%", "100%"]
   );
-  
+
   // Text lines with more varied and intriguing content
   const textLines = [
     "NEW ERA OF GAMING. DIGITAL EVOLUTION. NEW AGE",
     "BORDERLESS EXPERIENCE. BEYOND DIMENSIONS.",
     "VOID UNIVERSE. INFINITE POSSIBILITIES. VOID",
     "REALITY REDEFINED. PERCEPTION ALTERED. GAMING",
-    "BEYOND EXISTENCE. TRANSCEND REALITY. EVOLVE."
+    "BEYOND EXISTENCE. TRANSCEND REALITY. EVOLVE.",
   ];
-  
+
   return (
-    <section 
+    <section
       ref={sectionRef}
       className="relative py-32 bg-black overflow-hidden"
     >
       {/* Background gradients with parallax */}
-      <motion.div 
+      <motion.div
         className="absolute inset-0 bg-gradient-to-b from-black to-purple-950/30 z-0 opacity-70"
         style={{ y: bgParallax1 }}
       />
-      
-      <motion.div 
+
+      <motion.div
         className="absolute inset-0 z-0 overflow-hidden"
         style={{ y: bgParallax2 }}
       >
@@ -651,7 +662,7 @@ const ScrollingTextSection = () => {
           ))}
         </div>
       </motion.div>
-      
+
       {/* Enhanced vertical light beams */}
       <div className="absolute inset-0 z-1 overflow-hidden">
         {Array.from({ length: 5 }).map((_, i) => (
@@ -676,45 +687,49 @@ const ScrollingTextSection = () => {
           />
         ))}
       </div>
-      
+
       {/* Digital scan line effect */}
-      <motion.div 
+      <motion.div
         className="absolute inset-0 z-2 pointer-events-none overflow-hidden"
         initial={{ opacity: 0.15 }}
         animate={{ opacity: [0.15, 0.2, 0.15] }}
         transition={{ duration: 2, repeat: Infinity }}
       >
         {Array.from({ length: 50 }).map((_, i) => (
-          <motion.div 
+          <motion.div
             key={`scanline-${i}`}
             className="w-full h-px bg-gradient-to-r from-purple-500/0 via-purple-500/30 to-purple-500/0"
-            style={{ 
+            style={{
               top: `${i * 2}%`,
-              position: 'absolute',
-              boxShadow: '0 0 2px rgba(168, 85, 247, 0.3)',
-              filter: 'blur(0.5px)'
+              position: "absolute",
+              boxShadow: "0 0 2px rgba(168, 85, 247, 0.3)",
+              filter: "blur(0.5px)",
             }}
           />
         ))}
       </motion.div>
-      
+
       <div className="absolute inset-0 z-5 overflow-hidden">
         {/* Text rows that move horizontally as user scrolls - enhanced with rotation and scale */}
         <motion.div
           className="whitespace-nowrap text-[160px] leading-none font-bold text-gray-900 opacity-70 py-4 font-pixel transform-gpu"
-          style={{ 
-            x: smoothLine1X, 
+          style={{
+            x: smoothLine1X,
             rotate: smoothRotation1,
             scale: smoothScale1,
-            transformOrigin: "left center"
+            transformOrigin: "left center",
           }}
           onMouseEnter={() => setHoverText(0)}
           onMouseLeave={() => setHoverText(null)}
         >
           <motion.span
-            animate={hoverText === 0 ? {
-              color: ["#111111", "#332244", "#111111"],
-            } : {}}
+            animate={
+              hoverText === 0
+                ? {
+                    color: ["#111111", "#332244", "#111111"],
+                  }
+                : {}
+            }
             transition={{ duration: 1.5 }}
           >
             {applyGlitchEffect(textLines[0], 0)}
@@ -723,18 +738,22 @@ const ScrollingTextSection = () => {
 
         <motion.div
           className="whitespace-nowrap text-[160px] leading-none font-bold text-gray-900 opacity-70 py-4 font-pixel transform-gpu"
-          style={{ 
-            x: smoothLine2X, 
+          style={{
+            x: smoothLine2X,
             rotate: smoothRotation2,
-            transformOrigin: "right center" 
+            transformOrigin: "right center",
           }}
           onMouseEnter={() => setHoverText(1)}
           onMouseLeave={() => setHoverText(null)}
         >
           <motion.span
-            animate={hoverText === 1 ? {
-              color: ["#111111", "#442266", "#111111"],
-            } : {}}
+            animate={
+              hoverText === 1
+                ? {
+                    color: ["#111111", "#442266", "#111111"],
+                  }
+                : {}
+            }
             transition={{ duration: 1.5 }}
           >
             {applyGlitchEffect(textLines[1], 1)}
@@ -743,19 +762,23 @@ const ScrollingTextSection = () => {
 
         <motion.div
           className="whitespace-nowrap text-[160px] leading-none font-bold text-gray-900 opacity-70 py-4 font-pixel transform-gpu"
-          style={{ 
-            x: smoothLine3X, 
+          style={{
+            x: smoothLine3X,
             rotate: smoothRotation3,
             scale: smoothScale1,
-            transformOrigin: "left center" 
+            transformOrigin: "left center",
           }}
           onMouseEnter={() => setHoverText(2)}
           onMouseLeave={() => setHoverText(null)}
         >
           <motion.span
-            animate={hoverText === 2 ? {
-              color: ["#111111", "#663399", "#111111"],
-            } : {}}
+            animate={
+              hoverText === 2
+                ? {
+                    color: ["#111111", "#663399", "#111111"],
+                  }
+                : {}
+            }
             transition={{ duration: 1.5 }}
           >
             {applyGlitchEffect(textLines[2], 2)}
@@ -764,17 +787,21 @@ const ScrollingTextSection = () => {
 
         <motion.div
           className="whitespace-nowrap text-[160px] leading-none font-bold text-gray-900 opacity-70 py-4 font-pixel transform-gpu"
-          style={{ 
+          style={{
             x: smoothLine4X,
-            transformOrigin: "right center" 
+            transformOrigin: "right center",
           }}
           onMouseEnter={() => setHoverText(3)}
           onMouseLeave={() => setHoverText(null)}
         >
           <motion.span
-            animate={hoverText === 3 ? {
-              color: ["#111111", "#442266", "#111111"],
-            } : {}}
+            animate={
+              hoverText === 3
+                ? {
+                    color: ["#111111", "#442266", "#111111"],
+                  }
+                : {}
+            }
             transition={{ duration: 1.5 }}
           >
             {applyGlitchEffect(textLines[3], 3)}
@@ -783,24 +810,28 @@ const ScrollingTextSection = () => {
 
         <motion.div
           className="whitespace-nowrap text-[160px] leading-none font-bold text-gray-900 opacity-70 py-4 font-pixel transform-gpu"
-          style={{ 
+          style={{
             x: smoothLine5X,
-            transformOrigin: "left center" 
+            transformOrigin: "left center",
           }}
           onMouseEnter={() => setHoverText(4)}
           onMouseLeave={() => setHoverText(null)}
         >
           <motion.span
-            animate={hoverText === 4 ? {
-              color: ["#111111", "#332244", "#111111"],
-            } : {}}
+            animate={
+              hoverText === 4
+                ? {
+                    color: ["#111111", "#332244", "#111111"],
+                  }
+                : {}
+            }
             transition={{ duration: 1.5 }}
           >
             {applyGlitchEffect(textLines[4], 4)}
           </motion.span>
         </motion.div>
       </div>
-      
+
       {/* Enhanced animated particles - more variety and animation types */}
       <div className="absolute inset-0 z-4 overflow-hidden pointer-events-none">
         {/* Square particles */}
@@ -814,7 +845,7 @@ const ScrollingTextSection = () => {
               top: `${Math.random() * 100}%`,
               left: `${Math.random() * 100}%`,
               opacity: 0.3 + Math.random() * 0.4,
-              boxShadow: '0 0 3px rgba(168, 85, 247, 0.6)',
+              boxShadow: "0 0 3px rgba(168, 85, 247, 0.6)",
             }}
             animate={{
               x: [0, Math.random() * 150 - 75],
@@ -829,7 +860,7 @@ const ScrollingTextSection = () => {
             }}
           />
         ))}
-        
+
         {/* Line particles */}
         {Array.from({ length: 12 }).map((_, i) => (
           <motion.div
@@ -841,7 +872,7 @@ const ScrollingTextSection = () => {
               top: `${Math.random() * 100}%`,
               left: `${Math.random() * 100}%`,
               opacity: 0.3 + Math.random() * 0.3,
-              boxShadow: '0 0 3px rgba(236, 72, 153, 0.5)',
+              boxShadow: "0 0 3px rgba(236, 72, 153, 0.5)",
             }}
             animate={{
               x: [0, Math.random() * 120 - 60],
@@ -857,7 +888,7 @@ const ScrollingTextSection = () => {
             }}
           />
         ))}
-        
+
         {/* Circle particles */}
         {Array.from({ length: 8 }).map((_, i) => (
           <motion.div
@@ -869,7 +900,7 @@ const ScrollingTextSection = () => {
               top: `${Math.random() * 100}%`,
               left: `${Math.random() * 100}%`,
               opacity: 0.3 + Math.random() * 0.3,
-              boxShadow: '0 0 4px rgba(59, 130, 246, 0.5)',
+              boxShadow: "0 0 4px rgba(59, 130, 246, 0.5)",
             }}
             animate={{
               x: [0, Math.random() * 100 - 50],
@@ -896,23 +927,23 @@ const ScrollingTextSection = () => {
             }}
           >
             {/* Digital glitch effect overlay */}
-            <motion.div 
+            <motion.div
               className="absolute -inset-10 opacity-10 pointer-events-none"
               animate={{
                 background: [
                   "radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, rgba(0, 0, 0, 0) 70%)",
                   "radial-gradient(circle, rgba(168, 85, 247, 0.2) 0%, rgba(0, 0, 0, 0) 70%)",
                   "radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, rgba(0, 0, 0, 0) 70%)",
-                ]
+                ],
               }}
               transition={{ duration: 3, repeat: Infinity }}
             />
-            
+
             <PixelHeading
               text="THE NEXT STAGE"
               className="text-7xl md:text-8xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-blue-500 to-pink-600"
             />
-            
+
             {/* Enhanced animated separator with particles */}
             <div className="relative h-2 mx-auto mb-10 overflow-hidden">
               <motion.div
@@ -922,21 +953,21 @@ const ScrollingTextSection = () => {
                 transition={{ duration: 1.2, ease: "easeOut" }}
                 viewport={{ once: true }}
               />
-              
+
               {/* Animated light beam on the line */}
               <motion.div
                 className="absolute top-0 left-0 h-full w-20 bg-white/70 blur-sm"
-                animate={{ 
+                animate={{
                   x: ["-100%", "500%"],
-                  opacity: [0, 1, 0]
+                  opacity: [0, 1, 0],
                 }}
-                transition={{ 
-                  duration: 2.5, 
+                transition={{
+                  duration: 2.5,
                   repeat: Infinity,
-                  repeatDelay: 1
+                  repeatDelay: 1,
                 }}
               />
-              
+
               {/* Floating particles above line */}
               {Array.from({ length: 5 }).map((_, i) => (
                 <motion.div
@@ -944,21 +975,21 @@ const ScrollingTextSection = () => {
                   className="absolute bg-white rounded-full w-1 h-1"
                   style={{
                     left: `${15 + i * 15}%`,
-                    top: i % 2 === 0 ? -4 : 4
+                    top: i % 2 === 0 ? -4 : 4,
                   }}
                   animate={{
                     y: [0, i % 2 === 0 ? -5 : 5, 0],
                     opacity: [0.5, 1, 0.5],
                     boxShadow: [
-                      '0 0 2px rgba(255, 255, 255, 0.3)', 
-                      '0 0 4px rgba(255, 255, 255, 0.6)',
-                      '0 0 2px rgba(255, 255, 255, 0.3)'
-                    ]
+                      "0 0 2px rgba(255, 255, 255, 0.3)",
+                      "0 0 4px rgba(255, 255, 255, 0.6)",
+                      "0 0 2px rgba(255, 255, 255, 0.3)",
+                    ],
                   }}
                   transition={{
                     duration: 1.5 + i * 0.5,
                     repeat: Infinity,
-                    delay: i * 0.2
+                    delay: i * 0.2,
                   }}
                 />
               ))}
@@ -966,26 +997,29 @@ const ScrollingTextSection = () => {
 
             {/* Enhanced description text */}
             <div className="mb-12 relative">
-              <motion.p 
+              <motion.p
                 className="text-2xl text-white/90 font-pixel leading-relaxed"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.3 }}
                 viewport={{ once: true }}
               >
-                VOID transcends conventional boundaries, merging art, technology, and perception. Shape the universe through your choices and forge a path uniquely your own.
+                VOID transcends conventional boundaries, merging art,
+                technology, and perception. Shape the universe through your
+                choices and forge a path uniquely your own.
               </motion.p>
-              
+
               {/* Enhanced subtle digital noise overlay */}
-              <motion.div 
+              <motion.div
                 className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-10"
                 animate={{
-                  backgroundPosition: ['0% 0%', '100% 100%']
+                  backgroundPosition: ["0% 0%", "100% 100%"],
                 }}
                 transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                 style={{
-                  backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 250 250\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")',
-                  backgroundSize: '150px 150px'
+                  backgroundImage:
+                    "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 250 250' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E\")",
+                  backgroundSize: "150px 150px",
                 }}
               />
             </div>
@@ -998,21 +1032,21 @@ const ScrollingTextSection = () => {
                   title: "IMMERSIVE",
                   desc: "Experience a sensory revolution",
                   color: "from-purple-400 to-blue-500",
-                  delay: 0
+                  delay: 0,
                 },
                 {
                   icon: "⬡",
                   title: "INNOVATIVE",
                   desc: "Powered by quantum algorithms",
                   color: "from-pink-500 to-purple-500",
-                  delay: 0.2
+                  delay: 0.2,
                 },
                 {
                   icon: "⟐",
                   title: "INTERACTIVE",
                   desc: "Your decisions reshape reality",
                   color: "from-blue-500 to-purple-500",
-                  delay: 0.4
+                  delay: 0.4,
                 },
               ].map((item, i) => (
                 <motion.div
@@ -1022,74 +1056,86 @@ const ScrollingTextSection = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: item.delay, duration: 0.8 }}
-                  whileHover={{ 
+                  whileHover={{
                     y: -5,
-                    boxShadow: '0 10px 30px -10px rgba(168, 85, 247, 0.3)',
-                    borderColor: 'rgba(168, 85, 247, 0.6)'
+                    boxShadow: "0 10px 30px -10px rgba(168, 85, 247, 0.3)",
+                    borderColor: "rgba(168, 85, 247, 0.6)",
                   }}
                 >
                   {/* Background glow effect */}
-                  <motion.div 
+                  <motion.div
                     className="absolute -inset-px rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0"
                     animate={{
                       background: [
                         `radial-gradient(circle at center, rgba(168, 85, 247, 0.15) 0%, rgba(0, 0, 0, 0) 70%)`,
                         `radial-gradient(circle at center, rgba(168, 85, 247, 0.25) 0%, rgba(0, 0, 0, 0) 70%)`,
                         `radial-gradient(circle at center, rgba(168, 85, 247, 0.15) 0%, rgba(0, 0, 0, 0) 70%)`,
-                      ]
+                      ],
                     }}
                     transition={{ duration: 2, repeat: Infinity }}
                   />
-                  
+
                   <div className="relative z-10">
-                    <motion.div 
+                    <motion.div
                       className={`text-3xl mb-4 bg-gradient-to-r ${item.color} text-transparent bg-clip-text`}
                       whileHover={{ scale: 1.2, rotate: 360 }}
                       transition={{ duration: 0.6 }}
                     >
                       {item.icon}
                     </motion.div>
-                    
+
                     <h3 className="text-xl mb-2 font-pixel text-white">
                       {item.title}
                     </h3>
-                    
+
                     <p className="text-sm text-gray-400 font-pixel">
                       {item.desc}
                     </p>
-                    
+
                     {/* Interactive corner elements */}
-                    <motion.div 
+                    <motion.div
                       className="absolute top-0 right-0 w-0 h-0 border-t-8 border-r-8 border-transparent border-r-purple-500/0 group-hover:border-r-purple-500/70 transition-colors duration-500"
                       animate={{ rotate: 360 }}
-                      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                      transition={{
+                        duration: 20,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
                     />
-                    
-                    <motion.div 
+
+                    <motion.div
                       className="absolute bottom-0 left-0 w-0 h-0 border-b-8 border-l-8 border-transparent border-l-purple-500/0 group-hover:border-l-purple-500/70 transition-colors duration-500"
                       animate={{ rotate: 360 }}
-                      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                      transition={{
+                        duration: 20,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
                     />
                   </div>
                 </motion.div>
               ))}
             </div>
-            
+
             {/* New: Interactive scrolling progress indicator */}
             <div className="relative h-1 mx-auto w-40 mt-16 overflow-hidden">
               <div className="w-full h-full bg-gray-800/50"></div>
-              <motion.div 
+              <motion.div
                 className="absolute top-0 left-0 h-full bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500"
                 style={{ width: progressBarWidth }}
               />
-              
-              <motion.div 
+
+              <motion.div
                 className="absolute -top-2 h-4 w-1 bg-white/80 rounded-full shadow-lg shadow-purple-500/50"
                 style={{ left: progressBarWidth }}
               />
-              
-              <div className="absolute -top-8 left-0 text-xs font-mono text-purple-400">SECTOR_01</div>
-              <div className="absolute -top-8 right-0 text-xs font-mono text-purple-400">SECTOR_02</div>
+
+              <div className="absolute -top-8 left-0 text-xs font-mono text-purple-400">
+                SECTOR_01
+              </div>
+              <div className="absolute -top-8 right-0 text-xs font-mono text-purple-400">
+                SECTOR_02
+              </div>
             </div>
           </motion.div>
         </div>
@@ -1576,7 +1622,7 @@ const TicketSection = () => {
                         PROJECT
                       </div>
                       <div className="text-2xl font-bold text-white">
-                        VOID UNIVERSE
+                        VOID
                       </div>
                     </div>
 
@@ -1651,12 +1697,15 @@ const TicketSection = () => {
                   </div>
 
                   <div className="text-center text-lg font-bold text-purple-400 font-pixel mb-8">
-                    @VOID_UNIVERSE
+                    @VOID_COLLECTOR
                   </div>
 
-                  {/* Enhanced button */}
-                  <motion.button
-                    className="bg-transparent border-2 border-purple-500 text-white py-4 px-10 flex items-center justify-center font-pixel relative overflow-hidden group"
+                  {/* Enhanced button with X link */}
+                  <motion.a
+                    href="https://x.com/VOID_COLLECTOR" // Replace with your actual X profile URL
+                    target="_blank" // Opens in a new tab
+                    rel="noopener noreferrer" // Security best practice for external links
+                    className="bg-transparent border-2 border-purple-500 text-white py-4 px-10 flex items-center justify-center font-pixel relative overflow-hidden group cursor-pointer"
                     whileHover={{
                       backgroundColor: "rgba(168, 85, 247, 0.2)",
                       boxShadow: "0 0 20px rgba(168, 85, 247, 0.5)",
@@ -1676,8 +1725,16 @@ const TicketSection = () => {
                         repeatDelay: 1,
                       }}
                     />
-                    <span className="mr-3 text-lg">X</span> FOLLOW US
-                  </motion.button>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 mr-3"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                    FOLLOW US
+                  </motion.a>
                 </div>
               </div>
             </div>
