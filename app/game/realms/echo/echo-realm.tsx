@@ -1014,7 +1014,7 @@ const EchoRealm: React.FC<EchoRealmProps> = ({
                       30 + cubeHeight
                     }px) rotateX(${cubeRotation.x}deg) rotateY(${
                       cubeRotation.y
-                    }deg) rotateZ(${cubeRotation.z}deg) scale(0.6)`,
+                    }deg) rotateZ(${cubeRotation.z}deg)`,
                     transformStyle: "preserve-3d",
                     zIndex: 30,
                     transition:
@@ -1030,18 +1030,147 @@ const EchoRealm: React.FC<EchoRealmProps> = ({
                     }}
                   />
 
-                  {/* The cube component */}
+                  {/* CSS-based rendered cube instead of RealmCube component */}
+                  <div
+                    className="cube-scene"
+                    style={{
+                      width: "60px",
+                      height: "60px",
+                      transformStyle: "preserve-3d",
+                    }}
+                  >
+                    <div
+                      className="cube"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        position: "relative",
+                        transformStyle: "preserve-3d",
+                      }}
+                    >
+                      {/* Front face */}
+                      <div
+                        className="cube-face cube-face-front"
+                        style={{
+                          position: "absolute",
+                          width: "100%",
+                          height: "100%",
+                          backgroundColor: selectedCube.colors[0],
+                          borderWidth: "1px",
+                          borderColor:
+                            selectedCube.borderColor ||
+                            "rgba(255, 255, 255, 0.3)",
+                          boxShadow: selectedCube.glow || "none",
+                          transform: "translateZ(30px)",
+                          backfaceVisibility: "hidden",
+                        }}
+                      />
+
+                      {/* Back face */}
+                      <div
+                        className="cube-face cube-face-back"
+                        style={{
+                          position: "absolute",
+                          width: "100%",
+                          height: "100%",
+                          backgroundColor:
+                            selectedCube.colors[1] || selectedCube.colors[0],
+                          borderWidth: "1px",
+                          borderColor:
+                            selectedCube.borderColor ||
+                            "rgba(255, 255, 255, 0.3)",
+                          transform: "rotateY(180deg) translateZ(30px)",
+                          backfaceVisibility: "hidden",
+                        }}
+                      />
+
+                      {/* Right face */}
+                      <div
+                        className="cube-face cube-face-right"
+                        style={{
+                          position: "absolute",
+                          width: "100%",
+                          height: "100%",
+                          backgroundColor:
+                            selectedCube.colors[2] || selectedCube.colors[0],
+                          borderWidth: "1px",
+                          borderColor:
+                            selectedCube.borderColor ||
+                            "rgba(255, 255, 255, 0.3)",
+                          transform: "rotateY(90deg) translateZ(30px)",
+                          backfaceVisibility: "hidden",
+                        }}
+                      />
+
+                      {/* Left face */}
+                      <div
+                        className="cube-face cube-face-left"
+                        style={{
+                          position: "absolute",
+                          width: "100%",
+                          height: "100%",
+                          backgroundColor:
+                            selectedCube.colors[3] || selectedCube.colors[0],
+                          borderWidth: "1px",
+                          borderColor:
+                            selectedCube.borderColor ||
+                            "rgba(255, 255, 255, 0.3)",
+                          transform: "rotateY(-90deg) translateZ(30px)",
+                          backfaceVisibility: "hidden",
+                        }}
+                      />
+
+                      {/* Top face */}
+                      <div
+                        className="cube-face cube-face-top"
+                        style={{
+                          position: "absolute",
+                          width: "100%",
+                          height: "100%",
+                          backgroundColor:
+                            selectedCube.colors[4] || selectedCube.colors[0],
+                          borderWidth: "1px",
+                          borderColor:
+                            selectedCube.borderColor ||
+                            "rgba(255, 255, 255, 0.3)",
+                          transform: "rotateX(90deg) translateZ(30px)",
+                          backfaceVisibility: "hidden",
+                        }}
+                      />
+
+                      {/* Bottom face */}
+                      <div
+                        className="cube-face cube-face-bottom"
+                        style={{
+                          position: "absolute",
+                          width: "100%",
+                          height: "100%",
+                          backgroundColor:
+                            selectedCube.colors[5] || selectedCube.colors[0],
+                          borderWidth: "1px",
+                          borderColor:
+                            selectedCube.borderColor ||
+                            "rgba(255, 255, 255, 0.3)",
+                          transform: "rotateX(-90deg) translateZ(30px)",
+                          backfaceVisibility: "hidden",
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Keep the RealmCube component just for collection loading */}
                   <div
                     style={{
                       opacity: 0,
                       visibility: "hidden",
                       position: "absolute",
                       top: "-100px",
-                    }} // Hide this component
+                      pointerEvents: "none",
+                    }}
                   >
                     <RealmCube
                       position="corner"
-                      size={5} // Very small size just to get the collection, we'll hide this
+                      size={5}
                       cubeId={selectedCubeId}
                       onCubeCollectionUpdate={handleCubeCollectionUpdate}
                       onCubeClick={() => {}} // Prevent cube library from opening
@@ -1207,6 +1336,55 @@ const EchoRealm: React.FC<EchoRealmProps> = ({
         .font-pixel {
           font-family: "Press Start 2P", monospace;
           letter-spacing: 0.05em;
+        }
+        .cube-scene {
+          perspective: 800px;
+          perspective-origin: center center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .cube {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          transform-style: preserve-3d;
+          transform-origin: center center;
+        }
+
+        .cube-face {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          backface-visibility: hidden;
+          border-style: solid;
+          transform-origin: center center;
+        }
+
+        /* Fix for z-fighting issues */
+        .cube-face-front {
+          transform: translateZ(30.1px);
+        }
+
+        .cube-face-back {
+          transform: rotateY(180deg) translateZ(30.1px);
+        }
+
+        .cube-face-right {
+          transform: rotateY(90deg) translateZ(30.1px);
+        }
+
+        .cube-face-left {
+          transform: rotateY(-90deg) translateZ(30.1px);
+        }
+
+        .cube-face-top {
+          transform: rotateX(90deg) translateZ(30.1px);
+        }
+
+        .cube-face-bottom {
+          transform: rotateX(-90deg) translateZ(30.1px);
         }
       `}</style>
     </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, SetStateAction } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, useScroll, useTransform, AnimatePresence, useSpring } from "framer-motion"
 import Link from "next/link"
 import Navigation from "@/components/navigation"
@@ -12,12 +12,11 @@ import { cn } from "@/lib/utils"
 import RealmCube, { cubeCollection } from "../game/cube/realm-cube"
 import BackgroundAudio from "@/components/background-audio"
 
-// Enhanced gallery item component with 3D hover effect
+// Modified GalleryItem interface with fewer properties
 interface GalleryItemProps {
   id: number;
   title: string;
   category: string;
-  description: string;
   color: "purple" | "pink" | "blue";
   type: "circle" | "square" | "triangle" | "complex" | "wave" | "grid" | "dots" | "noise" | "loading" | "gamepad";
 }
@@ -98,21 +97,23 @@ const GalleryItem = ({
             "from-blue-500/30 to-blue-700/30"}`}
       />
 
-      {/* Abstract shape */}
+      {/* Image container - replace placeholder URLs with your actual images */}
       <div className="absolute inset-0 bg-black">
-        <AbstractShape
-          className={cn(
-            "w-full h-full",
-            item.color === "purple"
-              ? "text-purple-500/70"
-              : item.color === "pink"
-                ? "text-pink-500/70"
-                : "text-blue-500/70",
-          )}
-          type={item.type}
-          animate
-        />
-
+        <div className="w-full h-full relative overflow-hidden">
+          <div 
+            className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-110"
+            style={{
+              // REPLACE THIS URL with your actual image paths
+              backgroundImage: `url('/item-${item.id}.png')`,
+              // Add a color overlay based on the item color
+              backgroundBlendMode: "overlay",
+              backgroundColor: item.color === "purple" ? "rgba(168, 85, 247, 0.3)" : 
+                              item.color === "pink" ? "rgba(236, 72, 153, 0.3)" : 
+                              "rgba(59, 130, 246, 0.3)",
+            }}
+          />
+        </div>
+        
         {/* Interactive particles */}
         {Array.from({ length: 10 }).map((_, i) => (
           <motion.div
@@ -143,8 +144,8 @@ const GalleryItem = ({
         ))}
       </div>
 
-      {/* Content overlay */}
-      <div className="absolute inset-0 z-20 p-6 flex flex-col justify-between transform transition-transform duration-500">
+      {/* Simplified content overlay - just title and expand button */}
+      <div className="absolute inset-0 z-20 p-4 flex flex-col justify-between transform transition-transform duration-500">
         <div className="transform translate-y-full group-hover:translate-y-0 transition-transform duration-500">
           <motion.div 
             className="inline-block px-3 py-1 mb-2 bg-black/90 backdrop-blur-sm text-xs uppercase tracking-wider text-gray-400 border-l-2 font-pixel"
@@ -173,58 +174,39 @@ const GalleryItem = ({
           />
         </div>
 
-        <div className="transform translate-y-20 group-hover:translate-y-0 transition-transform duration-500 delay-100">
-          <motion.p 
-            className="text-gray-300 mb-4 bg-black/80 p-3 backdrop-blur-sm border-r-2 font-pixel"
+        <div className="flex justify-end items-center font-pixel">
+          <motion.div 
+            className="w-8 h-8 border flex items-center justify-center"
             style={{
               borderColor: item.color === "purple" ? "#a855f7" : 
                 item.color === "pink" ? "#ec4899" : "#3b82f6"
             }}
             whileHover={{ 
-              x: -5, 
+              scale: 1.1, 
               backgroundColor: item.color === "purple" ? "rgba(168, 85, 247, 0.2)" : 
                 item.color === "pink" ? "rgba(236, 72, 153, 0.2)" : "rgba(59, 130, 246, 0.2)" 
             }}
+            whileTap={{ scale: 0.95 }}
           >
-            {item.description}
-          </motion.p>
-          <div className="flex justify-between items-center font-pixel">
-            <div className="text-xs uppercase tracking-wider text-gray-400">
-              {activeImage === item.id ? "Click to minimize" : "Click to expand"}
-            </div>
-            <motion.div 
-              className="w-8 h-8 border flex items-center justify-center"
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className={cn(
+                "transition-transform duration-300",
+                activeImage === item.id ? "rotate-45" : "",
+              )}
               style={{
-                borderColor: item.color === "purple" ? "#a855f7" : 
+                color: item.color === "purple" ? "#a855f7" : 
                   item.color === "pink" ? "#ec4899" : "#3b82f6"
               }}
-              whileHover={{ 
-                scale: 1.1, 
-                backgroundColor: item.color === "purple" ? "rgba(168, 85, 247, 0.2)" : 
-                  item.color === "pink" ? "rgba(236, 72, 153, 0.2)" : "rgba(59, 130, 246, 0.2)" 
-              }}
-              whileTap={{ scale: 0.95 }}
             >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 12 12"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className={cn(
-                  "transition-transform duration-300",
-                  activeImage === item.id ? "rotate-45" : "",
-                )}
-                style={{
-                  color: item.color === "purple" ? "#a855f7" : 
-                    item.color === "pink" ? "#ec4899" : "#3b82f6"
-                }}
-              >
-                <rect x="5" y="0" width="2" height="12" fill="currentColor" />
-                <rect x="0" y="5" width="12" height="2" fill="currentColor" />
-              </svg>
-            </motion.div>
-          </div>
+              <rect x="5" y="0" width="2" height="12" fill="currentColor" />
+              <rect x="0" y="5" width="12" height="2" fill="currentColor" />
+            </svg>
+          </motion.div>
         </div>
       </div>
     </motion.div>
@@ -790,6 +772,111 @@ const RealmCubeCard = ({
   )
 }
 
+// Updated gallery items array with 14 items (7 for each category)
+const galleryItems: GalleryItemProps[] = [
+  // Gameplay category (7 items)
+  {
+    id: 1,
+    title: "ECHO REALM",
+    category: "gameplay",
+    color: "purple",
+    type: "grid",
+  },
+  {
+    id: 2,
+    title: "NEXUS REALM",
+    category: "gameplay",
+    color: "blue",
+    type: "complex",
+  },
+  {
+    id: 3,
+    title: "ABYSS REALM",
+    category: "gameplay",
+    color: "pink",
+    type: "wave",
+  },
+  {
+    id: 4,
+    title: "PULSE REALM",
+    category: "gameplay",
+    color: "purple",
+    type: "dots",
+  },
+  {
+    id: 5,
+    title: "CIPHER REALM",
+    category: "gameplay",
+    color: "blue",
+    type: "noise",
+  },
+  {
+    id: 6,
+    title: "CRYPTIC REALM",
+    category: "gameplay",
+    color: "pink",
+    type: "gamepad",
+  },
+  {
+    id: 7,
+    title: "VORTEX REALM",
+    category: "gameplay",
+    color: "purple",
+    type: "complex",
+  },
+
+  // Concept category (7 items)
+  {
+    id: 8,
+    title: "ECHO REALM",
+    category: "concept",
+    color: "blue",
+    type: "dots",
+  },
+  {
+    id: 9,
+    title: "NEXUS REALM",
+    category: "concept",
+    color: "pink",
+    type: "grid",
+  },
+  {
+    id: 10,
+    title: "ABYSS REALM",
+    category: "concept",
+    color: "purple",
+    type: "complex",
+  },
+  {
+    id: 11,
+    title: "PULSE REALM",
+    category: "concept",
+    color: "blue",
+    type: "wave",
+  },
+  {
+    id: 12,
+    title: "CIPHER REALM",
+    category: "concept",
+    color: "pink",
+    type: "noise",
+  },
+  {
+    id: 13,
+    title: "CRYPTIC REALM",
+    category: "concept",
+    color: "purple",
+    type: "triangle",
+  },
+  {
+    id: 14,
+    title: "VORTEX REALM",
+    category: "concept",
+    color: "blue",
+    type: "circle",
+  },
+];
+
 export default function GalleryPage() {
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 })
   const [cursorHover, setCursorHover] = useState(false)
@@ -835,91 +922,15 @@ export default function GalleryPage() {
     return () => window.removeEventListener("mousemove", handleMouseMove)
   }, [])
 
-  // Gallery items
-  const galleryItems: GalleryItemProps[] = [
-    {
-      id: 1,
-      title: "ETHEREAL VOID",
-      category: "environment",
-      description: "A surreal landscape where light and shadow dance in perpetual motion.",
-      color: "purple",
-      type: "complex",
-    },
-    {
-      id: 2,
-      title: "DIGITAL CONSCIOUSNESS",
-      category: "concept",
-      description: "Exploring the boundaries between human perception and digital existence.",
-      color: "pink",
-      type: "grid",
-    },
-    {
-      id: 3,
-      title: "EMOTIONAL RESONANCE",
-      category: "gameplay",
-      description: "Interactive elements that respond to the player's emotional state.",
-      color: "blue",
-      type: "wave",
-    },
-    {
-      id: 4,
-      title: "ABSTRACT JOURNEY",
-      category: "environment",
-      description: "A pathway through shifting geometric forms and evolving color palettes.",
-      color: "purple",
-      type: "dots",
-    },
-    {
-      id: 5,
-      title: "MEMORY FRAGMENTS",
-      category: "concept",
-      description: "Scattered pieces of narrative that form a unique story for each player.",
-      color: "pink",
-      type: "noise",
-    },
-    {
-      id: 6,
-      title: "REACTIVE SOUNDSCAPE",
-      category: "gameplay",
-      description: "Visualizing the dynamic audio environment that evolves with player actions.",
-      color: "blue",
-      type: "complex",
-    },
-    {
-      id: 7,
-      title: "LIMINAL SPACE",
-      category: "environment",
-      description: "The threshold between defined experiences, a place of transition and possibility.",
-      color: "purple",
-      type: "grid",
-    },
-    {
-      id: 8,
-      title: "DIGITAL DREAMS",
-      category: "concept",
-      description: "Manifestations of subconscious thought within the digital realm.",
-      color: "pink",
-      type: "wave",
-    },
-    {
-      id: 9,
-      title: "PLAYER ECHO",
-      category: "gameplay",
-      description: "Visualizing how player choices reverberate through the game world.",
-      color: "blue",
-      type: "dots",
-    },
-  ]
+  // Updated categories array - just 2 categories
+  const categories = [
+    { id: "all", name: "ALL" },
+    { id: "gameplay", name: "GAMEPLAY" },
+    { id: "concept", name: "CONCEPT" },
+  ];
 
   const filteredItems =
     filterCategory === "all" ? galleryItems : galleryItems.filter((item) => item.category === filterCategory)
-
-  const categories = [
-    { id: "all", name: "ALL" },
-    { id: "environment", name: "ENVIRONMENTS" },
-    { id: "concept", name: "CONCEPTS" },
-    { id: "gameplay", name: "GAMEPLAY" },
-  ]
 
   // Handle cube selection
   const handleCubeSelect = (id: string) => {
@@ -978,7 +989,7 @@ export default function GalleryPage() {
       {/* Enhanced 3D Banner */}
       <Gallery3DBanner />
 
-      {/* Gallery Section */}
+      {/* Gallery Section - UPDATED VERSION WITH 2 CATEGORIES */}
       <section ref={galleryRef} className="relative py-32 font-pixel">
         {/* Floating particles background */}
         <FloatingParticles />
@@ -1014,7 +1025,7 @@ export default function GalleryPage() {
             </div>
           </motion.div>
 
-          {/* Filter Categories */}
+          {/* Filter Categories - Just two categories now */}
           <div className="mb-16">
             <div className="flex flex-wrap justify-center gap-4">
               {categories.map((category) => (
