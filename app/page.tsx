@@ -19,6 +19,7 @@ import PixelHeading from "@/components/pixel-heading";
 import Banner3D from "@/components/interactive-banner";
 import BackgroundAudio from "@/components/background-audio";
 import { cn } from "@/lib/utils";
+import { cubeCollection } from "./game/cube/realm-cube";
 
 // Define interface for feature prop
 interface Feature {
@@ -324,134 +325,6 @@ const PixelVoidCube = ({ className }: { className?: string }) => {
         }}
       />
     </div>
-  );
-};
-
-// Enhanced gallery card with hover animation and parallax effect
-const GalleryCard = ({
-  index,
-  setCursorHover,
-}: {
-  index: number;
-  setCursorHover: (hover: boolean) => void;
-}) => {
-  const [isHovered, setIsHovered] = useState(false);
-
-  const backgroundVariants = {
-    initial: { scale: 1 },
-    hover: { scale: 1.1, transition: { duration: 0.5 } },
-  };
-
-  const overlayVariants = {
-    initial: { opacity: 0 },
-    hover: { opacity: 0.7, transition: { duration: 0.3 } },
-  };
-
-  const contentVariants = {
-    initial: { opacity: 0, y: 20 },
-    hover: { opacity: 1, y: 0, transition: { duration: 0.3, delay: 0.1 } },
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      whileInView={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      viewport={{ once: true, margin: "-100px" }}
-      className="group relative overflow-hidden aspect-[4/3] font-pixel"
-      onMouseEnter={() => {
-        setCursorHover(true);
-        setIsHovered(true);
-      }}
-      onMouseLeave={() => {
-        setCursorHover(false);
-        setIsHovered(false);
-      }}
-    >
-      {/* Background shape */}
-      <motion.div
-        className="absolute inset-0 bg-black"
-        variants={backgroundVariants}
-        initial="initial"
-        animate={isHovered ? "hover" : "initial"}
-      >
-        <AbstractShape
-          className={cn(
-            "w-full h-full",
-            index % 3 === 0
-              ? "text-purple-500/70"
-              : index % 3 === 1
-              ? "text-pink-500/70"
-              : "text-blue-500/70"
-          )}
-          type={
-            index % 5 === 0
-              ? "complex"
-              : index % 5 === 1
-              ? "grid"
-              : index % 5 === 2
-              ? "wave"
-              : index % 5 === 3
-              ? "dots"
-              : "noise"
-          }
-          animate
-        />
-      </motion.div>
-
-      {/* Overlay gradient */}
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-t from-black to-transparent"
-        variants={overlayVariants}
-        initial="initial"
-        animate={isHovered ? "hover" : "initial"}
-      />
-
-      {/* Content */}
-      <motion.div
-        className="absolute bottom-0 left-0 p-6 z-20"
-        variants={contentVariants}
-        initial="initial"
-        animate={isHovered ? "hover" : "initial"}
-      >
-        <PixelHeading
-          text={`VOID SCENE ${index + 1}`}
-          className="text-xl font-bold text-white mb-2"
-        />
-        <p className="text-gray-300 text-sm font-pixel">
-          EXPLORE THE MYSTERIES OF THE VOID
-        </p>
-
-        {/* View button */}
-        <motion.button
-          className="mt-4 px-4 py-2 bg-purple-600/80 text-white text-xs flex items-center space-x-2 border border-purple-400/30 font-pixel"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <span>VIEW DETAILS</span>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M5 12H19M19 12L12 5M19 12L12 19"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </motion.button>
-      </motion.div>
-
-      {/* Decorative elements */}
-      <div className="absolute top-4 left-4 w-3 h-3 border-t border-l border-purple-500/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="absolute top-4 right-4 w-3 h-3 border-t border-r border-purple-500/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="absolute bottom-4 left-4 w-3 h-3 border-b border-l border-purple-500/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="absolute bottom-4 right-4 w-3 h-3 border-b border-r border-purple-500/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-    </motion.div>
   );
 };
 
@@ -1496,6 +1369,745 @@ const RoadmapSection = () => {
   );
 };
 
+// Fixed CircularCubeSection
+const CircularCubeSection = () => {
+  const { scrollYProgress } = useScroll();
+  const sectionRef = useRef<HTMLElement>(null);
+  const [cursorHover, setCursorHover] = useState(false);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [hoveredCube, setHoveredCube] = useState<number | null>(null);
+
+  // Create ref for each cube position
+  const cubePositionsRef = useRef<
+    { x: number; y: number; rotation: number; orbit: number; scale: number }[]
+  >([]);
+
+  // Transform values based on scroll
+  const circleScale = useTransform(
+    scrollYProgress,
+    [0.6, 0.7, 0.8],
+    [0.6, 1, 1.2]
+  );
+  const circleRotate = useTransform(scrollYProgress, [0.6, 0.8], [0, 180]);
+  const opacityValue = useTransform(
+    scrollYProgress,
+    [0.6, 0.65, 0.8, 0.85],
+    [0, 1, 1, 0]
+  );
+  const yOffset = useTransform(
+    scrollYProgress,
+    [0.6, 0.7, 0.8],
+    [100, 0, -100]
+  );
+
+  // Smoother animations with spring physics
+  const smoothScale = useSpring(circleScale, { stiffness: 100, damping: 30 });
+  const smoothRotate = useSpring(circleRotate, { stiffness: 80, damping: 20 });
+  const smoothOpacity = useSpring(opacityValue, {
+    stiffness: 100,
+    damping: 25,
+  });
+  const smoothY = useSpring(yOffset, { stiffness: 100, damping: 20 });
+
+  // Initialize cube positions with more varied and dynamic properties
+  useEffect(() => {
+    // Generate positions around a circle for each cube
+    cubePositionsRef.current = cubeCollection.map((_, index) => {
+      const angle = (index / cubeCollection.length) * Math.PI * 2;
+      const orbitSpeed = 0.1 + Math.random() * 0.4; // More varied orbit speeds
+      const initialScale = 0.8 + Math.random() * 0.4; // Varied initial scales
+
+      return {
+        x: Math.cos(angle),
+        y: Math.sin(angle),
+        rotation: Math.random() * 360,
+        orbit: orbitSpeed,
+        scale: initialScale,
+      };
+    });
+  }, []);
+
+  // Create a pulsing effect on active cube
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Randomly highlight a cube for user attention if none is active
+      if (!hoveredCube && !activeIndex) {
+        const randomIndex = Math.floor(Math.random() * cubeCollection.length);
+        setActiveIndex(randomIndex);
+        
+        // Auto-clear after a delay
+        setTimeout(() => {
+          setActiveIndex(null);
+        }, 2000);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [hoveredCube, activeIndex]);
+
+  return (
+    <section
+      ref={sectionRef}
+      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-black py-20"
+    >
+      {/* Enhanced background elements */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-950/20 via-black to-black opacity-80"></div>
+
+        {/* Radial gradient background that pulses */}
+        <motion.div
+          className="absolute inset-0"
+          style={{
+            background: 'radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.15), transparent 70%)',
+          }}
+          animate={{
+            opacity: [0.3, 0.6, 0.3],
+            scale: [0.95, 1.05, 0.95],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+
+        {/* Dynamic grid background with animation */}
+        <div className="absolute inset-0 grid grid-cols-[repeat(40,1fr)] grid-rows-[repeat(40,1fr)] opacity-10">
+          {Array.from({ length: 300 }).map((_, i) => (
+            <motion.div
+              key={`grid-${i}`}
+              className="border border-purple-500/10"
+              animate={{
+                borderColor:
+                  i % 10 === 0
+                    ? [
+                        "rgba(168, 85, 247, 0.1)",
+                        "rgba(168, 85, 247, 0.3)",
+                        "rgba(168, 85, 247, 0.1)",
+                      ]
+                    : undefined,
+              }}
+              transition={{
+                duration: 3 + (i % 5),
+                repeat: Infinity,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Additional decorative elements: floating particles */}
+        {Array.from({ length: 30 }).map((_, i) => (
+          <motion.div
+            key={`particle-${i}`}
+            className="absolute rounded-full"
+            style={{
+              width: 2 + Math.random() * 4,
+              height: 2 + Math.random() * 4,
+              background: i % 3 === 0 
+                ? 'rgba(139, 92, 246, 0.7)' 
+                : i % 3 === 1 
+                  ? 'rgba(236, 72, 153, 0.7)' 
+                  : 'rgba(59, 130, 246, 0.7)',
+              boxShadow: i % 3 === 0 
+                ? '0 0 8px rgba(139, 92, 246, 0.7)' 
+                : i % 3 === 1 
+                  ? '0 0 8px rgba(236, 72, 153, 0.7)' 
+                  : '0 0 8px rgba(59, 130, 246, 0.7)',
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [-(Math.random() * 100), Math.random() * 100],
+              x: [-(Math.random() * 100), Math.random() * 100],
+              opacity: [0.2, 0.7, 0.2],
+            }}
+            transition={{
+              duration: 10 + Math.random() * 20,
+              repeat: Infinity,
+              repeatType: "reverse",
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+
+        {/* Multiple glowing circles in background */}
+        <motion.div
+          className="absolute top-1/2 left-1/2 w-[600px] h-[600px] rounded-full opacity-20 -translate-x-1/2 -translate-y-1/2"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(168, 85, 247, 0.4) 0%, transparent 70%)",
+            filter: "blur(40px)",
+          }}
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.1, 0.3, 0.1],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            repeatType: "reverse",
+          }}
+        />
+
+        <motion.div
+          className="absolute top-1/4 left-1/4 w-[300px] h-[300px] rounded-full opacity-15 -translate-x-1/2 -translate-y-1/2"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(236, 72, 153, 0.3) 0%, transparent 70%)",
+            filter: "blur(40px)",
+          }}
+          animate={{
+            scale: [0.8, 1.1, 0.8],
+            opacity: [0.08, 0.2, 0.08],
+          }}
+          transition={{
+            duration: 7,
+            repeat: Infinity,
+            repeatType: "reverse",
+            delay: 1,
+          }}
+        />
+
+        <motion.div
+          className="absolute bottom-1/4 right-1/4 w-[350px] h-[350px] rounded-full opacity-15 -translate-x-1/2 -translate-y-1/2"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 70%)",
+            filter: "blur(40px)",
+          }}
+          animate={{
+            scale: [0.9, 1.2, 0.9],
+            opacity: [0.05, 0.15, 0.05],
+          }}
+          transition={{
+            duration: 9,
+            repeat: Infinity,
+            repeatType: "reverse",
+            delay: 2,
+          }}
+        />
+      </div>
+
+      {/* Main content container with scroll animation */}
+      <motion.div
+        className="container mx-auto px-4 relative z-10 text-center"
+        style={{
+          opacity: smoothOpacity,
+          y: smoothY,
+        }}
+      >
+        <motion.div className="mb-16">
+          <PixelHeading
+            text="THE CUBES COLLECTION"
+            className="text-5xl md:text-7xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500"
+          />
+
+          {/* Enhanced animated separator line with glowing particles */}
+          <div className="relative h-1.5 w-72 mx-auto overflow-hidden">
+            <div className="w-full h-full bg-gradient-to-r from-purple-500 via-blue-500 to-pink-500 rounded-full"></div>
+            
+            <motion.div
+              className="absolute top-0 left-0 h-full w-20 bg-white/80 blur-sm rounded-full"
+              animate={{
+                x: ["-100%", "400%"],
+              }}
+              transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 0.5 }}
+            />
+
+            {/* Floating particles on the line */}
+            {Array.from({ length: 4 }).map((_, i) => (
+              <motion.div
+                key={`line-particle-${i}`}
+                className="absolute w-1.5 h-1.5 bg-white rounded-full"
+                style={{ 
+                  left: `${20 + i * 20}%`,
+                  boxShadow: '0 0 8px rgba(255, 255, 255, 0.8)'
+                }}
+                animate={{
+                  y: [-6, -12, -6],
+                  opacity: [0.4, 1, 0.4],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  delay: i * 0.5,
+                }}
+              />
+            ))}
+          </div>
+
+          <motion.p
+            className="max-w-2xl mx-auto mt-10 text-xl text-gray-300 font-pixel"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            viewport={{ once: true }}
+          >
+            Each cube represents a unique realm with its own energy signature.
+            Collect them all to harness their combined power and unlock the secrets of the void.
+          </motion.p>
+        </motion.div>
+
+        {/* Enhanced circular formation of cubes */}
+        <motion.div
+          className="relative w-[700px] h-[700px] mx-auto"
+          style={{
+            scale: smoothScale,
+            rotate: smoothRotate,
+          }}
+        >
+          {/* Animated circular paths - multiple rings with glow effects */}
+          <motion.div 
+            className="absolute top-1/2 left-1/2 w-[560px] h-[560px] border border-purple-500/30 rounded-full -translate-x-1/2 -translate-y-1/2"
+            animate={{
+              boxShadow: ['0 0 20px rgba(168, 85, 247, 0.1)', '0 0 30px rgba(168, 85, 247, 0.2)', '0 0 20px rgba(168, 85, 247, 0.1)'],
+              scale: [1, 1.02, 1],
+            }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              repeatType: "reverse",
+            }}
+          />
+          
+          <motion.div 
+            className="absolute top-1/2 left-1/2 w-[500px] h-[500px] border border-purple-500/20 rounded-full -translate-x-1/2 -translate-y-1/2"
+          />
+          
+          <motion.div 
+            className="absolute top-1/2 left-1/2 w-[440px] h-[440px] border border-blue-500/10 rounded-full -translate-x-1/2 -translate-y-1/2"
+            animate={{
+              rotate: [0, 360],
+            }}
+            transition={{
+              duration: 60,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          />
+
+          {/* Rotating energy flows around the circle */}
+          <motion.div
+            className="absolute top-1/2 left-1/2 w-[500px] h-[500px] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ transform: "translate(-50%, -50%)" }}
+          >
+            {Array.from({ length: 3 }).map((_, idx) => (
+              <motion.div
+                key={`energy-${idx}`}
+                className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 opacity-30"
+                style={{
+                  background: idx === 0 
+                    ? "conic-gradient(from 0deg, transparent, rgba(139, 92, 246, 0.3), transparent)" 
+                    : idx === 1 
+                      ? "conic-gradient(from 120deg, transparent, rgba(236, 72, 153, 0.3), transparent)" 
+                      : "conic-gradient(from 240deg, transparent, rgba(59, 130, 246, 0.3), transparent)",
+                  borderRadius: "50%",
+                }}
+                animate={{
+                  rotate: [0, 360],
+                }}
+                transition={{
+                  duration: 20 + idx * 5,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+              />
+            ))}
+          </motion.div>
+
+          {/* Improved cubes positioned in a circle */}
+          {cubeCollection.map((cube, index) => {
+            // Only proceed if position data is available
+            if (!cubePositionsRef.current || !cubePositionsRef.current[index]) {
+              return null; // Skip rendering this cube if position data isn't ready
+            }
+
+            // Get the cube's position data
+            const position = cubePositionsRef.current[index];
+
+            // Calculate position on the circle
+            const radius = 230; // Slightly less than half the container width
+            const isActive = activeIndex === index || hoveredCube === index;
+
+            return (
+              <motion.div
+                key={cube.id}
+                className="absolute"
+                style={{
+                  left: "50%",
+                  top: "50%",
+                  x: -40, // Half the cube size for centering
+                  y: -40,
+                  zIndex: isActive ? 10 : 1,
+                }}
+                animate={{
+                  x: [
+                    position.x * radius - 40,
+                    Math.cos(position.orbit * 2 * Math.PI + index) * radius - 40,
+                    position.x * radius - 40,
+                  ],
+                  y: [
+                    position.y * radius - 40,
+                    Math.sin(position.orbit * 2 * Math.PI + index) * radius - 40,
+                    position.y * radius - 40,
+                  ],
+                  rotate: [0, position.rotation, 0],
+                  scale: isActive ? [1, 1.3, 1] : [position.scale, position.scale],
+                }}
+                transition={{
+                  duration: 20 + index * 2,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                  ease: "easeInOut",
+                  scale: {
+                    duration: isActive ? 0.8 : 0,
+                    repeat: isActive ? 3 : 0,
+                    repeatType: "reverse"
+                  }
+                }}
+                whileHover={{ 
+                  scale: 1.3, 
+                  zIndex: 10,
+                  transition: { duration: 0.2 } 
+                }}
+                onMouseEnter={() => {
+                  setCursorHover(true);
+                  setHoveredCube(index);
+                }}
+                onMouseLeave={() => {
+                  setCursorHover(false);
+                  setHoveredCube(null);
+                }}
+              >
+                {/* Custom glow effect for active or hovered cubes */}
+                {isActive && (
+                  <motion.div
+                    className="absolute inset-0 -z-10 rounded-xl opacity-70"
+                    style={{
+                      background: `radial-gradient(circle, ${cube.colors[0]}80 0%, transparent 70%)`,
+                      filter: "blur(10px)",
+                      transform: "scale(1.5)",
+                    }}
+                    animate={{
+                      opacity: [0.4, 0.8, 0.4],
+                      scale: [1.5, 1.8, 1.5],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                    }}
+                  />
+                )}
+
+                {/* Use AnimatedCube with enhanced effects */}
+                <div className="cube-scene" style={{ width: 80, height: 80 }}>
+                  <motion.div
+                    className="cube"
+                    style={{
+                      width: 80,
+                      height: 80,
+                      transformStyle: "preserve-3d",
+                    }}
+                    animate={{
+                      rotateX: isActive 
+                        ? [15, 45, 15] 
+                        : [15, 25, 15],
+                      rotateY: isActive 
+                        ? [15, 45, 15] 
+                        : [15, 35, 15],
+                      rotateZ: isActive 
+                        ? [0, 20, 0] 
+                        : [0, 10, 0],
+                    }}
+                    transition={{
+                      duration: isActive ? 3 : 6 + index * 0.5,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      ease: "easeInOut",
+                    }}
+                  >
+                    {/* Cube faces with enhanced effects */}
+                    {[
+                      { face: "front", color: cube.colors[0] },
+                      { face: "back", color: cube.colors[1] },
+                      { face: "right", color: cube.colors[2] },
+                      { face: "left", color: cube.colors[3] },
+                      { face: "top", color: cube.colors[4] },
+                      { face: "bottom", color: cube.colors[5] },
+                    ].map(({ face, color }) => (
+                      <div
+                        key={face}
+                        className={`cube-face cube-face-${face}`}
+                        style={{
+                          backgroundColor: color,
+                          borderWidth: 1,
+                          borderColor: cube.borderColor,
+                          boxShadow: isActive 
+                            ? `0 0 30px ${color}` 
+                            : face === "front" && hoveredCube === index 
+                              ? cube.glow 
+                              : "none",
+                          position: "absolute",
+                          width: "100%",
+                          height: "100%",
+                          backfaceVisibility: "hidden",
+                          transform: `${
+                            face === "front"
+                              ? "translateZ(40px)"
+                              : face === "back"
+                              ? "rotateY(180deg) translateZ(40px)"
+                              : face === "right"
+                              ? "rotateY(90deg) translateZ(40px)"
+                              : face === "left"
+                              ? "rotateY(-90deg) translateZ(40px)"
+                              : face === "top"
+                              ? "rotateX(90deg) translateZ(40px)"
+                              : "rotateX(-90deg) translateZ(40px)"
+                          }`,
+                          
+                          // Add subtle gradient overlay for more dimension
+                          backgroundImage: isActive 
+                            ? `linear-gradient(45deg, ${color}, ${color}dd)` 
+                            : undefined,
+                        }}
+                      />
+                    ))}
+                  </motion.div>
+                </div>
+
+                {/* Enhanced cube name tooltip on hover */}
+                <motion.div
+                  className="absolute top-full left-1/2 transform -translate-x-1/2 mt-3 px-3 py-1.5 bg-black/80 border border-purple-500/40 rounded-md text-sm text-white whitespace-nowrap pointer-events-none font-pixel backdrop-blur-sm"
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ 
+                    opacity: hoveredCube === index ? 1 : 0, 
+                    y: hoveredCube === index ? 0 : 5,
+                    scale: hoveredCube === index ? 1 : 0.9,
+                  }}
+                  transition={{ duration: 0.2 }}
+                  style={{
+                    boxShadow: `0 0 15px ${cube.colors[0]}40`,
+                  }}
+                >
+                  <div className="flex flex-col items-center">
+                    <span className="text-xs mb-1" style={{ color: cube.colors[0] }}>
+                      {getRarityLabel(cube.rarity)}
+                    </span>
+                    <span className="font-medium">{cube.name}</span>
+                  </div>
+                </motion.div>
+              </motion.div>
+            );
+          })}
+
+          {/* Enhanced center core with multiple glowing layers */}
+          <motion.div
+            className="absolute top-1/2 left-1/2 w-24 h-24 -translate-x-1/2 -translate-y-1/2"
+          >
+            {/* Core layers */}
+            <motion.div
+              className="absolute inset-0 rounded-full bg-purple-900/60"
+              animate={{
+                scale: [1, 1.1, 1],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                repeatType: "reverse",
+              }}
+            />
+            
+            <motion.div
+              className="absolute inset-1 rounded-full bg-purple-700/60"
+              animate={{
+                scale: [1, 1.15, 1],
+              }}
+              transition={{
+                duration: 2.5,
+                repeat: Infinity,
+                repeatType: "reverse",
+                delay: 0.1,
+              }}
+            />
+            
+            <motion.div
+              className="absolute inset-3 rounded-full bg-purple-500/70"
+              animate={{
+                scale: [1, 1.2, 1],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                repeatType: "reverse",
+                delay: 0.2,
+              }}
+            />
+            
+            {/* Core glow */}
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{
+                background:
+                  "radial-gradient(circle, rgba(168, 85, 247, 0.8) 0%, transparent 70%)",
+                filter: "blur(10px)",
+              }}
+              animate={{
+                scale: [1.3, 2, 1.3],
+                opacity: [0.5, 0.8, 0.5],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                repeatType: "reverse",
+              }}
+            />
+
+            {/* Orbiting small particles around core */}
+            {Array.from({ length: 8 }).map((_, i) => {
+              const angle = (i / 8) * Math.PI * 2;
+              const radius = 50;
+              return (
+                <motion.div
+                  key={`core-particle-${i}`}
+                  className="absolute w-1.5 h-1.5 rounded-full bg-white"
+                  style={{
+                    left: "50%",
+                    top: "50%",
+                    x: Math.cos(angle) * radius,
+                    y: Math.sin(angle) * radius,
+                    boxShadow: "0 0 8px rgba(255, 255, 255, 0.8)",
+                  }}
+                  animate={{
+                    x: [
+                      Math.cos(angle) * radius,
+                      Math.cos(angle + Math.PI) * radius,
+                      Math.cos(angle + Math.PI * 2) * radius,
+                    ],
+                    y: [
+                      Math.sin(angle) * radius,
+                      Math.sin(angle + Math.PI) * radius,
+                      Math.sin(angle + Math.PI * 2) * radius,
+                    ],
+                    opacity: [0.7, 1, 0.7],
+                    scale: [1, 1.5, 1],
+                  }}
+                  transition={{
+                    duration: 5 + i * 0.5,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                />
+              );
+            })}
+          </motion.div>
+        </motion.div>
+
+        {/* Enhanced CTA Button with dramatic effects */}
+        <motion.div
+          className="mt-24"
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.5 }}
+          viewport={{ once: true }}
+        >
+          <Button
+            className="bg-transparent border-2 border-purple-500 hover:bg-purple-900/30 text-white rounded-none px-10 py-5 text-xl font-pixel tracking-wide relative overflow-hidden group"
+            onMouseEnter={() => setCursorHover(true)}
+            onMouseLeave={() => setCursorHover(false)}
+            onClick={() => window.location.href = "/gallery"}
+          >
+            {/* Multiple animated gradient overlays for more dramatic effect */}
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-purple-600/0 via-purple-600/30 to-purple-600/0"
+              animate={{
+                x: ["-100%", "200%"],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                repeatDelay: 1,
+              }}
+            />
+            
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-pink-600/0 via-pink-600/20 to-pink-600/0"
+              animate={{
+                x: ["-100%", "200%"],
+              }}
+              transition={{
+                duration: 2.5,
+                repeat: Infinity,
+                repeatDelay: 0.5,
+                delay: 0.3,
+              }}
+            />
+            
+            {/* Corner accents that light up on hover */}
+            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 group-hover:border-white" />
+            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 group-hover:border-white" />
+            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 group-hover:border-white" />
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 group-hover:border-white" />
+            
+            <span className="relative z-10 flex items-center justify-center">
+              <span>EXPLORE ALL CUBES</span>
+              <motion.svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-5 w-5 ml-2" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+                animate={{
+                  x: [0, 5, 0],
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M14 5l7 7m0 0l-7 7m7-7H3" 
+                />
+              </motion.svg>
+            </span>
+          </Button>
+          
+          {/* Button glow effect */}
+          <motion.div
+            className="w-full h-10 relative -mt-5 z-0 opacity-70 blur-xl"
+            style={{
+              background: "linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.5), transparent)",
+            }}
+            animate={{
+              opacity: [0.3, 0.7, 0.3],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              repeatType: "reverse",
+            }}
+          />
+        </motion.div>
+      </motion.div>
+    </section>
+  );
+};
+
+// Helper function to get rarity label
+const getRarityLabel = (rarity: string): string => {
+  switch(rarity) {
+    case 'common': return 'COMMON';
+    case 'rare': return 'RARE';
+    case 'epic': return 'EPIC';
+    case 'legendary': return 'LEGENDARY';
+    default: return 'COMMON';
+  }
+};
+
 // Enhanced Fullscreen Ticket Section
 const TicketSection = () => {
   return (
@@ -1621,9 +2233,7 @@ const TicketSection = () => {
                       <div className="text-sm text-purple-400 uppercase font-pixel">
                         PROJECT
                       </div>
-                      <div className="text-2xl font-bold text-white">
-                        VOID
-                      </div>
+                      <div className="text-2xl font-bold text-white">VOID</div>
                     </div>
 
                     <div className="space-y-2">
@@ -1801,7 +2411,6 @@ export default function Home() {
   const containerRef = useRef(null);
   const aboutRef = useRef(null);
   const featuresRef = useRef(null);
-  const galleryRef = useRef(null);
 
   const { scrollYProgress } = useScroll();
 
@@ -1816,11 +2425,6 @@ export default function Home() {
     [0.3, 0.4, 0.5],
     [200, 0, 0]
   );
-  const galleryTitleX = useTransform(
-    scrollYProgress,
-    [0.5, 0.6, 0.7],
-    [-200, 0, 0]
-  );
 
   // Smoother parallax values with spring physics
   const smoothAboutTitleX = useSpring(aboutTitleX, {
@@ -1828,10 +2432,6 @@ export default function Home() {
     damping: 30,
   });
   const smoothFeaturesTitleX = useSpring(featuresTitleX, {
-    stiffness: 100,
-    damping: 30,
-  });
-  const smoothGalleryTitleX = useSpring(galleryTitleX, {
     stiffness: 100,
     damping: 30,
   });
@@ -2168,211 +2768,8 @@ export default function Home() {
       {/* Updated Roadmap Section */}
       <RoadmapSection />
 
-      {/* Gallery Section with enhanced cards */}
-      <section ref={galleryRef} className="relative py-32 font-pixel">
-        {/* Parallax floating elements */}
-        <motion.div
-          className="absolute inset-0 pointer-events-none"
-          style={{ y: bgY3 }}
-        >
-          {[...Array(5)].map((_, i) => (
-            <motion.div
-              key={`float-${i}`}
-              className="absolute rounded-full opacity-30"
-              style={{
-                width: `${50 + i * 30}px`,
-                height: `${50 + i * 30}px`,
-                border: "1px solid rgba(168, 85, 247, 0.3)",
-                top: `${100 + i * 100}px`,
-                left: `${100 + i * 150}px`,
-                filter: "blur(1px)",
-              }}
-              animate={{
-                rotate: [0, 360],
-                scale: [1, 1.05, 1],
-              }}
-              transition={{
-                rotate: {
-                  duration: 20 + i * 5,
-                  repeat: Infinity,
-                  ease: "linear",
-                },
-                scale: {
-                  duration: 3 + i,
-                  repeat: Infinity,
-                  repeatType: "reverse",
-                  ease: "easeInOut",
-                },
-              }}
-            />
-          ))}
-        </motion.div>
-
-        <div className="container mx-auto px-4">
-          <motion.div style={{ x: smoothGalleryTitleX }} className="mb-20">
-            <PixelHeading
-              text="GALLERY"
-              className="text-5xl md:text-6xl font-black tracking-tighter mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-pink-600"
-            />
-
-            {/* Animated separator line */}
-            <div className="relative h-1 w-40">
-              <div className="w-full h-full bg-gradient-to-r from-blue-500 to-pink-500"></div>
-              <motion.div
-                className="absolute top-0 left-0 h-full bg-white/50"
-                style={{ width: "20px" }}
-                animate={{
-                  x: [0, 160, 0],
-                  opacity: [0, 1, 0],
-                }}
-                transition={{ duration: 3, repeat: Infinity }}
-              />
-            </div>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, index) => (
-              <GalleryCard
-                key={index}
-                index={index}
-                setCursorHover={setCursorHover}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section with enhanced effects */}
-      <section className="relative py-32 overflow-hidden font-pixel">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-t from-purple-950/30 via-black to-black"></div>
-        </div>
-
-        {/* Animated circular elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <motion.div
-            className="absolute w-96 h-96 rounded-full border border-purple-500/20"
-            style={{
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-            }}
-            animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
-            transition={{ duration: 5, repeat: Infinity }}
-          />
-
-          <motion.div
-            className="absolute w-64 h-64 rounded-full border border-pink-500/20"
-            style={{
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-            }}
-            animate={{ scale: [1.2, 1, 1.2], opacity: [0.1, 0.3, 0.1] }}
-            transition={{ duration: 5, repeat: Infinity, delay: 0.5 }}
-          />
-
-          <motion.div
-            className="absolute"
-            style={{
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-            }}
-            animate={{ rotate: [0, 360] }}
-            transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-          >
-            <motion.div
-              className="w-2 h-2 bg-purple-500 rounded-full absolute"
-              style={{
-                top: "0px",
-                left: "0px",
-                transform: "translate(-50%, -50%)",
-              }}
-              animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-
-            <motion.div
-              className="w-2 h-2 bg-pink-500 rounded-full absolute"
-              style={{
-                bottom: "0px",
-                right: "0px",
-                transform: "translate(50%, 50%)",
-              }}
-              animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity, delay: 1 }}
-            />
-          </motion.div>
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-4xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true, margin: "-100px" }}
-            >
-              <PixelHeading
-                text="READY TO TRANSCEND?"
-                className="text-3xl md:text-4xl font-black tracking-tighter mb-8 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
-              />
-              <p className="text-xl md:text-2xl text-gray-300 mb-10 font-pixel">
-                BEGIN YOUR JOURNEY INTO THE VOID
-              </p>
-
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                onMouseEnter={() => setCursorHover(true)}
-                onMouseLeave={() => setCursorHover(false)}
-                className="relative inline-block"
-              >
-                <Button
-                  asChild
-                  size="lg"
-                  className="bg-transparent border-2 border-purple-500 hover:bg-purple-950/30 text-white rounded-none px-12 py-8 text-2xl font-pixel tracking-wide transition-all duration-300 relative overflow-hidden"
-                >
-                  <Link href="/game">
-                    <span className="relative z-10">ENTER THE VOID</span>
-
-                    {/* Button glow effect */}
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-purple-600/40 to-pink-600/40"
-                      initial={{ opacity: 0 }}
-                      whileHover={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </Link>
-                </Button>
-
-                {/* Button decorative corners */}
-                <motion.div
-                  className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-purple-500"
-                  animate={{ opacity: [0.4, 1, 0.4] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                />
-                <motion.div
-                  className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-purple-500"
-                  animate={{ opacity: [0.4, 1, 0.4] }}
-                  transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-                />
-                <motion.div
-                  className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-purple-500"
-                  animate={{ opacity: [0.4, 1, 0.4] }}
-                  transition={{ duration: 2, repeat: Infinity, delay: 1 }}
-                />
-                <motion.div
-                  className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-purple-500"
-                  animate={{ opacity: [0.4, 1, 0.4] }}
-                  transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}
-                />
-              </motion.div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
+      {/* NEW: Add the CircularCubeSection here */}
+      <CircularCubeSection />
 
       <TicketSection />
 
