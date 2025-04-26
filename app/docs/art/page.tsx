@@ -65,17 +65,19 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ title, description, color, in
         </div>
         <p className="text-gray-300 text-sm leading-relaxed">{description}</p>
         <div className="mt-4 pt-4 border-t border-purple-900/30 flex justify-between items-center">
-          <motion.div
-            className={`px-3 py-1 text-xs ${colorClass.text} border ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1`}
-            animate={{ y: isHovered ? 0 : 10, opacity: isHovered ? 1 : 0 }}
-            initial={{ y: 10, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <span>LEARN MORE</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </motion.div>
+          <Link href="/app/art" passHref>
+            <motion.div
+              className={`px-3 py-1 text-xs ${colorClass.text} border ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1 cursor-pointer`}
+              animate={{ y: isHovered ? 0 : 10, opacity: isHovered ? 1 : 0 }}
+              initial={{ y: 10, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <span>LEARN MORE</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </motion.div>
+          </Link>
         </div>
       </div>
       <div className={`absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity`} />
@@ -472,7 +474,7 @@ export default function ArtDocsPage() {
                     A responsive canvas system designed for pixel-perfect artwork creation.
                   </p>
                   <h3 className="text-xl font-bold mb-2 text-pink-400">Key Features:</h3>
-                  <ul className="text-gray-300 space-y-2">
+                  <ul className="text-gray300 space-y-2">
                     <li className="flex items-start">
                       <span className="h-2 w-2 bg-pink-500/20 mr-2 mt-2"></span>
                       <span>Real-time resizing to fit any device or window</span>
@@ -744,12 +746,14 @@ export default function ArtDocsPage() {
                   Craft your vision pixel by pixel. Welcome to the future of creation in VOID.
                 </p>
                 <div className="mt-8">
-                  <Button
-                    size="lg"
-                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-none font-pixel"
-                  >
-                    START CREATING
-                  </Button>
+                  <Link href="/app/art" passHref>
+                    <Button
+                      size="lg"
+                      className="bg-purple-500 hover:bg-purple-600 text-white rounded-none font-pixel"
+                    >
+                      START CREATING
+                    </Button>
+                  </Link>
                 </div>
               </motion.div>
             </div>

@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useRef } from "react"
@@ -15,6 +14,7 @@ interface RealmCardProps {
   poem: string[];
   description: string;
   color: "purple" | "pink" | "blue";
+  Apparatus: "purple" | "pink" | "blue";
   modelType: string;
   index: number;
 }
@@ -87,17 +87,19 @@ const RealmCard: React.FC<RealmCardProps> = ({ name, poem, description, color, m
 
         {/* Interactive elements */}
         <div className="mt-4 pt-4 border-t border-purple-900/30 flex justify-between items-center">
-          <motion.div
-            className={`px-3 py-1 text-xs ${colorClass.text} border ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1`}
-            animate={{ y: isHovered ? 0 : 10, opacity: isHovered ? 1 : 0 }}
-            initial={{ y: 10, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <span>ENTER REALM</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </motion.div>
+          <Link href="/app/realm">
+            <motion.div
+              className={`px-3 py-1 text-xs ${colorClass.text} border ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1 cursor-pointer`}
+              animate={{ y: isHovered ? 0 : 10, opacity: isHovered ? 1 : 0 }}
+              initial={{ y: 10, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <span>ENTER REALM</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </motion.div>
+          </Link>
         </div>
       </div>
 
@@ -536,14 +538,13 @@ export default function RealmsDocsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {realms.map((realm, index) => (
                     <RealmCard
-                      key={index}
-                      name={realm.name}
-                      poem={realm.poem}
-                      description={realm.description}
-                      color={realm.color}
-                      modelType={realm.modelType}
-                      index={index}
-                    />
+                          key={index}
+                          name={realm.name}
+                          poem={realm.poem}
+                          description={realm.description}
+                          color={realm.color}
+                          modelType={realm.modelType}
+                          index={index} Apparatus={"purple"}                    />
                   ))}
                 </div>
               </div>
@@ -600,7 +601,7 @@ export default function RealmsDocsPage() {
                   <ul className="text-gray-300 space-y-2">
                     <li className="flex items-start">
                       <span className="h-2 w-2 bg-pink-500/20 mr-2 mt-2"></span>
-                      <span>Mirror Fragments for Echo, N遵義: Nodal Network for Nexus, and more</span>
+                      <span>Mirror Fragments for Echo, Nodal Network for Nexus, and more</span>
                     </li>
                     <li className="flex items-start">
                       <span className="h-2 w-2 bg-pink-500/20 mr-2 mt-2"></span>
@@ -817,12 +818,14 @@ export default function RealmsDocsPage() {
                 </p>
 
                 <div className="mt-8">
-                  <Button
-                    size="lg"
-                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-none font-pixel"
-                  >
-                    EXPLORE REALMS
-                  </Button>
+                  <Link href="/app/realm">
+                    <Button
+                      size="lg"
+                      className="bg-purple-500 hover:bg-purple-600 text-white rounded-none font-pixel"
+                    >
+                      EXPLORE REALMS
+                    </Button>
+                  </Link>
                 </div>
               </motion.div>
             </div>

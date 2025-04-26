@@ -18,7 +18,7 @@ interface FeatureCardProps {
 }
 
 const FeatureCard: React.FC<FeatureCardProps> = ({ title, description, color, index }) => {
-  const [isHovered, setIsHovered] = useState(false)
+  const [isHovered, setIsHovered] = useState(false);
 
   // Define color classes based on color prop
   const colorClasses = {
@@ -26,23 +26,23 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ title, description, color, in
       bg: "bg-purple-500/20",
       text: "text-purple-500",
       border: "border-purple-500/50",
-      gradient: "from-purple-400 to-purple-600"
+      gradient: "from-purple-400 to-purple-600",
     },
     pink: {
       bg: "bg-pink-500/20",
       text: "text-pink-500",
       border: "border-pink-500/50",
-      gradient: "from-pink-400 to-pink-600"
+      gradient: "from-pink-400 to-pink-600",
     },
     blue: {
       bg: "bg-blue-500/20",
       text: "text-blue-500",
       border: "border-blue-500/50",
-      gradient: "from-blue-400 to-blue-600"
-    }
-  }
+      gradient: "from-blue-400 to-blue-600",
+    },
+  };
 
-  const colorClass = colorClasses[color]
+  const colorClass = colorClasses[color];
 
   return (
     <motion.div
@@ -79,28 +79,38 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ title, description, color, in
 
         {/* Interactive elements */}
         <div className="mt-4 pt-4 border-t border-purple-900/30 flex justify-between items-center">
-          <motion.div
-            className={`px-3 py-1 text-xs ${colorClass.text} border ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1`}
-            animate={{ y: isHovered ? 0 : 10, opacity: isHovered ? 1 : 0 }}
-            initial={{ y: 10, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <span>LEARN MORE</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </motion.div>
+          <Link href="/ai">
+            <motion.div
+              className={`px-3 py-1 text-xs ${colorClass.text} border ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1 cursor-pointer`}
+              animate={{ y: isHovered ? 0 : 10, opacity: isHovered ? 1 : 0 }}
+              initial={{ y: 10, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <span>LEARN MORE</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </motion.div>
+          </Link>
         </div>
       </div>
 
       {/* Corner decorations */}
-      <div className={`absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity`} />
-      <div className={`absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity`} />
-      <div className={`absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity`} />
-      <div className={`absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity`} />
+      <div
+        className={`absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity`}
+      />
+      <div
+        className={`absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity`}
+      />
+      <div
+        className={`absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity`}
+      />
+      <div
+        className={`absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 ${colorClass.border} opacity-0 group-hover:opacity-100 transition-opacity`}
+      />
     </motion.div>
-  )
-}
+  );
+};
 
 // Sidebar navigation component
 const DocsSidebar = ({ activeSection }: { activeSection: string }) => {
@@ -113,8 +123,8 @@ const DocsSidebar = ({ activeSection }: { activeSection: string }) => {
     { id: "art", label: "ART" },
     { id: "market", label: "MARKET" },
     { id: "rubiks", label: "RUBIKS" },
-    { id: "canvas", label: "CANVAS" }
-  ]
+    { id: "canvas", label: "CANVAS" },
+  ];
 
   return (
     <div className="w-80 border-r border-purple-900/30 h-full py-8 px-4 hidden lg:block">
@@ -155,8 +165,8 @@ const DocsSidebar = ({ activeSection }: { activeSection: string }) => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
 // Mobile sidebar toggle
 const MobileSidebarToggle = ({ onClick }: { onClick: () => void }) => (
@@ -168,7 +178,7 @@ const MobileSidebarToggle = ({ onClick }: { onClick: () => void }) => (
       <path d="M3 6H21M3 12H21M3 18H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   </button>
-)
+);
 
 // Mobile sidebar dropdown
 const MobileSidebar = ({ isOpen, onClose, activeSection }: { isOpen: boolean; onClose: () => void; activeSection: string }) => {
@@ -181,10 +191,10 @@ const MobileSidebar = ({ isOpen, onClose, activeSection }: { isOpen: boolean; on
     { id: "art", label: "ART" },
     { id: "market", label: "MARKET" },
     { id: "rubiks", label: "RUBIKS" },
-    { id: "canvas", label: "CANVAS" }
-  ]
+    { id: "canvas", label: "CANVAS" },
+  ];
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <motion.div
@@ -232,8 +242,8 @@ const MobileSidebar = ({ isOpen, onClose, activeSection }: { isOpen: boolean; on
         </div>
       </motion.div>
     </motion.div>
-  )
-}
+  );
+};
 
 // Floating particles component
 const FloatingParticles = () => {
@@ -262,7 +272,7 @@ const FloatingParticles = () => {
     initialY: Math.random() * 100,
     destinationX: Math.random() * 100,
     destinationY: Math.random() * 100,
-  }))
+  }));
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -290,12 +300,12 @@ const FloatingParticles = () => {
         />
       ))}
     </div>
-  )
-}
+  );
+};
 
 export default function AIDocsPage() {
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
-  const containerRef = useRef(null)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const containerRef = useRef(null);
 
   // Features data for FeatureCard components
   const features = [
@@ -328,8 +338,8 @@ export default function AIDocsPage() {
       title: "Scalablibity",
       description: "Built for future growth, supporting new shader styles, textures, and features like text-to-scene generation and avatar creation.",
       color: "blue" as const,
-    }
-  ]
+    },
+  ];
 
   return (
     <div ref={containerRef} className="relative bg-black text-white min-h-screen font-pixel">
@@ -483,7 +493,7 @@ export default function AIDocsPage() {
                       <span>Special shader effects like Hologram, Flow, and Gradient</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="h-2 w-2 bg-purple-500/20 mr-2 mt contradictingmt-2"></span>
+                      <span className="h-2 w-2 bg-purple-500/20 mr-2 mt-2"></span>
                       <span>Mint as NFTs on the Solana blockchain</span>
                     </li>
                   </ul>
@@ -500,7 +510,7 @@ export default function AIDocsPage() {
                 >
                   <h2 className="text-2xl font-bold mb-4">AI-GENERATED MUSIC</h2>
                   <p className="text-gray-300 mb-4">
-                    Generate original music tracks from text prompts, with support for various styles and instant playback through an HTML5 audio player.
+                    Generate original music tracks from text prompts, with support for various styles and sound playback through an HTML5 audio player.
                   </p>
                   <h3 className="text-xl font-bold mb-2 text-pink-400">Key Features:</h3>
                   <ul className="text-gray-300 space-y-2">
@@ -701,5 +711,5 @@ export default function AIDocsPage() {
       {/* Footer */}
       <Footer />
     </div>
-  )
+  );
 }
