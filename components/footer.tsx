@@ -110,7 +110,7 @@ const FooterLink = ({ href, children, index }: FooterLinkProps) => {
 const GlitchDecoration = ({ className }: { className: string }) => {
   return (
     <motion.div 
-      className={`absolute ${className}`}
+className={`absolute ${className}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: [0, 0.7, 0.4, 0.7, 0] }}
       transition={{ 
@@ -282,7 +282,7 @@ export default function Footer() {
           className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-20"
         >
           {/* Brand column */}
-          <motion.div variants={rowVariants} className="col-span-1 md:col-span-2">
+          <motion.div variants={rowVariants} className="col-span-1 md:col-span-1">
             <div className="relative mb-6">
               <PixelHeading
                 text="VOID"
@@ -334,15 +334,33 @@ export default function Footer() {
             </div>
           </motion.div>
           
-          {/* Navigation links */}
+          {/* Void links */}
           <motion.div variants={rowVariants}>
-            <PixelHeading text="GAME" className="text-lg font-bold mb-6 text-white" />
+            <PixelHeading text="VOID" className="text-lg font-bold mb-6 text-white" />
             <div className="space-y-3 font-pixel">
               {[
                 { name: "HOME", path: "/" },
-                { name: "REALM", path: "/realm" },
-                { name: "GAME", path: "/game" },
                 { name: "ABOUT", path: "/about" },
+                { name: "GAME", path: "/game" },
+                { name: "REALM", path: "/realm" },
+                { name: "GALLERY", path: "/gallery" },
+                { name: "CANVAS", path: "/canvas" },
+              ].map((link, index) => (
+                <FooterLink key={link.path} href={link.path} index={index}>
+                  {link.name}
+                </FooterLink>
+              ))}
+            </div>
+          </motion.div>
+          
+          {/* NFT links */}
+          <motion.div variants={rowVariants}>
+            <PixelHeading text="NFT" className="text-lg font-bold mb-6 text-white" />
+            <div className="space-y-3 font-pixel">
+              {[
+                { name: "AI", path: "/ai" },
+                { name: "ART", path: "/art" },
+                { name: "MARKET", path: "/market" },
                 { name: "RUBIKS", path: "/rubiks" },
               ].map((link, index) => (
                 <FooterLink key={link.path} href={link.path} index={index}>
@@ -352,16 +370,15 @@ export default function Footer() {
             </div>
           </motion.div>
           
-          {/* Support links */}
+          {/* Documentation links */}
+          <motion.div>
+
           <motion.div variants={rowVariants}>
-            <PixelHeading text="NFT" className="text-lg font-bold mb-6 text-white" />
+          </motion.div>
+            <PixelHeading text="Documentation" className="text-lg font-bold mb-6 text-white" />
             <div className="space-y-3 font-pixel">
               {[
-                { name: "AI", path: "/ai" },
-                { name: "MARKET", path: "/market" },
-                { name: "GALLERY", path: "/gallery" },
-                { name: "ART", path: "/art" },
-                { name: "CANVAS", path: "/canvas" },
+                { name: "DOCS", path: "/docs" },
               ].map((link, index) => (
                 <FooterLink key={link.path} href={link.path} index={index}>
                   {link.name}

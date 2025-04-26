@@ -70,6 +70,7 @@ export default function Navigation() {
     { name: "MARKET", path: "/market" },
     { name: "RUBIKS", path: "/rubiks" },
     { name: "CANVAS", path: "/canvas" },
+    { name: "DOCS", path: "/docs" },
   ]
 
   const handleWalletClick = () => {
