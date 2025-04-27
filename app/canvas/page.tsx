@@ -492,10 +492,10 @@ export default function CanvasPage() {
       >
         {/* Background grid */}
         <div
-          className="absolute inset-0 bg-black opacity-10"
+          className="absolute inset-0 bg-gray-900"
           style={{
             backgroundImage:
-              "linear-gradient(to right, #222 1px, transparent 1px), linear-gradient(to bottom, #222 1px, transparent 1px)",
+              "linear-gradient(to right, rgba(139,92,246,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(139,92,246,0.3) 1px, transparent 1px)",
             backgroundSize: `${pixelSize}px ${pixelSize}px`,
           }}
         />
