@@ -1,0 +1,1 @@
+/Users/truongngochuyen/Documents/VOID/nft_marketplace/target/wasm32-unknown-unknown/release/nft_marketplace.wasm: /Users/truongngochuyen/Documents/VOID/nft_marketplace/src/lib.rs /Users/truongngochuyen/Documents/VOID/nft_marketplace/src/marketplace_views.rs
