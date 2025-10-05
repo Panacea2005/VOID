@@ -1,156 +1,171 @@
 # VOID
 
-VOID is a decentralized AI-powered creative economy and cross-game asset platform built on Solana.  
-VOID empowers users to generate 3D Cubes, Music, and Pixel Art through custom AI models, mint them as NFTs, and use these assets across interactive realm-based games.  
-VOID unifies creativity, ownership, and gameplay into a fully interoperable Web3 experience where players create, evolve, and trade their digital assets seamlessly.
+![VOID Logo](public/favicon.png)
 
----
-
-## Project Structure
-
-VOID's architecture connects modern AI generation pipelines, Web3 blockchain standards, and real-time backend infrastructure to support large-scale, decentralized user interaction.
-
-- **Frontend**:
-  - Built with [Next.js](https://nextjs.org/) and [React](https://reactjs.org/).
-  - UI styling powered by [TailwindCSS](https://tailwindcss.com/).
-  - Solana wallet authentication integrated via [Solana Wallet Adapter](https://github.com/solana-labs/wallet-adapter).
-  - Pixel Canvas built as a scalable TypeScript-React component with real-time updates.
-
-- **Backend**:
-  - User profiles (wallet addresses, avatars) and Pixel Canvas pixel data are stored in [Supabase](https://supabase.com/).
-  - Real-time capabilities of Supabase enable collaborative pixel art experiences without latency.
-
-- **Blockchain Layer**:
-  - Solana blockchain used for NFT minting, marketplace transactions, and ownership validation.
-  - NFT metadata structured according to [Metaplex Metadata Standard](https://docs.metaplex.com/).
-
-- **AI Engines**:
-  - **VOID 3D Model**: Custom-trained model to generate original 3D Cube designs based on prompts.
-  - **Suno AI**: Used for dynamic music track generation based on theme, realm, or player mood.
-  - **Stable Diffusion (Pixel Art Tuning)**: Used for generating pixel art styled outputs matching game realms.
-
-- **Storage Infrastructure**:
-  - [Pinata](https://www.pinata.cloud/) IPFS hosting used for decentralized storage of all NFT assets (3D Cube files, Music tracks, Pixel Art).
-
-- **Gameplay Layer**:
-  - Interactive multi-realm games built with [Three.js](https://threejs.org/), dynamically loading user NFTs.
-  - NFTs are playable objects that evolve based on player interaction and realm-specific logic.
+An open, on-chain creative playground on Solana. VOID lets creators mint interactive 3D cube NFTs, AI-generated pixel art, and music collectibles, then showcase and trade them in a unified experience.
 
 ---
 
 ## Features
 
-- **AI Asset Studio**:
-  - Generate Cubes, Music, and Pixel Art through intuitive prompt-based AI tools.
-  - Immediate asset feedback and iteration capabilities.
-
-- **Instant NFT Minting**:
-  - Mint AI-generated assets as SPL NFTs directly from the frontend.
-  - NFT metadata automatically formatted according to Metaplex standards.
-
-- **Cross-Game Asset Interoperability**:
-  - A single NFT can interact across multiple realm games, unlocking different appearances, abilities, or bonus content.
-
-- **Marketplace**:
-  - List, buy, and trade NFTs securely.
-  - Marketplace built with direct Solana blockchain transaction support, eliminating intermediaries.
-
-- **Pixel Canvas**:
-  - Global collaborative pixel art board.
-  - Each wallet can contribute one pixel at a time, verified on backend and frontend in real-time.
-
-- **Profile System**:
-  - Users manage their identity by uploading avatars, viewing their assets, transaction history, and in-game achievements.
-  - Profiles linked directly to wallet authentication.
-
-- **Real-time Interaction**:
-  - Supabase enables seamless state synchronization across players for Pixel Canvas and Profile updates.
+- **NFT minting**: Mint 3D cube, pixel art, and music NFTs with rich metadata (Metaplex standard)
+- **AI art**: Generate pixel art via in-app AI and mint directly
+- **Music NFTs**: Upload or link audio, visualize, and mint music collectibles
+- **3D rendering**: Real-time WebGL rendering of cube NFTs with material parameters preserved
+- **Marketplace-ready**: Includes a Rust on-chain marketplace program and integration points
+- **Wallet integration**: Phantom and Solana wallet adapters for seamless auth and signing
+- **IPFS storage**: Upload assets and metadata to IPFS (Pinata helpers included)
+- **Game and gallery**: Explore realms, play, and browse NFTs in an immersive UI
 
 ---
 
-## System Architecture
+## Tech Stack
 
-VOID is designed to support massive scalability, minimal transaction fees, and real-time gameplay using decentralized infrastructures:
-
-- **Authentication and Profiles**:
-  - Wallet login secured via Solana Wallet Adapter.
-  - Profiles are linked to public wallet addresses, stored in Supabase.
-
-- **Asset Generation & Minting**:
-  - AI asset output streamed back to frontend.
-  - Mint button initiates transaction on Solana blockchain via Web3.js SDK, registering the asset metadata on-chain.
-
-- **Data Storage**:
-  - Generated assets and corresponding metadata (JSON + files) are uploaded to IPFS via Pinata.
-  - All URIs in NFT metadata point directly to immutable IPFS hashes, ensuring asset authenticity.
-
-- **Gameplay Integration**:
-  - Three.js games dynamically read NFTs by parsing on-chain metadata, pulling assets from IPFS, and rendering them interactively.
-
-- **Marketplace Operations**:
-  - Each NFT listing is smart contract-validated for rightful ownership.
-  - On purchase, Solana blockchain transfers NFT securely to buyer’s wallet.
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS, Radix UI, Three.js
+- **Audio/3D**: Tone.js, Howler, @react-three/fiber, postprocessing
+- **Solana**: @solana/web3.js, @metaplex-foundation/js, Wallet Adapter
+- **Storage**: IPFS/Pinata helpers, local fallbacks for dev
+- **Backend routes**: Next.js Route Handlers under `app/api/*`
+- **Optional services**: Supabase (auth/profile), Vercel KV/Blob utilities
 
 ---
 
-## Security and Data Integrity
-
-VOID prioritizes security at every architectural layer:
-
-- **Supabase Backend Security**:
-  - Row-Level Security (RLS) policies enforced to ensure wallets can only modify their own data.
-  - Pixel Canvas contributions rate-limited and signed to prevent spamming or unauthorized canvas attacks.
-
-- **Blockchain and NFT Security**:
-  - NFTs minted with Metaplex standards guarantee immutability of ownership and metadata.
-  - Marketplace operations require transaction signing and validation before trades are executed.
-
-- **IPFS Asset Storage**:
-  - Assets permanently pinned on IPFS.
-  - Metadata content-addressed using CID hashes, preventing asset manipulation or link-breaking.
-
-- **Frontend Wallet Operations**:
-  - All wallet actions require explicit user confirmation through connected wallet (e.g., Phantom, Solflare).
-
----
-
-## Roadmap
-
-### ✅ Completed — Q1 2025
-- Launch AI Asset Studio (VOID Cubes, Music, Pixel Art)
-- NFT Minting System live
-- Realm-Based Games (Echo, Pulse, Cipher) released
-- Pixel Canvas collaborative system operational
-- Marketplace launch for NFT trading
-
-### 🚀 Upcoming
-
-- **Q2 2025**:
-  - Realm SDK launch for external developers.
-  - Multiplayer-enhanced Pixel Canvas (live cursor tracking, collaboration).
-  - Upgrade AI engine to VOID Model 2.0 for animated 3D cubes.
-
-- **Q3 2025**:
-  - Mobile App beta release for iOS and Android.
-  - Gacha system and Fusion mechanics introduction.
-  - Social media asset sharing integrations.
-
-- **Q4 2025**:
-  - Realm-specific tokenization tied to in-game activities.
-  - Advanced AI personalized generators ("Liquid Cubes", "Biome Music").
-  - Timed collaborative realm building events.
-
-- **2026 and Beyond**:
-  - Full Open Realm Protocol allowing anyone to create and connect new realms.
-  - Cross-chain asset compatibility exploration.
-  - AI personalization layer where users train their own asset styles.
-
----
-
-## Setup (Quick Start)
-
-Clone the repository:
+## Quick Start
 
 ```bash
-git clone https://github.com/your-org-name/void.git
-cd void
+pnpm install
+pnpm dev
+# or
+npm install
+npm run dev
+```
+
+App will start at `http://localhost:3000`.
+
+---
+
+## Scripts
+
+- `dev`: Start Next.js dev server
+- `build`: Production build
+- `start`: Start production server
+- `lint`: Run ESLint
+
+---
+
+## Environment Variables
+
+Create `.env.local` at the repo root when needed:
+
+```env
+# AI music service (optional)
+MUSIC_API_KEY=
+MUSIC_AI_API_URL=
+
+# Add your own keys as you integrate providers (Pinata, etc.)
+# PINATA_JWT=
+# NEXT_PUBLIC_RPC_ENDPOINT=
+```
+
+See `app/config/env.ts` for currently referenced variables.
+
+---
+
+## Project Structure
+
+- `app/` Next.js app router pages and route handlers
+  - `app/api/*` REST-like endpoints (AI art, IPFS, minting, auth)
+  - `app/art`, `app/ai`, `app/market`, `app/game` feature areas
+- `components/` UI, 3D viewers, and shared widgets
+- `lib/services/` Solana, IPFS/Pinata, NFT mint, wallet utilities
+- `nft_marketplace/` Rust smart contract and tests for marketplace
+- `public/` static assets (covers, audio)
+
+---
+
+## Core API Routes
+
+- `app/api/generate-pixel-art/route.ts`: AI pixel art generation
+- `app/api/mint-pixel-art/route.ts`: Pixel art minting flow
+- `app/api/ipfs/[cid]/route.ts`: IPFS access helper
+- `app/api/cube/[color]/route.ts`: Cube utilities
+- `app/api/auth/wallet-login.ts`: Wallet-based auth example
+- `app/api/music/callback/route.ts`: Music AI callback handler
+
+---
+
+## Solana & Wallet Setup
+
+1. Install Phantom and switch to Devnet
+2. Fund your wallet via a faucet if on Devnet
+3. Configure your RPC if needed (`NEXT_PUBLIC_RPC_ENDPOINT`)
+4. Connect your wallet in the app header and start minting
+
+For the on-chain marketplace program, see `nft_marketplace/README.md` for build and deploy instructions (Solana CLI, program deployment, and integration notes).
+
+---
+
+## Minting Workflows
+
+### Mint a Pixel Art NFT
+
+1. Open `Art` → Pixel Art
+2. Create or generate pixel art via AI
+3. Provide name, description, and optional attributes
+4. Mint; assets and metadata upload to IPFS, then an NFT is created with Metaplex
+
+Related code:
+- `lib/services/pixelArtNftService.ts`
+- `lib/services/nftService.ts`
+
+### Mint a 3D Cube NFT
+
+1. Open `Game` or builder UI for cubes
+2. Customize materials, colors, effects; preview in 3D
+3. Mint; all `materialParams` are preserved in metadata and IPFS alongside the model
+
+Related code:
+- `lib/services/nftService.ts` (`getCubeNFTMetadata`, `mintNFT`)
+
+### Mint a Music NFT
+
+1. Open `AI` → Music or the Market mint flow
+2. Select cover image and provide `audioUrl` or upload audio
+3. Mint; metadata stores audio in multiple discoverable fields (`audio`, `audioUrl`, `animation_url`)
+
+Related code:
+- `lib/services/nftService.ts` (`getMusicNFTMetadata`)
+
+---
+
+## IPFS & Metadata
+
+- Assets and metadata are uploaded via Pinata helpers
+- Redundant fields ensure marketplaces can discover models/audio
+- Fallbacks and local storage enable dev-friendly flows
+
+Key helpers:
+- `lib/services/pinataService.ts`
+- `lib/services/modelExportService.ts`
+
+---
+
+## Development Notes
+
+- Strong focus on preserving 3D `materialParams` across uploads and metadata
+- Local fallbacks: when uploads or minting fail in dev, data is cached to `localStorage`
+- Uses Metaplex JS SDK for minting and discovery
+
+---
+
+## Contributing
+
+- Open issues and PRs are welcome
+- Keep code clear and typed; match existing formatting
+- Avoid introducing breaking API changes without discussion
+
+---
+
+## License
+
+MIT
